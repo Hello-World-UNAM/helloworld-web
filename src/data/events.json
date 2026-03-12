@@ -1,0 +1,80 @@
+{
+  "hackathones": [
+    {
+      "title": "Deloitte: Hack & Defend",
+      "tag": "Hackathon",
+      "date": "📅 12 Mar 2026 · CDMX",
+      "description": "Deloitte te invita al Hackathon: Hack and Defend. Una oportunidad única para poner a prueba tus habilidades en hacking ético, análisis forense e inteligencia de amenazas, ¡acompañado de verdaderos ciberexpertos!",
+      "url": "https://encuestas.deloittemx.com/Answer/AnswerPoll.aspx?token=brqYcbS7i3gqb7LKbA9pVT4ZxBeT",
+      "accent": "#c8a96e"
+    },
+    {
+      "title": "HackHW: 24h Build",
+      "tag": "Hackathon",
+      "date": "📅 5 Abr 2026 · Campus Central",
+      "description": "Construye un proyecto en 24 horas. Premios y menciones para los mejores equipos.",
+      "url": "https://ejemplo.com/evento3",
+      "accent": "#c86e9a"
+    },
+    {
+      "title": "Hello World Open Night",
+      "tag": "Hackathon",
+      "date": "📅 18 Abr 2026 · Sala de Cómputo",
+      "description": "Sesión abierta para nuevos miembros. Conoce al equipo y resuelve tu primer reto de programación competitiva.",
+      "url": "https://ejemplo.com/evento4",
+      "accent": "#8bc86e"
+    }
+  ],
+  "cursos": [
+    {
+      "title": "GCI World - Matsuo Iwasawa Lab UTokyo",
+      "tag": "Curso",
+      "date": "📅 Límite de Registro: 2 Abr 2026 · Online",
+      "description": "El curso GCI Global, desarrollado por el Laboratorio Matsuo-Iwasawa de la Universidad de Tokio, ofrece formación integral en ciencia de datos, desde fundamentos de Python hasta su aplicación en entornos empresariales.",
+      "url": "https://weblab.t.u-tokyo.ac.jp/en/lecture/gci/",
+      "accent": "#6eb5c8"
+    },
+    {
+      "title": "Taller de Algoritmos Avanzados",
+      "tag": "Curso",
+      "date": "📅 22 Mar 2026 · Online",
+      "description": "Sesión intensiva sobre grafos, DP y estructuras de datos para competencias de programación.",
+      "url": "https://ejemplo.com/evento2",
+      "accent": "#c8a96e"
+    },
+    {
+      "title": "HackHW: 24h Build",
+      "tag": "Curso",
+      "date": "📅 5 Abr 2026 · Campus Central",
+      "description": "Construye un proyecto en 24 horas. Premios y menciones para los mejores equipos.",
+      "url": "https://ejemplo.com/evento3",
+      "accent": "#c86e9a"
+    }
+  ],
+  "eventos": [
+    {
+      "title": "Beca Talent Land México 2026",
+      "tag": "Evento",
+      "date": "📅 Abril 2026 · Santa Fe, CDMX",
+      "description": "Conferencias con ponentes nacionales e internacionales, espacios de networking, vinculación con empresas y ecosistemas de innovación en tecnología, ciencia e innovación.",
+      "url": "https://becas.talent-land.mx/secihti?utm_source=talent-comms&utm_medium=email&utm_campaign=becas-innovacion-federal-1&utm_content=2d95748a-4a0f-4932-8d72-398a460bca00",
+      "accent": "#c8a96e"
+    },
+    {
+      "title": "ICPC Regional 2026",
+      "tag": "Evento",
+      "date": "📅 15 Mar 2026 · CDMX, México",
+      "description": "Clasificatorio regional para el ICPC World Finals. Equipos de 3 integrantes resuelven problemas de algoritmia bajo presión de tiempo.",
+      "url": "https://ejemplo.com/evento1",
+      "accent": "#6eb5c8"
+    },
+    {
+      "title": "Hello World Open Night",
+      "tag": "Evento",
+      "date": "📅 18 Abr 2026 · Sala de Cómputo",
+      "description": "Sesión abierta para nuevos miembros. Conoce al equipo y resuelve tu primer reto de programación competitiva.",
+      "url": "https://ejemplo.com/evento4",
+      "accent": "#8bc86e"
+    }
+  ]
+}

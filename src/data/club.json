@@ -1,0 +1,87 @@
+{
+  "team": [
+    {
+      "name": "Ana Guadalupe Martínez Colón",
+      "role": "Presidenta",
+      "image": "/img/ana.jpeg"
+    },
+    {
+      "name": "Jesús Sebastián Vázquez Zarco",
+      "role": "Vicepresidente",
+      "image": "/img/sebas.jpeg"
+    },
+    {
+      "name": "Enrique Emiliano Cano García",
+      "role": "Secretario Técnico",
+      "image": "/img/cano.jpeg"
+    },
+    {
+      "name": "Eric Leonardo Rosales Sánchez",
+      "role": "Dir. Estrategia y Planeación",
+      "image": "/img/eric.jpeg"
+    }
+  ],
+  "mission": {
+    "statement": "Formamos el equipo tecnológico de élite que lleva a la FES Aragón a competir y ganar en los retos más grandes del mundo.",
+    "pillars": [
+      {
+        "icon": "bi-trophy-fill",
+        "title": "Alto Rendimiento",
+        "description": "Equipos preparados para hackatones y desafíos de programación de nivel nacional"
+      },
+      {
+        "icon": "bi-code-slash",
+        "title": "Habilidades Técnicas",
+        "description": "Talleres y cursos de programación, IA, desarrollo y pensamiento crítico"
+      },
+      {
+        "icon": "bi-rocket-takeoff-fill",
+        "title": "Impacto Profesional",
+        "description": "Preparación e inserción real en el ámbito tecnológico profesional"
+      }
+    ]
+  },
+  "vision": {
+    "statement": "Ser el club tecnológico universitario de referencia en México, donde el talento de la FES Aragón llega al escenario nacional e internacional.",
+    "pillars": [
+      {
+        "icon": "bi-patch-check-fill",
+        "title": "Excelencia Técnica",
+        "description": "Reconocidos por innovación, trabajo colaborativo y dominio técnico"
+      },
+      {
+        "icon": "bi-people-fill",
+        "title": "Crecimiento Integral",
+        "description": "Miembros que se desarrollan técnica y profesionalmente dentro del club"
+      },
+      {
+        "icon": "bi-globe-americas",
+        "title": "Proyección Nacional",
+        "description": "La universidad como referente en competencias tecnológicas a nivel país"
+      }
+    ]
+  },
+  "generalObjective": "Desarrollar y consolidar un espacio estudiantil de alcance institucional que facilite la participación activa de la comunidad universitaria en iniciativas externas académicas, profesionales y tecnológicas, fortaleciendo su formación integral y contribuyendo a la proyección y representación de la Universidad en el entorno tecnológico.",
+  "objectives": [
+    {
+      "title": "Habilidades Técnicas",
+      "description": "Organizar talleres, cursos y sesiones prácticas en programación, desarrollo de software, IA y diseño."
+    },
+    {
+      "title": "Habilidades Blandas",
+      "description": "Fomentar el trabajo en equipo, liderazgo, comunicación efectiva y gestión del tiempo."
+    },
+    {
+      "title": "Preparación para Competencias",
+      "description": "Formar y coordinar equipos multidisciplinarios para participar en hackatones a nivel nacional e internacional."
+    },
+    {
+      "title": "Interdisciplinariedad",
+      "description": "Fomentar la colaboración entre las distintas ingenierías de la Facultad."
+    },
+    {
+      "title": "Proyección Institucional",
+      "description": "Contribuir a la representación de la FES Aragón en eventos, competencias e iniciativas tecnológicas."
+    }
+  ]
+}

@@ -1,0 +1,196 @@
+---
+import Layout from '@layouts/Layout.astro';
+
+const stats = [
+  { target: 40, suffix: "+", label: "Miembros" },
+  { target: 15, suffix: "", label: "Hackathones" },
+  { target: 6, suffix: "", label: "1er Lugares" },
+  { target: 3, suffix: "", label: "Cursos Activos" },
+];
+
+const termLines = [
+  { cls: 'cmd', text: '$ ./hello_world --info' },
+  { cls: 'out', text: '❯ Club tecnológico de élite · FES Aragón UNAM' },
+  { cls: 'blank', text: '' },
+  { cls: 'cmd', text: '$ ./hello_world --stack' },
+  { cls: 'out', text: '❯ Python · JavaScript · C++ · AI/ML · Web Dev' },
+  { cls: 'blank', text: '' },
+  { cls: 'cmd', text: '$ ./hello_world --mission' },
+  { cls: 'out', text: '❯ "Competir y ganar los retos más grandes"' },
+  { cls: 'blank', text: '' },
+  { cls: 'cmd', text: '$ ./hello_world --status' },
+  { cls: 'out', text: '● ACTIVO  ·  Ciclo 2025–2026' },
+];
+---
+
+<Layout title="Club Hello World" activeNav="inicio">
+  <h1 class="visually-hidden">Club Hello World — FES Aragón UNAM</h1>
+  
+  <!-- Hero Section Neo-Brutalista -->
+  <section class="hw-hero" aria-label="Introducción al club">
+    <div class="hw-hero-container">
+      <div class="hw-hero-content">
+        <div class="hw-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-rocket" style="display:inline-block; vertical-align:-3px; margin-right:4px;"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+          Temporada 2026-2027
+        </div>
+        <h2 class="hw-hero-title">
+          Liderando<br/>
+          <span class="highlight">el mañana.</span>
+        </h2>
+        <p class="hw-hero-desc">
+          Desde la FES Aragón hacia el mundo. Somos la comunidad que forja talento tecnológico de excelencia. Desarrollamos equipos de alto rendimiento listos para innovar, competir y transformar el mundo.
+        </p>
+        <div class="hw-hero-actions">
+          <a href="/unete" class="hw-btn hw-btn-primary">Aplica Ahora ➔</a>
+          <a href="/oferta" class="hw-btn hw-btn-secondary">Ver Oferta</a>
+        </div>
+      </div>
+      
+      <div class="hw-hero-visuals">
+        <div class="hw-stacked-images">
+          <div class="hw-img-box hw-img-back">
+            <img src="/img/equipo.jpg" alt="Hackeando" loading="lazy">
+          </div>
+          <div class="hw-img-box hw-img-front">
+            <img src="/img/logoclub2.jpeg" alt="Club Hello World equipo" fetchpriority="high">
+          </div>
+          <div class="hw-deco-star">✦</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="hw-scroll-indicator">
+      <span>Descubre la consola</span>
+      <div class="hw-scroll-arrow">↓</div>
+    </div>
+  </section>
+
+  <!-- Terminal + Stats -->
+  <section class="hw-showcase">
+    <div class="hw-showcase-inner">
+      <!-- Terminal animada -->
+      <div class="hw-terminal">
+        <div class="hw-terminal-bar">
+          <span class="hw-dot" style="background:#ff5f57;"></span>
+          <span class="hw-dot" style="background:#febc2e;"></span>
+          <span class="hw-dot" style="background:#28c840;"></span>
+          <span class="hw-terminal-title">hello_world_club — zsh</span>
+        </div>
+        <div class="hw-terminal-body">
+          <div id="hw-terminal-output"></div>
+          <span class="hw-cursor" id="hw-cursor">█</span>
+        </div>
+      </div>
+
+      <!-- Contadores animados -->
+      <div class="hw-stats-grid">
+        {stats.map((stat) => (
+          <div class="hw-stat-card">
+            <div class="hw-stat-value">
+              <span class="hw-stat-num" data-target={stat.target}>0</span>
+              {stat.suffix && <span class="hw-stat-suffix">{stat.suffix}</span>}
+            </div>
+            <div class="hw-stat-label">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ termLines }}>
+// ── Terminal Typewriter ───────────────────────────────────────────────────────
+function runTerminal() {
+  const output = document.getElementById('hw-terminal-output');
+  if (!output) return;
+
+  let lineIdx = 0;
+
+  function typeLine(line, callback) {
+    const span = document.createElement('span');
+    span.className = 'hw-line ' + line.cls;
+    output.appendChild(span);
+
+    if (line.cls === 'blank') {
+      setTimeout(callback, 180);
+      return;
+    }
+
+    let charIdx = 0;
+    const charDelay = line.cls === 'cmd' ? 42 : 16;
+
+    function typeChar() {
+      if (charIdx < line.text.length) {
+        span.textContent += line.text[charIdx++];
+        setTimeout(typeChar, charDelay + Math.random() * 18);
+      } else {
+        span.textContent += '\n';
+        setTimeout(callback, line.cls === 'cmd' ? 280 : 120);
+      }
+    }
+    typeChar();
+  }
+
+  function nextLine() {
+    if (lineIdx >= termLines.length) return;
+    typeLine(termLines[lineIdx++], nextLine);
+  }
+
+  setTimeout(nextLine, 700);
+}
+
+function initTerminalObserver() {
+  const terminal = document.querySelector('.hw-terminal');
+  if (!terminal) return;
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        runTerminal();
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  observer.observe(terminal);
+}
+
+// ── Counters (animate on scroll into view) ────────────────────────────────────
+function animateCounter(el) {
+  const target = parseInt(el.dataset.target, 10);
+  const duration = 1400;
+  const startTime = performance.now();
+
+  function step(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(2, -10 * progress);
+    el.textContent = Math.floor(eased * target);
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = target;
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function initCounters() {
+  const counters = document.querySelectorAll('.hw-stat-num');
+  if (!counters.length) return;
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        animateCounter(entry.target);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  counters.forEach(el => observer.observe(el));
+}
+
+initTerminalObserver();
+initCounters();
+</script>

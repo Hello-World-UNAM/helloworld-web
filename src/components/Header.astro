@@ -1,0 +1,47 @@
+---
+interface Props {
+  activeNav?: string;
+}
+
+const { activeNav = "" } = Astro.props;
+
+const navItems = [
+  { href: "/", label: "Inicio", key: "inicio" },
+  { href: "/oferta", label: "Oferta", key: "oferta" },
+  { href: "/ranking", label: "Ranking", key: "ranking" },
+  { href: "/unete", label: "Únete", key: "unete" },
+  { href: "/nuestro-club", label: "Nuestro Club", key: "nuestro-club" },
+];
+---
+
+<header>
+  <div class="content">
+    <div class="menu container">
+      <a href="/" class="logo">
+        <img src="/img/favicon.png" alt="Logo Club Hello World" width="28" height="28">
+        Hello <span>World</span>
+      </a>
+      <input type="checkbox" id="menu" />
+      <label for="menu" class="hamburger" aria-label="Abrir menú de navegación">
+        <svg viewBox="0 0 32 32">
+          <path class="line line-top-bottom" d="M27 10 13 10C10.8 10 9 8.2 9 6 9 3.5 10.8 2 13 2 15.2 2 17 3.8 17 6L17 26C17 28.2 18.8 30 21 30 23.2 30 25 28.2 25 26 25 23.8 23.2 22 21 22L7 22"></path>
+          <path class="line" d="M7 16 27 16"></path>
+        </svg>
+      </label>
+      <nav class="navbar" aria-label="Menú principal">
+        <ul>
+          {navItems.map((item) => (
+            <li>
+              <a 
+                href={item.href} 
+                style={activeNav === item.key ? "color:#c084fc;" : ""}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  </div>
+</header>

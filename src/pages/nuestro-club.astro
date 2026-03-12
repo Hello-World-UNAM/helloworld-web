@@ -1,0 +1,92 @@
+---
+import Layout from '@layouts/Layout.astro';
+import clubData from '@data/club.json';
+
+const { team, mission, vision, generalObjective, objectives } = clubData;
+---
+
+<Layout title="Nuestro Club | Club Hello World" activeNav="nuestro-club">
+  <!-- Hero -->
+  <section class="club-hero">
+    <h1>Nuestro Club</h1>
+    <p>Conoce quiénes somos, qué nos mueve y hacia dónde vamos como comunidad tecnológica.</p>
+    <div class="hero-divider"></div>
+  </section>
+
+  <!-- Main content -->
+  <div class="club-main">
+    <div class="container" style="max-width: 900px;">
+
+      <!-- Misión -->
+      <div class="section-card">
+        <h2><span class="icon">M</span> Misión</h2>
+        <p class="mv-declaracion">
+          &ldquo;{mission.statement}&rdquo;
+        </p>
+        <div class="mv-pilares">
+          {mission.pillars.map((pillar) => (
+            <div class="mv-pilar">
+              <i class={`bi ${pillar.icon} mv-pilar-icon`}></i>
+              <h3>{pillar.title}</h3>
+              <p>{pillar.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Visión -->
+      <div class="section-card">
+        <h2><span class="icon">V</span> Visión</h2>
+        <p class="mv-declaracion">
+          &ldquo;{vision.statement}&rdquo;
+        </p>
+        <div class="mv-pilares">
+          {vision.pillars.map((pillar) => (
+            <div class="mv-pilar">
+              <i class={`bi ${pillar.icon} mv-pilar-icon`}></i>
+              <h3>{pillar.title}</h3>
+              <p>{pillar.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Objetivo General -->
+      <div class="section-card">
+        <h2><span class="icon">O</span> Objetivo General</h2>
+        <p>{generalObjective}</p>
+      </div>
+
+      <!-- Objetivos Específicos -->
+      <div class="section-card">
+        <h2><span class="icon">★</span> Objetivos Específicos</h2>
+        <div class="objetivos-grid">
+          {objectives.map((obj, i) => (
+            <div class="objetivo-item">
+              <span class="objetivo-num">{i + 1}</span>
+              <div>
+                <h3>{obj.title}</h3>
+                <p>{obj.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Mesa Directiva -->
+      <div class="section-card">
+        <h2><span class="icon"><i class="bi bi-people-fill"></i></span> Mesa Directiva</h2>
+        <div class="directiva-grid">
+          {team.map((member) => (
+            <div class="directiva-card">
+              <img class="directiva-avatar" src={member.image} alt={member.name} width="120" height="120" loading="lazy" />
+              <h3>{member.name}</h3>
+              <span>{member.role}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</Layout>

@@ -1,0 +1,92 @@
+---
+import Layout from '@layouts/Layout.astro';
+import rankingData from '@data/ranking.json';
+
+const { participants } = rankingData;
+const medals = ["🥇", "🥈", "🥉"];
+
+// Ordenar por puntos (mayor a menor)
+const sorted = [...participants].sort((a, b) => b.pts - a.pts);
+const maxPts = sorted[0]?.pts || 1;
+const pct = (pts: number) => Math.round((pts / maxPts) * 100);
+
+// Top 3 para podio, resto para tabla
+const top3 = sorted.slice(0, 3);
+const rest = sorted.slice(3);
+
+// Orden visual del podio: 2º — 1º — 3º (DOM order; CSS order rearranges)
+const podiumOrder = [1, 0, 2];
+---
+
+<Layout title="Ranking | Club Hello World" activeNav="ranking">
+  <div class="ranking-section">
+    <h1 class="ranking-title">Ranking del Club</h1>
+    <p class="ranking-subtitle">Puntuación acumulada por competencias y actividades</p>
+
+    <!-- Podio -->
+    <div class="podium" id="podium">
+      {podiumOrder.map((i) => {
+        const p = top3[i];
+        if (!p) return null;
+        const rank = i + 1;
+        return (
+          <div class={`podium-card rank-${rank}`}>
+            <div class="podium-medal">{medals[i]}</div>
+            <div class="podium-pos">#{rank}</div>
+            <div class="podium-name">{p.name}</div>
+            <div class="podium-pts">{p.pts} <span>pts</span></div>
+            <div class="pts-bar-wrap">
+              <div class="pts-bar" data-pct={pct(p.pts)}></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- Tabla -->
+    {rest.length > 0 && (
+      <div id="table-wrap">
+        <table class="ranking-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Participante</th>
+              <th>Progreso</th>
+              <th>Puntos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rest.map((p, i) => (
+              <tr>
+                <td class="rank-num">#{i + 4}</td>
+                <td class="player-name">{p.name}</td>
+                <td class="bar-cell">
+                  <div class="table-bar-wrap">
+                    <div class="table-bar" data-pct={pct(p.pts)}></div>
+                  </div>
+                </td>
+                <td class="pts-value">{p.pts} pts</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+</Layout>
+
+<script>
+// Animar barras de progreso al cargar
+function animateBars() {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.pts-bar, .table-bar').forEach(bar => {
+        const pct = (bar as HTMLElement).dataset.pct;
+        (bar as HTMLElement).style.width = pct + '%';
+      });
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', animateBars);
+</script>
