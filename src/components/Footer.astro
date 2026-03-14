@@ -34,7 +34,12 @@ const socialLinks = [
       <span class="footer-tagline">Comunidad · Competencia · Crecimiento</span>
     </div>
     <div class="footer-logo">
-      <img src="/img/logo.png" alt="Hello World Logo" width="70" height="70" loading="lazy">
+      <a href="/" aria-label="Ir al inicio">
+        <img src="/img/logo.png" alt="Hello World Logo" width="70" height="70" loading="lazy">
+      </a>
+      <a href="https://www.aragon.unam.mx/fes-aragon/#!/inicio" target="_blank" rel="noopener noreferrer" aria-label="Sitio web FES Aragón">
+        <img src="/img/fes_aragon_logo.png" alt="FES Aragón UNAM" width="90" height="90" loading="lazy">
+      </a>
     </div>
     <div class="footer-socials">
       {socialLinks.map((social) => (

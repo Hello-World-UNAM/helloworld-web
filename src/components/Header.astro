@@ -7,10 +7,9 @@ const { activeNav = "" } = Astro.props;
 
 const navItems = [
   { href: "/", label: "Inicio", key: "inicio" },
-  { href: "/oferta", label: "Oferta", key: "oferta" },
+  { href: "/nuestro-club", label: "Nuestro Club", key: "nuestro-club" },
   { href: "/ranking", label: "Ranking", key: "ranking" },
   { href: "/unete", label: "Únete", key: "unete" },
-  { href: "/nuestro-club", label: "Nuestro Club", key: "nuestro-club" },
 ];
 ---
 
@@ -34,7 +33,7 @@ const navItems = [
             <li>
               <a 
                 href={item.href} 
-                style={activeNav === item.key ? "color:#c084fc;" : ""}
+                class={activeNav === item.key ? "nav-active" : ""}
               >
                 {item.label}
               </a>
