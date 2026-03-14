@@ -2,24 +2,24 @@
 import Layout from '@layouts/Layout.astro';
 
 const stats = [
-  { target: 40, suffix: "+", label: "Miembros" },
-  { target: 15, suffix: "", label: "Hackathones" },
-  { target: 6, suffix: "", label: "1er Lugares" },
-  { target: 3, suffix: "", label: "Cursos Activos" },
+  { target: 20, suffix: "+", label: "miembros" },
+  { target: 3, suffix: "", label: "hackatones" },
+  { target: 4, suffix: "", label: "proyectos en curso" },
+  { target: 3, suffix: "", label: "cursos activos" },
 ];
 
 const termLines = [
-  { cls: 'cmd', text: '$ ./hello_world --info' },
-  { cls: 'out', text: '❯ Club tecnológico de élite · FES Aragón UNAM' },
+  { cls: 'cmd', text: '$ ./hello_world --identity' },
+  { cls: 'out', text: '❯ Equipo de alto rendimiento tecnológico · FES Aragón' },
   { cls: 'blank', text: '' },
-  { cls: 'cmd', text: '$ ./hello_world --stack' },
-  { cls: 'out', text: '❯ Python · JavaScript · C++ · AI/ML · Web Dev' },
+  { cls: 'cmd', text: '$ ./hello_world --focus' },
+  { cls: 'out', text: '❯ Hackatones · Desarrollo · IA · Liderazgo' },
   { cls: 'blank', text: '' },
   { cls: 'cmd', text: '$ ./hello_world --mission' },
-  { cls: 'out', text: '❯ "Competir y ganar los retos más grandes"' },
+  { cls: 'out', text: '❯ "Impulsar la excelencia y competitividad estudiantil"' },
   { cls: 'blank', text: '' },
   { cls: 'cmd', text: '$ ./hello_world --status' },
-  { cls: 'out', text: '● ACTIVO  ·  Ciclo 2025–2026' },
+  { cls: 'out', text: '● ACTIVO  ·  Proyección nacional e internacional' },
 ];
 ---
 
@@ -43,7 +43,7 @@ const termLines = [
         </p>
         <div class="hw-hero-actions">
           <a href="/unete" class="hw-btn hw-btn-primary">Aplica Ahora ➔</a>
-          <a href="/oferta" class="hw-btn hw-btn-secondary">Ver Oferta</a>
+          <a href="/nuestro-club" class="hw-btn hw-btn-secondary">Sobre nosotros</a>
         </div>
       </div>
       
