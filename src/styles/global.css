@@ -49,7 +49,20 @@ header {
 }
 
 .logo {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    "Noto Sans",
+    "Liberation Sans",
+    Arial,
+    sans-serif,
+    "Apple Color Emoji",
+    "Segoe UI Emoji",
+    "Segoe UI Symbol",
+    "Noto Color Emoji";
   font-size: 15px;
   font-weight: 900;
   text-transform: uppercase;
@@ -104,7 +117,8 @@ header {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 3;
-  transition: stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
+  transition:
+    stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
     stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -128,7 +142,7 @@ header {
 }
 
 .menu .navbar ul li a {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 0.82rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -137,7 +151,11 @@ header {
   color: #fff;
   border-radius: 0;
   border: 2px solid transparent;
-  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
   position: relative;
 }
 
@@ -208,24 +226,35 @@ header {
   border-top: 4px solid #000;
   background: #fff;
   box-shadow: 0 -5px 0 #6225e6;
-  padding: 28px 40px 20px;
+  padding: 40px 40px 20px;
 }
 
 .footer-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1200px;
+  display: grid;
+  grid-template-columns: 1.2fr auto auto;
+  gap: 40px;
+  max-width: 1100px;
   margin: 0 auto;
-  flex-wrap: wrap;
-  gap: 20px;
+  align-items: start;
 }
 
-.footer-brand {
-  flex: 1;
+/* -- Columna Brand -- */
+.footer-col-brand {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+}
+
+.footer-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.footer-logo-row img {
+  border: 3px solid #000;
+  box-shadow: 3px 3px 0 #6225e6;
+  border-radius: 12px;
 }
 
 .footer-name {
@@ -241,55 +270,86 @@ header {
 }
 
 .footer-tagline {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #999;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
 
-.footer-logo {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
+/* -- Headings de columna -- */
+.footer-heading {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #6225e6;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #6225e6;
+  padding-bottom: 6px;
+  display: inline-block;
 }
 
-.footer-logo img {
-  max-height: 90px;
-  object-fit: contain;
+/* -- Columna Nav -- */
+.footer-col-nav {
+  text-align: center;
+}
+
+.footer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-nav a {
+  color: #2d002e;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 0.15s;
+}
+
+.footer-nav a:hover {
+  color: #6225e6;
+}
+
+/* -- Columna Connect -- */
+.footer-col-connect {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .footer-socials {
-  flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 14px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .social-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: 4px solid #000;
+  width: 42px;
+  height: 42px;
+  border-radius: 0;
+  border: 3px solid #000;
   color: #fff;
   text-decoration: none;
-  box-shadow: 4px 4px 0px #000;
-  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 3px 3px 0px #000;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .social-btn svg {
-  transform: scale(1.1);
+  transform: scale(1);
 }
 
 .social-btn:hover {
-  transform: translate(-3px, -3px);
-  box-shadow: 7px 7px 0px #000;
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px #000;
 }
 
 .social-btn:active {
@@ -297,17 +357,57 @@ header {
   box-shadow: 0px 0px 0px #000;
 }
 
+.footer-fes-link img {
+  max-height: 70px;
+  object-fit: contain;
+}
+
+/* -- Columna Instituciones -- */
+.footer-col-inst {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* -- Copyright -- */
 .footer-copy {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #6225e6;
-  width: 100%;
   text-align: center;
   border-top: 2px solid #eee;
   padding-top: 16px;
-  margin-top: 8px;
+  margin-top: 24px;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* -- Responsive footer -- */
+@media (max-width: 768px) {
+  .footer-inner {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 24px;
+  }
+  .footer-logo-row {
+    justify-content: center;
+  }
+  .footer-socials {
+    justify-content: center;
+  }
+  .footer-col-nav {
+    text-align: center;
+  }
+  .footer-col-inst {
+    align-items: center;
+  }
+  .footer-fes-link {
+    display: flex;
+    justify-content: center;
+  }
 }
 
 /* ── UTILIDADES ───────────────────────────────────────────────────────────── */
@@ -361,7 +461,7 @@ header {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-weight: 700;
   text-transform: uppercase;
   font-size: 0.8rem;
@@ -404,7 +504,7 @@ header {
 .hw-badge {
   background: #c4b5fd;
   color: #000;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 1px;
@@ -418,7 +518,7 @@ header {
 }
 
 .hw-hero-title {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: clamp(3rem, 5vw, 4.5rem);
   font-weight: 900;
   color: #000;
@@ -440,7 +540,7 @@ header {
 }
 
 .hw-hero-desc {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 1.15rem;
   color: #444;
   line-height: 1.6;
@@ -455,14 +555,16 @@ header {
 }
 
 .hw-btn {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-weight: 800;
   font-size: 1.1rem;
   padding: 14px 28px;
   text-decoration: none;
   text-transform: uppercase;
   border: 4px solid #000;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   display: inline-block;
 }
 
@@ -655,7 +757,7 @@ header {
   box-shadow: 8px 8px 0 #6225e6;
   border-radius: 10px;
   overflow: hidden;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   min-height: 320px;
 }
 
@@ -682,7 +784,7 @@ header {
   font-weight: 700;
   color: #666;
   margin-left: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
   flex: 1;
   text-align: center;
 }
@@ -750,7 +852,9 @@ header {
   box-shadow: 6px 6px 0 #6225e6;
   padding: 26px 16px 20px;
   text-align: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   cursor: default;
 }
 
@@ -771,14 +875,14 @@ header {
   font-weight: 900;
   color: #6225e6;
   line-height: 1;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
 }
 
 .hw-stat-suffix {
   font-size: 1.8rem;
   font-weight: 900;
   color: #6225e6;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: "Courier New", Courier, monospace;
   line-height: 1;
 }
 
@@ -836,37 +940,6 @@ header {
    ESTILOS PÁGINA: NUESTRO CLUB
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* -- Sección hero -- */
-.club-hero {
-  background-color: #6225e6;
-  padding: 60px 20px 40px;
-  text-align: center;
-  color: white;
-}
-
-.club-hero h1 {
-  font-size: 2.5rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-  margin-bottom: 10px;
-}
-
-.club-hero p {
-  font-size: 1.1rem;
-  opacity: 0.8;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.hero-divider {
-  width: 60px;
-  height: 4px;
-  background-color: white;
-  margin: 18px auto 0;
-  border-radius: 2px;
-  opacity: 0.6;
-}
-
 /* -- Contenido principal -- */
 .club-main {
   background-color: #f9f3ff;
@@ -876,8 +949,13 @@ header {
 .section-card {
   background-color: white;
   padding: 32px 36px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
   border: 4px solid black;
+  box-shadow: 8px 8px 0px #6225e6;
+  transition: box-shadow 0.2s ease;
+}
+
+.section-card:hover {
   box-shadow: 12px 12px 0px #6225e6;
 }
 
@@ -894,14 +972,15 @@ header {
 .section-card h2 .icon {
   background-color: #6225e6;
   color: white;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 1.1rem;
   flex-shrink: 0;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0 #000;
 }
 
 .section-card p {
@@ -918,23 +997,39 @@ header {
   margin-top: 4px;
 }
 
+.objetivos-grid .objetivo-item:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  max-width: 50%;
+  justify-self: center;
+}
+
 .objetivo-item {
   background-color: #f9f3ff;
-  border-radius: 10px;
+  border-radius: 0;
+  border: 3px solid #000;
   padding: 16px 18px;
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+  box-shadow: 4px 4px 0 #6225e6;
+}
+
+.objetivo-item:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #6225e6;
 }
 
 .objetivo-num {
   background-color: #6225e6;
   color: white;
-  font-weight: 700;
-  font-size: 0.85rem;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.9rem;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -963,37 +1058,204 @@ header {
   margin-top: 4px;
 }
 
-.directiva-card {
-  background-color: #f9f3ff;
-  border-radius: 10px;
-  padding: 18px 20px;
+/* -- Flip Card -- */
+.flip-card {
+  perspective: 1000px;
+  height: 280px;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+}
+
+/* Hover flip desactivado — solo se activa por click (botón +) */
+/* .flip-card:hover .flip-card-inner { transform: rotateY(180deg); } */
+
+/* Tap/click flip — toggled via JS */
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 3px solid #000;
+  box-shadow: 5px 5px 0 #6225e6;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+
+.flip-card-front {
+  background-color: #f9f3ff;
 }
 
 .directiva-avatar {
-  width: 80px;
-  height: 80px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
-  margin: 0 auto 12px;
-  border: 3px solid #6225e6;
+  margin: 0 auto 16px;
+  border: 4px solid #000;
+  box-shadow: 4px 4px 0 #6225e6;
+  transform: translateZ(0);
+  image-rendering: auto;
 }
 
-.directiva-card h3 {
+.flip-card-back {
+  background-color: #f9f3ff;
+  transform: rotateY(180deg);
+  justify-content: center;
+  gap: 16px;
+}
+
+.flip-card-front h3 {
   color: #2d002e;
   font-weight: 700;
   font-size: 0.95rem;
   margin-bottom: 4px;
 }
 
-.directiva-card span {
+.flip-card-front span:not(.flip-btn-mobile) {
   font-size: 0.82rem;
-  color: #6225e6;
-  font-weight: 600;
-  background-color: #ede0f5;
-  padding: 2px 10px;
-  border-radius: 20px;
+  color: white;
+  font-weight: 700;
+  background-color: #6225e6;
+  padding: 4px 12px;
+  border: 2px solid #000;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* -- Bio en reverso -- */
+.flip-bio {
+  color: #2d002e;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+  border-left: 3px solid #6225e6;
+  padding-left: 12px;
+  text-align: left;
+}
+
+/* -- Links sociales -- */
+.flip-socials {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.flip-social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: #fbbf24;
+  color: #000;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0 #000;
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.flip-social-link:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 #000;
+}
+
+.flip-social-placeholder {
+  display: flex;
+  gap: 16px;
+  opacity: 0.3;
+  color: #2d002e;
+}
+
+/* -- Botón + para flip -- */
+.flip-btn-mobile {
+  display: block;
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  background-color: #6225e6;
+  color: white;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.flip-btn-mobile:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 #000;
+}
+
+.flip-btn-back {
+  background-color: #fbbf24;
+  color: #000;
+}
+
+@media (max-width: 900px) {
+  .flip-card:hover .flip-card-inner {
+    transform: none;
+  }
+  .flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+}
+
+/* -- Objetivo General Dinámico -- */
+.objetivo-general-block p {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.6;
+  color: #111;
+  text-align: center;
+  padding: 24px;
+  background: #f0e6ff;
+  border: 3px solid black;
+  box-shadow: 6px 6px 0 #6225e6;
+  position: relative;
+  margin-top: 20px;
+}
+
+.objetivo-general-block p::before {
+  content: "✦";
+  position: absolute;
+  bottom: -12px;
+  right: -12px;
+  background: #6225e6;
+  color: white;
+  border: 2px solid #000;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
 }
 
 /* -- Misión / Visión: Declaración + Pilares -- */
@@ -1043,12 +1305,233 @@ header {
   line-height: 1.5;
 }
 
+/* -- Call to Action (CTA) -- */
+.cta-section {
+  background-color: white;
+  border: 4px solid black;
+  box-shadow: 10px 10px 0 #6225e6;
+  padding: 48px 36px;
+  text-align: center;
+  margin-top: 16px;
+  background-image: radial-gradient(rgba(0, 0, 0, 0.1) 2px, transparent 2px);
+  background-size: 20px 20px;
+}
+
+.cta-section h2 {
+  font-family: "DM Sans", sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #111;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0 white;
+  margin-bottom: 16px;
+}
+
+.cta-section p {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111;
+  max-width: 600px;
+  margin: 0 auto 32px;
+  line-height: 1.6;
+}
+
+.cta-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* -- Spacer Intro Desktop -- */
+.hero-spacer-desktop {
+  display: none;
+  position: relative;
+}
+
+
+/* -- Galería / Comunidad en acción (Scattered Polaroids) -- */
+.scattered-gallery {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  height: 480px;
+  margin: 60px auto 20px;
+}
+
+.scattered-photo {
+  position: absolute;
+  width: 250px;
+  background-color: white;
+  border: 4px solid black;
+  padding: 12px 12px 18px;
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 1);
+  transition:
+    transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    box-shadow 0.3s,
+    z-index 0s;
+  z-index: 1;
+}
+
+.scattered-photo:hover {
+  transform: scale(1.08) rotate(0deg) !important;
+  box-shadow: 16px 16px 0 #fbbf24;
+  z-index: 100 !important;
+}
+
+.scattered-photo img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  border: 2px solid #000;
+  display: block;
+}
+
+
+
+/* Cinta adhesiva (Tape) */
+.scattered-photo::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-3deg);
+  width: 50px;
+  height: 22px;
+  background-color: #e2fca4;
+  border: 2px solid #000;
+  box-shadow: 2px 2px 0 #000;
+  z-index: 1;
+}
+
+/* Posiciones específicas para efecto de tira de fotos desordenada */
+.sp-1 {
+  left: 2%;
+  top: 5%;
+  transform: rotate(-6deg);
+  z-index: 2;
+}
+
+.sp-1::before {
+  background-color: #fbbf24;
+  transform: translateX(-50%) rotate(4deg);
+}
+
+.sp-2 {
+  left: 26%;
+  top: 15%;
+  transform: rotate(4deg);
+  z-index: 1;
+}
+
+.sp-2::before {
+  background-color: #6225e6;
+}
+
+.sp-3 {
+  right: 26%;
+  top: 6%;
+  transform: rotate(-3deg);
+  z-index: 3;
+}
+
+.sp-3::before {
+  background-color: #fbbf24;
+  transform: translateX(-50%) rotate(-5deg);
+}
+
+.sp-4 {
+  right: 2%;
+  top: 14%;
+  transform: rotate(5deg);
+  z-index: 4;
+}
+
 /* -- Responsive -- */
-@media (max-width: 768px) {
-  .club-hero h1 {
-    font-size: 1.8rem;
+@media (min-width: 1400px) {
+  .hero-spacer-desktop {
+    display: block;
+    height: 400px;
+    width: 100%;
   }
 
+  .club-main {
+    position: relative;
+  }
+
+  .gallery-responsive-wrapper {
+    position: absolute;
+    /* top and height son manipulados dinámicamente por JS */
+    left: 0;
+    width: 100%;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .scattered-gallery {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    max-width: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .scattered-photo {
+    /* Quitamos el posicionamiento absoluto rígido y lo vinculamos a Flex Centro */
+    position: absolute;
+    left: 50% !important;
+    top: 0% !important;
+    right: auto !important;
+    bottom: auto !important;
+
+    /* El transform usa CSS vars manipuladas en tiempo real por el observer de scroll */
+    transform: translate(calc(-50% + var(--anim-x, 0px)), var(--anim-y, 0px)) rotate(var(--anim-r, 0deg)) scale(var(--anim-s, 0.8));
+    transition:
+      transform 0.1s ease-out,
+      box-shadow 0.3s;
+    pointer-events: auto;
+    /* Reactivar hover aunque el wrapper esté desactivado */
+  }
+
+  /* Animación Hover que respeta la posición en tiempo real obtenida de JS */
+  .scattered-photo:hover {
+    transform: translate(calc(-50% + var(--anim-x, 0px)), var(--anim-y, 0px)) rotate(0deg) scale(1.05) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .scattered-gallery {
+    height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 24px;
+    margin: 40px auto;
+  }
+
+  .scattered-photo {
+    position: relative;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: 240px;
+    margin: 0 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .scattered-photo {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
   .objetivos-grid {
     grid-template-columns: 1fr;
   }
@@ -1077,7 +1560,7 @@ header {
 }
 
 .events-title {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 2.5rem;
   font-weight: 700;
   color: black;
@@ -1088,7 +1571,7 @@ header {
 }
 
 .events-subtitle {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 2rem;
   font-weight: 900;
   color: black;
@@ -1127,21 +1610,23 @@ header {
   scroll-snap-align: start;
   background: white;
   border: 4px solid black;
-  box-shadow: 8px 8px 0px #4E006A;
+  box-shadow: 8px 8px 0px #4e006a;
   padding: 28px;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  font-family: 'DM Sans', sans-serif;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+  font-family: "DM Sans", sans-serif;
 }
 
 .card:hover {
   transform: translate(-4px, -4px);
-  box-shadow: 12px 12px 0px #4E006A;
+  box-shadow: 12px 12px 0px #4e006a;
 }
 
 .card-tag {
   display: inline-block;
-  background: #4E006A;
+  background: #4e006a;
   color: white;
   font-size: 12px;
   font-weight: 700;
@@ -1152,7 +1637,7 @@ header {
 }
 
 .card-title {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 1.3rem;
   font-weight: 700;
   color: #111;
@@ -1205,7 +1690,9 @@ header {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
   z-index: 10;
 }
 
@@ -1256,7 +1743,7 @@ header {
 }
 
 .ranking-title {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 2.5rem;
   font-weight: 900;
   color: black;
@@ -1267,7 +1754,7 @@ header {
 }
 
 .ranking-subtitle {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   text-align: center;
   color: rgba(0, 0, 0, 0.5);
   font-size: 1.05rem;
@@ -1289,9 +1776,11 @@ header {
   border: 4px solid black;
   padding: 20px 18px 16px;
   text-align: center;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
   cursor: default;
 }
 
@@ -1338,7 +1827,7 @@ header {
 }
 
 .podium-pos {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -1348,7 +1837,7 @@ header {
 }
 
 .podium-name {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 1.05rem;
   font-weight: 700;
   color: #111;
@@ -1387,7 +1876,7 @@ header {
 .ranking-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
 }
 
 .ranking-table thead tr {
@@ -1411,7 +1900,9 @@ header {
 .ranking-table tbody tr {
   background: white;
   border-bottom: 3px solid black;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .ranking-table tbody tr:hover {
@@ -1425,7 +1916,7 @@ header {
 }
 
 .rank-num {
-  font-family: 'Playfair Display', serif;
+  font-family: "Playfair Display", serif;
   font-size: 1.1rem;
   font-weight: 700;
   color: #111;
@@ -1468,7 +1959,7 @@ header {
 .empty-state {
   text-align: center;
   padding: 40px 20px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   color: #888;
   font-size: 0.9rem;
   border: 3px dashed #555;
@@ -1552,7 +2043,7 @@ header {
 }
 
 .contact-hero h1 {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 2.8rem;
   font-weight: 900;
   color: white;
@@ -1561,11 +2052,13 @@ header {
 }
 
 .contact-hero p {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.95);
   max-width: 520px;
   margin: 14px auto 0;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-weight: 500;
   line-height: 1.6;
+  letter-spacing: 0.02em;
 }
 
 /* -- Layout principal -- */
@@ -1617,8 +2110,20 @@ header {
   transform: scale(1.05);
 }
 
+@media (max-width: 768px) {
+  .contact-robot {
+    position: absolute;
+    bottom: -40px;
+    left: 10px;
+    right: auto;
+  }
+  .contact-robot img {
+    width: 140px;
+  }
+}
+
 .modern-form h2 {
-  font-family: 'Arial Black', sans-serif;
+  font-family: "Arial Black", sans-serif;
   text-transform: uppercase;
   margin-bottom: 10px;
   color: #6225e6;
@@ -1746,7 +2251,9 @@ header {
   border: 4px solid black;
   box-shadow: 8px 8px 0px #6225e6;
   padding: 28px 24px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 }
 
 .contact-card:hover {
@@ -1762,7 +2269,7 @@ header {
 }
 
 .contact-card h3 {
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-size: 1rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -1816,7 +2323,10 @@ header {
   font-weight: 700;
   font-size: 0.88rem;
   color: #1a1a1a;
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s,
+    background 0.15s;
 }
 
 .contact-social-link:hover {
@@ -1926,5 +2436,6 @@ header {
 
   .contact-form-col {
     padding: 28px 20px;
+    padding-bottom: 100px;
   }
 }

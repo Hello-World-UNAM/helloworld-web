@@ -1,4 +1,7 @@
 ---
+import Layout from '@layouts/Layout.astro';
+import clubData from '@data/club.json';
+
 const socialLinks = [
   {
     href: "https://www.instagram.com/helloworld_unam/",
@@ -29,32 +32,53 @@ const socialLinks = [
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <div class="footer-brand">
-      <div class="footer-name">Hello <span>World</span></div>
-      <span class="footer-tagline">Comunidad · Competencia · Crecimiento</span>
-    </div>
-    <div class="footer-logo">
-      <a href="/" aria-label="Ir al inicio">
-        <img src="/img/logo.png" alt="Hello World Logo" width="70" height="70" loading="lazy">
-      </a>
-      <a href="https://www.aragon.unam.mx/fes-aragon/#!/inicio" target="_blank" rel="noopener noreferrer" aria-label="Sitio web FES Aragón">
-        <img src="/img/fes_aragon_logo.png" alt="FES Aragón UNAM" width="90" height="90" loading="lazy">
-      </a>
-    </div>
-    <div class="footer-socials">
-      {socialLinks.map((social) => (
-        <a 
-          href={social.href} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          aria-label={social.label}
-          class="social-btn"
-          style={`background-color: ${social.bgColor};`}
-        >
-          <Fragment set:html={social.icon} />
+    <!-- Columna izquierda: Brand + Sociales -->
+    <div class="footer-col footer-col-brand">
+      <div class="footer-logo-row">
+        <a href="/" aria-label="Ir al inicio">
+          <img src="/img/logo.png" alt="Hello World Logo" width="56" height="56" loading="lazy">
         </a>
-      ))}
+        <div>
+          <div class="footer-name">Hello <span>World</span></div>
+          <span class="footer-tagline">Comunidad · Competencia · Crecimiento</span>
+        </div>
+      </div>
+      <div class="footer-socials">
+        {socialLinks.map((social) => (
+          <a 
+            href={social.href} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            aria-label={social.label}
+            class="social-btn"
+            style={`background-color: ${social.bgColor};`}
+          >
+            <Fragment set:html={social.icon} />
+          </a>
+        ))}
+      </div>
     </div>
-    <p class="footer-copy">© 2026 Hello World University Technology Club</p>
+
+    <!-- Columna central: Links rápidos -->
+    <div class="footer-col footer-col-nav">
+      <h4 class="footer-heading">Navegación</h4>
+      <nav class="footer-nav">
+        <a href="/">Inicio</a>
+        <a href="/nuestro-club">Sobre Nosotros</a>
+        <a href="/ranking">Leaderboard</a>
+        <a href="/contacto">Contacto</a>
+      </nav>
+    </div>
+
+    <!-- Columna derecha: Instituciones -->
+    <div class="footer-col footer-col-inst">
+      <h4 class="footer-heading">Instituciones</h4>
+      <a href="https://www.aragon.unam.mx/fes-aragon/#!/inicio" target="_blank" rel="noopener noreferrer" class="footer-fes-link" aria-label="Sitio web FES Aragón">
+        <img src="/img/fes_aragon_logo.png" alt="FES Aragón UNAM" width="80" height="80" loading="lazy">
+      </a>
+    </div>
   </div>
+
+  <!-- Copyright -->
+  <p class="footer-copy">© 2026 Hello World University Technology Club</p>
 </footer>

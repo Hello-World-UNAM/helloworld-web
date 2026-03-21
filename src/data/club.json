@@ -3,59 +3,71 @@
     {
       "name": "Ana Guadalupe Martínez Colón",
       "role": "Presidenta",
-      "image": "/img/ana.jpeg"
+      "image": "/img/ana.jpeg",
+      "bio": "Ing. en Computación · Líder estratégica. Apasionada por la gestión de proyectos tecnológicos y la innovación educativa. Impulsa al equipo a superar límites.",
+      "github": "https://github.com/anagmc059",
+      "linkedin": "https://www.linkedin.com/in/ana-mart%C3%ADnez-12359331a/"
     },
     {
       "name": "Jesús Sebastián Vázquez Zarco",
       "role": "Vicepresidente",
-      "image": "/img/sebas.jpeg"
+      "image": "/img/sebas.jpeg",
+      "bio": "Ing. en Computación · Full Stack Dev. Desarrollador con experiencia en frontend y entusiasta del software libre. Cree en liderar con impacto y en crear tecnología abierta para la comunidad.",
+      "github": "https://github.com/itsebasvz",
+      "linkedin": "https://www.linkedin.com/in/jsebastianvz"
     },
     {
       "name": "Enrique Emiliano Cano García",
       "role": "Secretario Técnico",
-      "image": "/img/cano.jpeg"
+      "image": "/img/cano.jpeg",
+      "bio": "Ing. en Computación · Backend Dev. Enfocado en arquitecturas robustas y resolución de problemas complejos. La eficiencia es su filosofía de código.",
+      "github": "https://github.com/kno4",
+      "linkedin": "https://www.linkedin.com/in/enrique-cano-garc%C3%ADa-2a3012227/"
     },
     {
-      "name": "Eric Leonardo Rosales Sánchez",
-      "role": "Dir. Estrategia y Planeación",
-      "image": "/img/eric.jpeg"
+      "name": "Jessica Almaguer Paredes",
+      "role": "Dir. de Comunicación",
+      "image": "/img/jess.jpg",
+      "bio": "Ing. en Computación · Comunicación y Diseño. Conecta al club con el mundo a través de estrategias de difusión y contenido digital creativo.",
+      "github": "",
+      "linkedin": ""
     }
   ],
   "mission": {
-    "statement": "Formamos equipos de alto rendimiento tecnológico en la FES Aragón, impulsando habilidades técnicas, pensamiento crítico y colaboración a través de hackatones, cursos y proyectos reales.",
+    "statement": "Formamos equipos de alto rendimiento tecnológico en la FES Aragón, UNAM, impulsando habilidades técnicas, pensamiento crítico y colaboración a través de hackatones, cursos y proyectos reales.",
     "pillars": [
       {
-        "icon": "bi-trophy-fill",
+        "icon": "trophy",
         "title": "Alto Rendimiento",
         "description": "Equipos preparados para hackatones y desafíos de programación de nivel nacional"
       },
       {
-        "icon": "bi-code-slash",
+        "icon": "code",
         "title": "Habilidades Técnicas",
         "description": "Talleres y cursos de programación, IA, desarrollo y pensamiento crítico"
       },
       {
-        "icon": "bi-rocket-takeoff-fill",
+        "icon": "rocket",
         "title": "Impacto Profesional",
         "description": "Preparación e inserción real en el ámbito tecnológico profesional"
       }
     ]
   },
   "vision": {
-    "statement": "Ser el referente universitario en México para el desarrollo de talento tecnológico competitivo, proyectando a nuestros miembros al escenario nacional e internacional.",
+    "statement": "Ser el referente en la UNAM para el desarrollo de talento tecnológico competitivo, proyectando a nuestros miembros al escenario nacional e internacional.",
     "pillars": [
       {
-        "icon": "bi-patch-check-fill",
+        "icon": "check",
         "title": "Excelencia Técnica",
         "description": "Reconocidos por innovación, trabajo colaborativo y dominio técnico"
       },
       {
-        "icon": "bi-people-fill",
+        "icon": "users",
         "title": "Crecimiento Integral",
         "description": "Miembros que se desarrollan técnica y profesionalmente dentro del club"
       },
       {
-        "icon": "bi-globe-americas",
+        "icon": "globe",
         "title": "Proyección Nacional",
         "description": "La universidad como referente en competencias tecnológicas a nivel país"
       }
