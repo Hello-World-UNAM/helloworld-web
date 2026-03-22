@@ -46,9 +46,31 @@ const sorted = [...participants].sort((a, b) => b.pts - a.pts);
 const maxPts = sorted[0]?.pts || 1;
 const pct = (pts: number) => Math.round((pts / maxPts) * 100);
 
-// Top 3 para podio, resto para tabla
-const top3 = sorted.slice(0, 3);
-const rest = sorted.slice(3);
+// Agrupar por puntos para manejar empates (Compartir Podio)
+const groupedByPts = new Map<number, typeof sorted>();
+sorted.forEach(p => {
+  if (!groupedByPts.has(p.pts)) groupedByPts.set(p.pts, []);
+  groupedByPts.get(p.pts)!.push(p);
+});
+
+// Extraer los puntajes únicos, ordenados de mayor a menor
+const uniquePts = Array.from(groupedByPts.keys()).sort((a, b) => b - a);
+
+// Estructurar el Top 3 de puntajes para el podio
+const top3Ranks = [0, 1, 2].map(i => {
+  const pts = uniquePts[i];
+  if (pts === undefined) return null;
+  return { rank: i + 1, pts, participants: groupedByPts.get(pts)! };
+});
+
+// El resto de los participantes para la tabla (partiendo del lugar 4)
+const restRanks = [];
+for (let i = 3; i < uniquePts.length; i++) {
+  const pts = uniquePts[i];
+  groupedByPts.get(pts)!.forEach(p => {
+    restRanks.push({ rank: i + 1, ...p });
+  });
+}
 
 // Orden visual del podio: 2º — 1º — 3º (DOM order; CSS order rearranges)
 const podiumOrder = [1, 0, 2];
@@ -62,12 +84,11 @@ const podiumOrder = [1, 0, 2];
     <!-- Podio -->
     <div class="podium" id="podium">
       {podiumOrder.map((i) => {
-        const p = top3[i];
-        if (!p) return null;
-        const rank = i + 1;
+        const group = top3Ranks[i];
+        if (!group) return null;
         const color = medalColors[i];
         return (
-          <div class={`podium-card rank-${rank}`}>
+          <div class={`podium-card rank-${group.rank}`}>
             <div class="podium-medal">
               <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={color} stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
@@ -79,11 +100,13 @@ const podiumOrder = [1, 0, 2];
                 <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
               </svg>
             </div>
-            <div class="podium-pos">#{rank}</div>
-            <div class="podium-name">{p.name}</div>
-            <div class="podium-pts">{p.pts} <span>pts</span></div>
+            <div class="podium-pos">#{group.rank}</div>
+            <div class="podium-name">
+              {group.participants.map(p => p.name).join(' & ')}
+            </div>
+            <div class="podium-pts">{group.pts} <span>pts</span></div>
             <div class="pts-bar-wrap">
-              <div class="pts-bar" data-pct={pct(p.pts)}></div>
+              <div class="pts-bar" data-pct={pct(group.pts)}></div>
             </div>
           </div>
         );
@@ -91,7 +114,7 @@ const podiumOrder = [1, 0, 2];
     </div>
 
     <!-- Tabla -->
-    {rest.filter(p => p.pts > 0).length > 0 && (
+    {restRanks.filter(p => p.pts > 0).length > 0 && (
       <div id="ranking-list-section">
         <div id="table-wrap" class="table-collapsed">
           <table class="ranking-table">
@@ -104,9 +127,9 @@ const podiumOrder = [1, 0, 2];
               </tr>
             </thead>
             <tbody>
-              {rest.filter(p => p.pts > 0).map((p, i) => (
+              {restRanks.filter(p => p.pts > 0).map((p, i) => (
                 <tr class={i >= 2 ? "extra-row" : ""}>
-                  <td class="rank-num">#{i + 4}</td>
+                  <td class="rank-num">#{p.rank}</td>
                   <td class="player-name">{p.name}</td>
                   <td class="bar-cell">
                     <div class="table-bar-wrap">
@@ -120,7 +143,7 @@ const podiumOrder = [1, 0, 2];
           </table>
         </div>
         
-        {rest.filter(p => p.pts > 0).length > 2 && (
+        {restRanks.filter(p => p.pts > 0).length > 2 && (
           <div class="btn-wrap">
             <button id="show-more-btn" class="hw-btn hw-btn-secondary">Ver más miembros ▼</button>
           </div>
@@ -157,14 +180,8 @@ function animateBars() {
         const pct = parseInt(hBar.dataset.pct || '0', 10);
         hBar.style.width = pct + '%';
         
-        // Colores según rango de completitud
-        if (pct >= 75) {
-          hBar.style.backgroundColor = '#22c55e'; // Verde
-        } else if (pct >= 30) {
-          hBar.style.backgroundColor = '#f59e0b'; // Naranja/Amarillo
-        } else {
-          hBar.style.backgroundColor = '#ef4444'; // Rojo neo-brutalista
-        }
+        // Colores: Siempre verde
+        hBar.style.backgroundColor = '#22c55e'; // Verde
       });
     });
   });

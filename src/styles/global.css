@@ -1786,6 +1786,9 @@ header {
     transform 0.2s,
     box-shadow 0.2s;
   cursor: default;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .podium-card:hover {
@@ -1796,11 +1799,29 @@ header {
   width: 210px;
   box-shadow: 10px 10px 0px #c8a96e;
   order: 2;
-  padding-top: 28px;
+}
+
+.podium-card.rank-1::before {
+  content: '';
+  display: block;
+  height: 18px;
 }
 
 .podium-card.rank-1:hover {
   box-shadow: 14px 14px 0px #c8a96e;
+}
+
+.podium-card.rank-1 .podium-medal svg {
+  width: 48px;
+  height: 48px;
+}
+
+.podium-card.rank-1 .podium-name {
+  font-size: 1.18rem;
+}
+
+.podium-card.rank-1 .podium-pts {
+  font-size: 1.7rem;
 }
 
 .podium-card.rank-2 {
@@ -1809,8 +1830,27 @@ header {
   order: 1;
 }
 
+.podium-card.rank-2::before {
+  content: '';
+  display: block;
+  height: 8px;
+}
+
 .podium-card.rank-2:hover {
   box-shadow: 12px 12px 0px #6eb5c8;
+}
+
+.podium-card.rank-2 .podium-medal svg {
+  width: 44px;
+  height: 44px;
+}
+
+.podium-card.rank-2 .podium-name {
+  font-size: 1.1rem;
+}
+
+.podium-card.rank-2 .podium-pts {
+  font-size: 1.6rem;
 }
 
 .podium-card.rank-3 {
@@ -1847,6 +1887,10 @@ header {
   color: #111;
   margin-bottom: 10px;
   word-break: break-word;
+  min-height: 2.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .podium-pts {
@@ -1999,6 +2043,10 @@ header {
     width: 90% !important; /* Para que no toque las orillas y no se vea tan toscamente ancho */
     max-width: 320px; /* Un tope máximo para pantallas medianas-pequeñas */
     padding: 16px 12px 14px !important;
+  }
+
+  .podium-card::before {
+    display: none !important;
   }
   
   .podium-card .podium-medal svg {
