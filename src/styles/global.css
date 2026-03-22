@@ -13,6 +13,10 @@
   list-style: none;
 }
 
+img {
+  color: transparent;
+}
+
 body {
   font-family: sans-serif;
   background-color: #fff;
