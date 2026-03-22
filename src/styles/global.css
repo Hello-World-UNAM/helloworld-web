@@ -1874,7 +1874,7 @@ header {
   height: 100%;
   background: #22c55e;
   width: 0%;
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 1s ease;
 }
 
 .ranking-table {
@@ -1920,9 +1920,14 @@ header {
 }
 
 .rank-num {
-  font-family: "Playfair Display", serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 800;
   color: #111;
   width: 40px;
 }
@@ -1949,7 +1954,7 @@ header {
   height: 100%;
   background: #22c55e;
   width: 0%;
-  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1), background-color 1s ease;
 }
 
 .pts-value {
@@ -1983,27 +1988,45 @@ header {
     margin-bottom: 32px;
   }
 
-  /* Podium: stack vertically in correct order (1st, 2nd, 3rd) */
+  /* Podium: stack vertically in correct order (1st, 2nd, 3rd) con un tamaño más ajustado */
   .podium {
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
   }
 
   .podium-card {
-    width: 100% !important;
+    width: 90% !important; /* Para que no toque las orillas y no se vea tan toscamente ancho */
+    max-width: 320px; /* Un tope máximo para pantallas medianas-pequeñas */
+    padding: 16px 12px 14px !important;
+  }
+  
+  .podium-card .podium-medal svg {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .podium-card .podium-name {
+    font-size: 1.15rem;
+  }
+  
+  .podium-card .podium-pts {
+    font-size: 1.05rem;
   }
 
   .podium-card.rank-1 {
     order: 1;
+    box-shadow: 6px 6px 0px #c8a96e;
   }
 
   .podium-card.rank-2 {
     order: 2;
+    box-shadow: 6px 6px 0px #6eb5c8;
   }
 
   .podium-card.rank-3 {
     order: 3;
+    box-shadow: 6px 6px 0px #c86e9a;
   }
 
   /* Tabla: ocultar barra de progreso, compactar */

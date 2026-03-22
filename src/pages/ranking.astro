@@ -92,31 +92,33 @@ const podiumOrder = [1, 0, 2];
 
     <!-- Tabla -->
     {rest.filter(p => p.pts > 0).length > 0 && (
-      <div id="table-wrap">
-        <table class="ranking-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Participante</th>
-              <th>Progreso</th>
-              <th>Puntos</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rest.filter(p => p.pts > 0).map((p, i) => (
-              <tr class={i >= 2 ? "extra-row hidden" : ""}>
-                <td class="rank-num">#{i + 4}</td>
-                <td class="player-name">{p.name}</td>
-                <td class="bar-cell">
-                  <div class="table-bar-wrap">
-                    <div class="table-bar" data-pct={pct(p.pts)}></div>
-                  </div>
-                </td>
-                <td class="pts-value">{p.pts} pts</td>
+      <div id="ranking-list-section">
+        <div id="table-wrap" class="table-collapsed">
+          <table class="ranking-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Participante</th>
+                <th>Progreso</th>
+                <th>Puntos</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rest.filter(p => p.pts > 0).map((p, i) => (
+                <tr class={i >= 2 ? "extra-row" : ""}>
+                  <td class="rank-num">#{i + 4}</td>
+                  <td class="player-name">{p.name}</td>
+                  <td class="bar-cell">
+                    <div class="table-bar-wrap">
+                      <div class="table-bar" data-pct={pct(p.pts)}></div>
+                    </div>
+                  </td>
+                  <td class="pts-value">{p.pts} pts</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         
         {rest.filter(p => p.pts > 0).length > 2 && (
           <div class="btn-wrap">
@@ -129,8 +131,14 @@ const podiumOrder = [1, 0, 2];
 </Layout>
 
 <style>
-  .hidden {
-    display: none !important;
+  #table-wrap {
+    overflow: hidden;
+    transition: max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: max-height;
+  }
+  .table-collapsed {
+    /* Altura por defecto para SSR, JS la ajustará exacto para modo oscuro/claro y móviles */
+    max-height: 250px; 
   }
   .btn-wrap {
     text-align: center;
@@ -145,8 +153,18 @@ function animateBars() {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       document.querySelectorAll('.pts-bar, .table-bar').forEach(bar => {
-        const pct = (bar as HTMLElement).dataset.pct;
-        (bar as HTMLElement).style.width = pct + '%';
+        const hBar = bar as HTMLElement;
+        const pct = parseInt(hBar.dataset.pct || '0', 10);
+        hBar.style.width = pct + '%';
+        
+        // Colores según rango de completitud
+        if (pct >= 75) {
+          hBar.style.backgroundColor = '#22c55e'; // Verde
+        } else if (pct >= 30) {
+          hBar.style.backgroundColor = '#f59e0b'; // Naranja/Amarillo
+        } else {
+          hBar.style.backgroundColor = '#ef4444'; // Rojo neo-brutalista
+        }
       });
     });
   });
@@ -154,16 +172,44 @@ function animateBars() {
 
 function setupShowMore() {
   const showMoreBtn = document.getElementById('show-more-btn');
-  if (showMoreBtn) {
+  const tableWrap = document.getElementById('table-wrap');
+  const table = document.querySelector('.ranking-table');
+  const tbody = table?.querySelector('tbody');
+  
+  if (showMoreBtn && tableWrap && tbody && tbody.children.length > 2) {
+    // Calculamos dinámicamente la altura de la cabecera + 2 primeras filas (Responsive friendly)
+    const theadHeight = table.querySelector('thead').offsetHeight;
+    const row1Height = tbody.children[0].offsetHeight;
+    const row2Height = tbody.children[1].offsetHeight;
+    
+    // Altura base (sumamos 2px por márgenes/borders comunes)
+    const exactCollapsedHeight = theadHeight + row1Height + row2Height + 2;
+    
+    // Iniciamos la altura exacta antes de que el usuario interactúe
+    tableWrap.style.maxHeight = `${exactCollapsedHeight}px`;
+    
     showMoreBtn.addEventListener('click', () => {
-      const extraRows = document.querySelectorAll('.extra-row');
-      const isHidden = extraRows[0]?.classList.contains('hidden');
+      const isCollapsed = tableWrap.classList.contains('table-collapsed');
       
-      extraRows.forEach(row => {
-        row.classList.toggle('hidden');
-      });
-      
-      showMoreBtn.textContent = isHidden ? 'Ocultar miembros ▲' : 'Ver más miembros ▼';
+      if (isCollapsed) {
+        // Expandir tabla: sacamos la altura total
+        const fullHeight = table.offsetHeight;
+        tableWrap.style.maxHeight = `${fullHeight}px`;
+        tableWrap.classList.remove('table-collapsed');
+        showMoreBtn.textContent = 'Ocultar miembros ▲';
+      } else {
+        // Colapsar tabla: regresamos a la altura calculada
+        tableWrap.style.maxHeight = `${exactCollapsedHeight}px`;
+        tableWrap.classList.add('table-collapsed');
+        showMoreBtn.textContent = 'Ver más miembros ▼';
+      }
+    });
+
+    // En caso de que se redimensione la pantalla, corregimos si es necesario
+    window.addEventListener('resize', () => {
+      if (!tableWrap.classList.contains('table-collapsed')) {
+        tableWrap.style.maxHeight = `${table.offsetHeight}px`;
+      }
     });
   }
 }
