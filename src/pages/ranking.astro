@@ -91,7 +91,7 @@ const podiumOrder = [1, 0, 2];
     </div>
 
     <!-- Tabla -->
-    {rest.length > 0 && (
+    {rest.filter(p => p.pts > 0).length > 0 && (
       <div id="table-wrap">
         <table class="ranking-table">
           <thead>
@@ -103,8 +103,8 @@ const podiumOrder = [1, 0, 2];
             </tr>
           </thead>
           <tbody>
-            {rest.map((p, i) => (
-              <tr>
+            {rest.filter(p => p.pts > 0).map((p, i) => (
+              <tr class={i >= 2 ? "extra-row hidden" : ""}>
                 <td class="rank-num">#{i + 4}</td>
                 <td class="player-name">{p.name}</td>
                 <td class="bar-cell">
@@ -117,10 +117,27 @@ const podiumOrder = [1, 0, 2];
             ))}
           </tbody>
         </table>
+        
+        {rest.filter(p => p.pts > 0).length > 2 && (
+          <div class="btn-wrap">
+            <button id="show-more-btn" class="hw-btn hw-btn-secondary">Ver más miembros ▼</button>
+          </div>
+        )}
       </div>
     )}
   </div>
 </Layout>
+
+<style>
+  .hidden {
+    display: none !important;
+  }
+  .btn-wrap {
+    text-align: center;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+</style>
 
 <script>
 // Animar barras de progreso al cargar
@@ -135,5 +152,24 @@ function animateBars() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', animateBars);
+function setupShowMore() {
+  const showMoreBtn = document.getElementById('show-more-btn');
+  if (showMoreBtn) {
+    showMoreBtn.addEventListener('click', () => {
+      const extraRows = document.querySelectorAll('.extra-row');
+      const isHidden = extraRows[0]?.classList.contains('hidden');
+      
+      extraRows.forEach(row => {
+        row.classList.toggle('hidden');
+      });
+      
+      showMoreBtn.textContent = isHidden ? 'Ocultar miembros ▲' : 'Ver más miembros ▼';
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  animateBars();
+  setupShowMore();
+});
 </script>
