@@ -396,18 +396,23 @@ header {
     text-align: center;
     gap: 24px;
   }
+
   .footer-logo-row {
     justify-content: center;
   }
+
   .footer-socials {
     justify-content: center;
   }
+
   .footer-col-nav {
     text-align: center;
   }
+
   .footer-col-inst {
     align-items: center;
   }
+
   .footer-fes-link {
     display: flex;
     justify-content: center;
@@ -1226,8 +1231,25 @@ header {
   .flip-card:hover .flip-card-inner {
     transform: none;
   }
+
   .flip-card.flipped .flip-card-inner {
     transform: rotateY(180deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .social-text {
+    display: none;
+  }
+
+  .flip-social-link {
+    padding: 8px; /* Hace el botón más cuadrado y pequeño */
+    gap: 0;
+  }
+
+  .flip-socials {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -1538,6 +1560,11 @@ header {
 @media (max-width: 768px) {
   .objetivos-grid {
     grid-template-columns: 1fr;
+  }
+
+  .objetivos-grid .objetivo-item:last-child:nth-child(odd) {
+    max-width: 100%;
+    grid-column: auto;
   }
 
   .directiva-grid {
@@ -2040,24 +2067,26 @@ header {
   }
 
   .podium-card {
-    width: 90% !important; /* Para que no toque las orillas y no se vea tan toscamente ancho */
-    max-width: 320px; /* Un tope máximo para pantallas medianas-pequeñas */
+    width: 90% !important;
+    /* Para que no toque las orillas y no se vea tan toscamente ancho */
+    max-width: 320px;
+    /* Un tope máximo para pantallas medianas-pequeñas */
     padding: 16px 12px 14px !important;
   }
 
   .podium-card::before {
     display: none !important;
   }
-  
+
   .podium-card .podium-medal svg {
     width: 32px;
     height: 32px;
   }
-  
+
   .podium-card .podium-name {
     font-size: 1.15rem;
   }
-  
+
   .podium-card .podium-pts {
     font-size: 1.05rem;
   }
@@ -2192,6 +2221,7 @@ header {
     left: 10px;
     right: auto;
   }
+
   .contact-robot img {
     width: 140px;
   }

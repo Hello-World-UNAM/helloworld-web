@@ -132,12 +132,12 @@ const lucideIcons: Record<string, string> = {
                   <div class="flip-socials">
                     {member.github && (
                       <a href={member.github} target="_blank" rel="noopener noreferrer" class="flip-social-link" aria-label="GitHub">
-                        <span set:html={lucideIcons.github} /> GitHub
+                        <span set:html={lucideIcons.github} /> <span class="social-text">GitHub</span>
                       </a>
                     )}
                     {member.linkedin && (
                       <a href={member.linkedin} target="_blank" rel="noopener noreferrer" class="flip-social-link" aria-label="LinkedIn">
-                        <span set:html={lucideIcons.linkedin} /> LinkedIn
+                        <span set:html={lucideIcons.linkedin} /> <span class="social-text">LinkedIn</span>
                       </a>
                     )}
                     {!member.github && !member.linkedin && (
