@@ -1,8 +1,44 @@
 ---
 import Layout from '@layouts/Layout.astro';
-import rankingData from '@data/ranking.json';
 
-const { participants } = rankingData;
+// 1. URL de tu Google Sheets (Debe ser el enlace en formato CSV)
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT9G2UoQcUeike5dOAQrhNV5DnymjGs_ub2O5osy6EWESrCed-P1xk_awukFS9iCPUM4_sL_wQ9WIG9/pub?output=csv";
+
+let participants = [];
+
+try {
+  // 2. Obtenemos los datos de Google Sheets
+  const res = await fetch(SHEET_CSV_URL);
+  if (!res.ok) throw new Error("No se pudo descargar el CSV");
+  
+  const csvText = await res.text();
+  
+  // 3. Parsear el CSV: separamos por filas y omitimos vacías
+  const rows = csvText.split('\n').filter(row => row.trim() !== '');
+  
+  // Omitimos la primera fila asumiendo que son los encabezados (Nombre, Puntos)
+  const dataRows = rows.slice(1);
+  
+  participants = dataRows.map(row => {
+    // Separamos por coma
+    const [name, pts] = row.split(',');
+    return {
+      name: name ? name.trim() : 'Desconocido',
+      pts: pts ? parseInt(pts.trim(), 10) : 0
+    };
+  });
+
+  if (participants.length === 0) throw new Error("La hoja está vacía");
+  
+} catch (error) {
+  console.error("Error cargando ranking:", error);
+  // Datos de fallback mientras configuras el Sheets
+  participants = [
+    { name: "Esperando conexión a Google Sheets...", pts: 100 },
+    { name: "Falta configurar URL", pts: 50 }
+  ];
+}
+
 const medalColors = ["#c8a96e", "#6eb5c8", "#c86e9a"];
 
 // Ordenar por puntos (mayor a menor)
