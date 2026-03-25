@@ -50,24 +50,24 @@ const termLines = [
       <div class="hw-hero-visuals">
         <div class="hw-stacked-images">
           <div class="hw-img-box hw-img-back">
-            <img style="color: transparent;" src="/img/equipo.webp" alt="Equipo" loading="lazy">
+            <img class="hw-zoomable" data-modal-color="#c4b5fd" style="color: transparent;" src="/img/equipo.webp" alt="Equipo" loading="lazy">
           </div>
           <div class="hw-img-box hw-img-front">
-            <img style="color: transparent;" src="/img/logoclub2.webp" alt="Club Hello World" fetchpriority="high">
+            <img class="hw-zoomable" data-modal-color="#6225e6" style="color: transparent;" src="/img/logoclub2.webp" alt="Club Hello World" fetchpriority="high">
           </div>
           <div class="hw-deco-star">✦</div>
         </div>
       </div>
     </div>
     
-    <div class="hw-scroll-indicator">
+    <a href="#hw-showcase" class="hw-scroll-indicator" aria-label="Desplazar a la sección de la consola">
       <span>Descubre la consola</span>
       <div class="hw-scroll-arrow">↓</div>
-    </div>
+    </a>
   </section>
 
   <!-- Terminal + Stats -->
-  <section class="hw-showcase">
+  <section id="hw-showcase" class="hw-showcase">
     <div class="hw-showcase-inner">
       <!-- Terminal animada -->
       <div class="hw-terminal">
@@ -97,6 +97,15 @@ const termLines = [
       </div>
     </div>
   </section>
+
+  <!-- Modal de Imagen -->
+  <div id="hw-image-modal" class="hw-modal" aria-hidden="true">
+    <div class="hw-modal-overlay"></div>
+    <div class="hw-modal-content">
+      <button class="hw-modal-close" aria-label="Cerrar modal">✕</button>
+      <img id="hw-modal-img" src="" alt="Zoomed image">
+    </div>
+  </div>
 </Layout>
 
 <script define:vars={{ termLines }}>
@@ -191,6 +200,62 @@ function initCounters() {
   counters.forEach(el => observer.observe(el));
 }
 
+function initImageZoom() {
+  const zoomables = document.querySelectorAll('.hw-zoomable');
+  const modal = document.getElementById('hw-image-modal');
+  const modalImg = document.getElementById('hw-modal-img');
+  const closeBtn = document.querySelector('.hw-modal-close');
+  const overlay = document.querySelector('.hw-modal-overlay');
+
+  if (!modal || !zoomables.length) return;
+
+  function openModal(src, alt, color) {
+    modalImg.src = src;
+    modalImg.alt = alt || 'Zoomed image';
+    
+    const modalContent = document.querySelector('.hw-modal-content');
+    if (color) {
+      modalContent.style.boxShadow = `12px 12px 0 ${color}`;
+      if (color === '#c4b5fd') {
+        modalContent.style.padding = '0';
+        modalContent.style.background = 'transparent';
+      } else {
+        modalContent.style.padding = '';
+        modalContent.style.background = '';
+      }
+    } else {
+      modalContent.style.boxShadow = '12px 12px 0 #6225e6';
+      modalContent.style.padding = '';
+      modalContent.style.background = '';
+    }
+
+    modal.classList.add('is-active');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-active');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  zoomables.forEach(img => {
+    img.addEventListener('click', () => {
+      openModal(img.src, img.alt, img.getAttribute('data-modal-color'));
+    });
+  });
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', closeModal);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('is-active')) {
+      closeModal();
+    }
+  });
+}
+
 initTerminalObserver();
 initCounters();
+initImageZoom();
 </script>

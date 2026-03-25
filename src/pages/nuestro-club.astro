@@ -120,14 +120,22 @@ const lucideIcons: Record<string, string> = {
             <div class="flip-card">
               <div class="flip-card-inner">
                 <!-- Frente -->
-                <div class="flip-card-front">
+                <div class="flip-card-front flip-trigger">
                   <img class="directiva-avatar" src={member.image} alt={member.name} width="120" height="120" loading="lazy" />
                   <h3>{member.name}</h3>
                   <span>{member.role}</span>
-                  <button class="flip-btn-mobile" aria-label="Ver más">+</button>
+                  
+                  <!-- Esquina Doblada (Peel Corner) -->
+                  <div class="peel-corner">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="100%" height="100%">
+                      <polygon points="80,0 0,80 80,80" fill="#fbbf24" stroke="#000" stroke-width="5" stroke-linejoin="round" />
+                      <polygon points="80,0 0,80 0,0" fill="#f9f3ff" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
+                      <text x="56" y="58" font-size="26" font-weight="900" text-anchor="middle" fill="#000" transform="rotate(-45, 56, 56)">⟳</text>
+                    </svg>
+                  </div>
                 </div>
                 <!-- Reverso -->
-                <div class="flip-card-back">
+                <div class="flip-card-back flip-trigger">
                   <p class="flip-bio">{member.bio}</p>
                   <div class="flip-socials">
                     {member.github && (
@@ -147,7 +155,6 @@ const lucideIcons: Record<string, string> = {
                       </span>
                     )}
                   </div>
-                  <button class="flip-btn-mobile flip-btn-back" aria-label="Volver">←</button>
                 </div>
               </div>
             </div>
@@ -167,6 +174,68 @@ const lucideIcons: Record<string, string> = {
       </div>
     </div>
   </div>
+
+  <!-- Polaroid Overlay -->
+  <div id="polaroid-overlay" class="polaroid-overlay" aria-hidden="true"></div>
+
+  <style>
+    .polaroid-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 9998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .polaroid-overlay.is-active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    :global(.polaroid-clone) {
+      position: fixed;
+      z-index: 9999;
+      background-color: white;
+      border: 4px solid black;
+      padding: 12px 12px 18px;
+      box-shadow: 16px 16px 0 #fbbf24;
+      transition: top 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  left 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  height 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
+                  transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+      transform-origin: top left;
+      cursor: zoom-out;
+      margin: 0;
+      box-sizing: border-box;
+    }
+    :global(.polaroid-clone img) {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      border: 2px solid #000;
+      display: block;
+    }
+    :global(.polaroid-clone::before) {
+      content: "";
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-3deg);
+      width: 50px;
+      height: 22px;
+      background-color: #e2fca4;
+      border: 2px solid #000;
+      box-shadow: 2px 2px 0 #000;
+      z-index: 1;
+    }
+  </style>
 </Layout>
 
 <script>
@@ -235,14 +304,125 @@ const lucideIcons: Record<string, string> = {
   window.addEventListener('DOMContentLoaded', initGalleryAnimation);
   window.addEventListener('resize', initGalleryAnimation);
 
-  // Flip cards: Toggle para móvil (botón + y ←)
+  // Flip cards: Toggle para la tarjeta interactiva
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.flip-btn-mobile').forEach(btn => {
+    document.querySelectorAll('.flip-trigger').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        // Ignorar los clics si ocurren dentro de un enlace (como las redes sociales)
+        if ((e.target as HTMLElement).closest('a')) {
+          return;
+        }
         e.stopPropagation();
         const card = (e.target as HTMLElement).closest('.flip-card');
         if (card) card.classList.toggle('flipped');
       });
     });
+  });
+
+  // FLIP Animation para Zoom de Polaroids
+  function initPolaroidZoom() {
+    const polaroids = document.querySelectorAll('.scattered-photo');
+    const overlay = document.getElementById('polaroid-overlay');
+    
+    if (!polaroids.length || !overlay) return;
+    
+    let activeClone: HTMLElement | null = null;
+    let activeOriginal: HTMLElement | null = null;
+    
+    function closePolaroid() {
+      if (!activeClone || !activeOriginal) return;
+      
+      const rect = activeOriginal.getBoundingClientRect();
+      
+      // Animate back to original position
+      activeClone.style.top = `${rect.top}px`;
+      activeClone.style.left = `${rect.left}px`;
+      activeClone.style.width = `${rect.width}px`;
+      activeClone.style.height = `${rect.height}px`;
+      activeClone.style.transform = `translate(0, 0) rotate(0deg) scale(1)`; // Needs to match initial clone transform
+      
+      // We must account for the original's applied rotation in the DOM via the scroll animation variables
+      // But actually, top/left already covers the bounding box. We just map it exactly to the rect.
+      
+      overlay.classList.remove('is-active');
+      document.body.style.overflow = '';
+      
+      setTimeout(() => {
+        if(activeOriginal) activeOriginal.style.opacity = '1';
+        if(activeClone) activeClone.remove();
+        activeClone = null;
+        activeOriginal = null;
+      }, 400);
+    }
+    
+    overlay.addEventListener('click', closePolaroid);
+    window.addEventListener('scroll', () => {
+        if(activeClone) closePolaroid();
+    }, { passive: true });
+    
+    polaroids.forEach(p => {
+      const el = p as HTMLElement;
+      el.style.cursor = 'zoom-in';
+      
+      el.addEventListener('click', (e) => {
+        if (activeClone) return; // Prevent double clicks
+        
+        activeOriginal = el;
+        const rect = el.getBoundingClientRect();
+        
+        const clone = el.cloneNode(true) as HTMLElement;
+        clone.className = 'polaroid-clone'; // Resets to base clone class
+        
+        // Initial state matches the exact bounding box
+        clone.style.top = `${rect.top}px`;
+        clone.style.left = `${rect.left}px`;
+        clone.style.width = `${rect.width}px`;
+        clone.style.height = `${rect.height}px`;
+        clone.style.transform = `translate(0, 0) scale(1)`;
+        
+        document.body.appendChild(clone);
+        activeOriginal.style.opacity = '0';
+        activeClone = clone;
+        
+        overlay.classList.add('is-active');
+        document.body.style.overflow = 'hidden';
+        
+        // Aumentar la escala dinámicamente según el tamaño de la pantalla (con márgenes de seguridad)
+        const maxScaleX = (window.innerWidth - 60) / rect.width;
+        const maxScaleY = (window.innerHeight - 80) / rect.height;
+        let targetScale = Math.min(maxScaleX, maxScaleY);
+        // En pantallas grandes, no queremos que pase de un tope (ej. 1.6x)
+        if (window.innerWidth >= 900) {
+          targetScale = Math.min(targetScale, 1.6);
+        }
+        
+        // Next frame to trigger transition
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if(!activeClone) return;
+            const cloneWidth = rect.width * targetScale;
+            const cloneHeight = rect.height * targetScale;
+            // Center calculation for top-left based origin
+            const targetLeft = (window.innerWidth - cloneWidth) / 2;
+            const targetTop = (window.innerHeight - cloneHeight) / 2;
+            
+            activeClone.style.top = `${targetTop}px`;
+            activeClone.style.left = `${targetLeft}px`;
+            activeClone.style.width = `${cloneWidth}px`;
+            activeClone.style.height = `${cloneHeight}px`;
+          });
+        });
+        
+        clone.addEventListener('click', closePolaroid);
+      });
+    });
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePolaroid();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initPolaroidZoom, 150);
   });
 </script>

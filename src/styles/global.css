@@ -22,6 +22,10 @@ body {
   background-color: #fff;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* ── CONTAINER (reemplazo de Bootstrap) ───────────────────────────────────── */
 .container {
   max-width: 1200px;
@@ -476,7 +480,14 @@ header {
   font-size: 0.8rem;
   letter-spacing: 1px;
   color: #666;
-  pointer-events: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.hw-scroll-indicator:hover {
+  color: #6225e6;
+  opacity: 0.8;
 }
 
 .hw-scroll-arrow {
@@ -1138,7 +1149,7 @@ header {
   margin-bottom: 4px;
 }
 
-.flip-card-front span:not(.flip-btn-mobile) {
+.flip-card-front span {
   font-size: 0.82rem;
   color: white;
   font-weight: 700;
@@ -1198,33 +1209,28 @@ header {
   color: #2d002e;
 }
 
-/* -- Botón + para flip -- */
-.flip-btn-mobile {
-  display: block;
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  background-color: #6225e6;
-  color: white;
-  border: 2px solid #000;
-  box-shadow: 2px 2px 0 #000;
-  font-size: 1.1rem;
-  font-weight: 900;
+/* -- Esquina Doblada Interactiva (Frente) -- */
+.flip-card-front.flip-trigger,
+.flip-card-back.flip-trigger {
   cursor: pointer;
-  line-height: 1;
-  transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.flip-btn-mobile:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 4px 4px 0 #000;
+.peel-corner {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  width: 50px;
+  height: 50px;
+  transition: width 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    height 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: none;
+  /* Let the card handle clicks */
+  z-index: 10;
 }
 
-.flip-btn-back {
-  background-color: #fbbf24;
-  color: #000;
+.flip-card-front:hover .peel-corner {
+  width: 65px;
+  height: 65px;
 }
 
 @media (max-width: 900px) {
@@ -1243,7 +1249,8 @@ header {
   }
 
   .flip-social-link {
-    padding: 8px; /* Hace el botón más cuadrado y pequeño */
+    padding: 8px;
+    /* Hace el botón más cuadrado y pequeño */
     gap: 0;
   }
 
@@ -1532,28 +1539,68 @@ header {
 
 @media (max-width: 900px) {
   .scattered-gallery {
-    height: auto;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 24px;
-    margin: 40px auto;
+    height: 380px;
+    margin: -10px auto 45px;
+    position: relative;
+    display: block;
   }
 
   .scattered-photo {
-    position: relative;
-    left: auto !important;
+    position: absolute;
+    top: 50% !important;
+    left: 50% !important;
     right: auto !important;
-    top: auto !important;
     bottom: auto !important;
-    width: 240px;
-    margin: 0 10px;
+    width: 200px;
+    margin: 0;
+    transform-origin: bottom center;
+  }
+
+  .sp-1 {
+    transform: translate(calc(-50% - 60px), calc(-50% + 10px)) rotate(-18deg);
+    z-index: 1;
+  }
+
+  .sp-2 {
+    transform: translate(calc(-50% - 20px), calc(-50% - 10px)) rotate(-6deg);
+    z-index: 2;
+  }
+
+  .sp-3 {
+    transform: translate(calc(-50% + 20px), calc(-50% - 10px)) rotate(6deg);
+    z-index: 3;
+  }
+
+  .sp-4 {
+    transform: translate(calc(-50% + 60px), calc(-50% + 10px)) rotate(18deg);
+    z-index: 4;
   }
 }
 
 @media (max-width: 600px) {
+  .scattered-gallery {
+    height: 280px;
+    margin: -40px auto 40px;
+  }
+
   .scattered-photo {
-    width: 280px;
+    width: 150px;
+  }
+
+  .sp-1 {
+    transform: translate(calc(-50% - 45px), calc(-50% + 5px)) rotate(-22deg);
+  }
+
+  .sp-2 {
+    transform: translate(calc(-50% - 15px), calc(-50% - 15px)) rotate(-7deg);
+  }
+
+  .sp-3 {
+    transform: translate(calc(-50% + 15px), calc(-50% - 15px)) rotate(7deg);
+  }
+
+  .sp-4 {
+    transform: translate(calc(-50% + 45px), calc(-50% + 5px)) rotate(22deg);
   }
 }
 
@@ -2543,4 +2590,93 @@ header {
     padding: 28px 20px;
     padding-bottom: 100px;
   }
+}
+
+/* ── NEO-BRUTALIST IMAGE MODAL ────────────────────────────────────────────── */
+.hw-zoomable {
+  cursor: zoom-in;
+}
+
+.hw-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hw-modal.is-active {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.hw-modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  cursor: zoom-out;
+}
+
+.hw-modal-content {
+  position: relative;
+  z-index: 10000;
+  max-width: 90vw;
+  max-height: 90vh;
+  background: #fff;
+  border: 4px solid #000;
+  box-shadow: 12px 12px 0 #6225e6;
+  padding: 12px;
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hw-modal.is-active .hw-modal-content {
+  transform: scale(1);
+}
+
+.hw-modal-content img {
+  max-width: 100%;
+  max-height: calc(90vh - 24px);
+  object-fit: contain;
+  display: block;
+}
+
+.hw-modal-close {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  color: #000;
+  border: 4px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  border-radius: 0;
+  font-family: "DM Sans", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+  z-index: 10001;
+}
+
+.hw-modal-close:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #6225e6;
+  background: #6225e6;
+  color: #fff;
 }
