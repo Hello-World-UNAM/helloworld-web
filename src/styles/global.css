@@ -1567,13 +1567,13 @@ header {
   }
 
   .sp-3 {
-    transform: translate(calc(-50% + 20px), calc(-50% - 10px)) rotate(6deg);
-    z-index: 3;
+    transform: translate(calc(-50% + 60px), calc(-50% + 10px)) rotate(18deg);
+    z-index: 4;
   }
 
   .sp-4 {
-    transform: translate(calc(-50% + 60px), calc(-50% + 10px)) rotate(18deg);
-    z-index: 4;
+    transform: translate(calc(-50% + 20px), calc(-50% - 10px)) rotate(6deg);
+    z-index: 3;
   }
 }
 
@@ -1596,11 +1596,11 @@ header {
   }
 
   .sp-3 {
-    transform: translate(calc(-50% + 15px), calc(-50% - 15px)) rotate(7deg);
+    transform: translate(calc(-50% + 45px), calc(-50% + 5px)) rotate(22deg);
   }
 
   .sp-4 {
-    transform: translate(calc(-50% + 45px), calc(-50% + 5px)) rotate(22deg);
+    transform: translate(calc(-50% + 15px), calc(-50% - 15px)) rotate(7deg);
   }
 }
 
