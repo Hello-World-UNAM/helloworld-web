@@ -1,12 +1,16 @@
 ---
+import seleccionData from '@data/seleccion.json';
+
 interface Props {
   activeNav?: string;
 }
 
 const { activeNav = "" } = Astro.props;
+const isSeleccionOpen = seleccionData.open;
 
 const navItems = [
   { href: "/", label: "Inicio", key: "inicio" },
+  { href: "/seleccion", label: "Selección", key: "seleccion" },
   { href: "/nuestro-club", label: "Sobre nosotros", key: "nuestro-club" },
   { href: "/ranking", label: "Leaderboard", key: "ranking" },
   { href: "/contacto", label: "Contacto", key: "contacto" },
@@ -31,11 +35,14 @@ const navItems = [
         <ul>
           {navItems.map((item) => (
             <li>
-              <a 
-                href={item.href} 
+              <a
+                href={item.href}
                 class={activeNav === item.key ? "nav-active" : ""}
               >
                 {item.label}
+                {item.key === "seleccion" && isSeleccionOpen && (
+                  <span class="nav-seleccion-dot" aria-label="Convocatoria abierta"></span>
+                )}
               </a>
             </li>
           ))}
