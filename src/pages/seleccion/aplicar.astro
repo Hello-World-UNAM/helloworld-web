@@ -1,0 +1,321 @@
+---
+import Layout from '@layouts/Layout.astro';
+import seleccionData from '@data/seleccion.json';
+
+const { open, season, deadline } = seleccionData;
+---
+
+<Layout
+  title={`Solicitud de Ingreso | Selección ${season} · Club Hello World`}
+  description="Formulario de solicitud para nuevos integrantes del Club Hello World. Completa la Prueba Técnica y Habilidades Blandas en una sola solicitud."
+  activeNav="seleccion"
+>
+
+  <!-- Hero -->
+  <section class="contact-hero">
+    <span class="hw-badge" style="transform: rotate(-2deg); display: inline-block; background:#c4b5fd; color:#000; border:3px solid #000; box-shadow:4px 4px 0 #000;">
+      ✦ SOLICITUD DE INGRESO · {season}
+    </span>
+    <h1 style="margin-top: 16px;">Formulario de Selección</h1>
+    <p>
+      {open
+        ? 'Completa todas las secciones con honestidad. Valoramos tu proceso, no solo tus resultados.'
+        : 'La convocatoria está cerrada en este momento.'
+      }
+    </p>
+    {open && deadline && (
+      <p class="sel-deadline">Fecha límite: <strong>{deadline}</strong></p>
+    )}
+  </section>
+
+  <!-- Contenido -->
+  <section class="seleccion-main">
+    <div class="container">
+      <div class="sel-form-wrapper">
+
+        <a href="/seleccion" class="sel-back-link">
+          <i class="bi bi-arrow-left"></i> Volver a Selección
+        </a>
+
+        {!open ? (
+          <div class="sel-closed-banner section-card">
+            <i class="bi bi-lock-fill sel-closed-icon"></i>
+            <h2>Convocatoria Cerrada</h2>
+            <p>El formulario de solicitud no está disponible por ahora. Síguenos en redes para saber cuándo abre la próxima convocatoria.</p>
+            <a href="/seleccion" class="hw-btn hw-btn-secondary" style="margin-right: 12px;">Ver Selección</a>
+            <a href="https://www.instagram.com/helloworld_unam/" target="_blank" rel="noopener noreferrer" class="hw-btn hw-btn-primary">Instagram</a>
+          </div>
+        ) : (
+          <div class="contact-form-col" style="box-shadow: 12px 12px 0 #6225e6;">
+            <form id="form-seleccion" action="https://formspree.io/f/YOUR_FORMSPREE_ENDPOINT" method="POST">
+
+              <!-- ══ SECCIÓN A: DATOS PERSONALES ══ -->
+              <span class="sel-form-section-label">
+                <i class="bi bi-person-fill"></i> Datos Personales
+              </span>
+
+              <div class="input-group">
+                <input type="text" id="nombre" name="nombre" required placeholder=" ">
+                <label for="nombre">Nombre completo</label>
+              </div>
+
+              <div class="input-group">
+                <input
+                  type="text"
+                  id="numero_cuenta"
+                  name="numero_cuenta"
+                  required
+                  placeholder=" "
+                  pattern="[0-9]{9}"
+                  title="Debe ser un número de exactamente 9 dígitos"
+                  inputmode="numeric"
+                  maxlength="9"
+                >
+                <label for="numero_cuenta">Número de cuenta (9 dígitos)</label>
+              </div>
+
+              <div class="input-group">
+                <input type="email" id="correo" name="correo" required placeholder=" ">
+                <label for="correo">Correo electrónico</label>
+              </div>
+
+              <div class="input-group">
+                <select id="carrera" name="carrera" required class="contact-select">
+                  <option value="" disabled selected hidden></option>
+                  <option value="Ing. en Computación">Ing. en Computación</option>
+                  <option value="Ing. Civil">Ing. Civil</option>
+                  <option value="Ing. Electrónica y Comunicaciones">Ing. Electrónica y Comunicaciones</option>
+                  <option value="Ing. Industrial">Ing. Industrial</option>
+                  <option value="Ing. Mecánica">Ing. Mecánica</option>
+                  <option value="Ing. Mecatrónica">Ing. Mecatrónica</option>
+                  <option value="Ing. Topográfica">Ing. Topográfica</option>
+                  <option value="Ing. Química">Ing. Química</option>
+                  <option value="Otra">Otra</option>
+                </select>
+                <label for="carrera" class="select-float-label">Carrera</label>
+              </div>
+
+              <div class="input-group">
+                <select id="semestre" name="semestre" required class="contact-select">
+                  <option value="" disabled selected hidden></option>
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                    <option value={String(n)}>{n}° semestre</option>
+                  ))}
+                </select>
+                <label for="semestre" class="select-float-label">Semestre</label>
+              </div>
+
+              <!-- Intereses -->
+              <div style="margin-bottom: 25px;">
+                <span class="sel-field-label">
+                  Intereses personales
+                  <span style="color:#999; font-weight:500; text-transform:none; font-size:0.78rem;"> — selecciona todos los que apliquen</span>
+                </span>
+                <div class="sel-tags-group" id="tags-seleccion">
+                  {['IA', 'Backend', 'Frontend', 'Ciberseguridad', 'Algoritmos', 'DevOps', 'Diseño UI/UX', 'Bases de Datos', 'Cloud', 'Móvil', 'Robótica'].map(tag => (
+                    <label class="sel-tag-label">
+                      <input type="checkbox" value={tag}> {tag}
+                    </label>
+                  ))}
+                </div>
+                <input type="hidden" name="intereses" id="intereses-hidden" value="">
+              </div>
+
+              <!-- ══ SECCIÓN B: PERFIL Y DOCUMENTOS ══ -->
+              <span class="sel-form-section-label">
+                <i class="bi bi-folder2-open"></i> Perfil y Documentos
+                <span style="font-weight:500; text-transform:none; color:#999;"> — opcionales, pero suman</span>
+              </span>
+
+              <div class="input-group">
+                <input type="url" id="linkedin_url" name="linkedin_url" placeholder=" ">
+                <label for="linkedin_url">Perfil de LinkedIn</label>
+              </div>
+              <small class="sel-field-hint">Ej: https://linkedin.com/in/tu-usuario</small>
+
+              <div class="input-group" style="margin-top: 20px;">
+                <input type="url" id="portfolio_url" name="portfolio_url" placeholder=" ">
+                <label for="portfolio_url">Portafolio o sitio web</label>
+              </div>
+              <small class="sel-field-hint">Tu página personal, proyecto en línea o repositorio destacado</small>
+
+              <div class="input-group" style="margin-top: 20px;">
+                <input type="url" id="cv_link" name="cv_link" placeholder=" ">
+                <label for="cv_link">Enlace a tu CV</label>
+              </div>
+              <small class="sel-field-hint">Comparte el enlace público desde Google Drive, Dropbox u otro servicio</small>
+
+              <!-- ══ SECCIÓN C: PRUEBA TÉCNICA ══ -->
+              <span class="sel-form-section-label" style="margin-top: 36px;">
+                <i class="bi bi-code-slash"></i> Prueba Técnica
+              </span>
+
+              <!-- Lenguajes -->
+              <div style="margin-bottom: 25px;">
+                <span class="sel-field-label">Lenguajes que dominas o estás aprendiendo</span>
+                <div class="sel-check-group">
+                  {['Python', 'JavaScript', 'TypeScript', 'Java', 'C/C++', 'Go', 'Rust', 'PHP', 'Otro'].map(lang => (
+                    <label class="sel-check-item">
+                      <input type="checkbox" name="lenguajes" value={lang}> {lang}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <!-- Nivel -->
+              <div style="margin-bottom: 25px;">
+                <span class="sel-field-label">Nivel de experiencia en programación</span>
+                <div class="sel-radio-group">
+                  {['Principiante', 'Intermedio', 'Avanzado'].map(nivel => (
+                    <label class="sel-radio-item">
+                      <input type="radio" name="nivel_experiencia" value={nivel} required> {nivel}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <!-- GitHub -->
+              <div class="input-group">
+                <input type="url" id="github_url" name="github_url" placeholder=" ">
+                <label for="github_url">Perfil de GitHub (opcional)</label>
+              </div>
+              <small class="sel-field-hint">Ej: https://github.com/tu-usuario</small>
+
+              <!-- Proyecto -->
+              <div class="input-group" style="margin-top: 20px;">
+                <textarea id="proyecto_descripcion" name="proyecto_descripcion" rows="4" required placeholder=" "></textarea>
+                <label for="proyecto_descripcion">Describe un proyecto técnico que hayas desarrollado</label>
+              </div>
+
+              <!-- ══ SECCIÓN D: HABILIDADES BLANDAS ══ -->
+              <span class="sel-form-section-label" style="margin-top: 36px;">
+                <i class="bi bi-people-fill"></i> Habilidades Blandas
+              </span>
+
+              <div class="input-group">
+                <textarea id="experiencia_liderazgo" name="experiencia_liderazgo" rows="4" required placeholder=" "></textarea>
+                <label for="experiencia_liderazgo">Describe una experiencia donde demostraste liderazgo o coordinación de equipo</label>
+              </div>
+
+              <div class="input-group">
+                <textarea id="manejo_conflicto" name="manejo_conflicto" rows="4" required placeholder=" "></textarea>
+                <label for="manejo_conflicto">¿Cómo manejas los conflictos dentro de un equipo?</label>
+              </div>
+
+              <div class="input-group">
+                <textarea id="fortalezas_areas" name="fortalezas_areas" rows="3" required placeholder=" "></textarea>
+                <label for="fortalezas_areas">¿Cuáles son tus fortalezas y áreas de mejora?</label>
+              </div>
+
+              <div class="input-group">
+                <select id="horas_disponibles" name="horas_disponibles" required class="contact-select">
+                  <option value="" disabled selected hidden></option>
+                  <option value="Menos de 5 h">Menos de 5 h por semana</option>
+                  <option value="5–10 h">5–10 h por semana</option>
+                  <option value="10–15 h">10–15 h por semana</option>
+                  <option value="Más de 15 h">Más de 15 h por semana</option>
+                </select>
+                <label for="horas_disponibles" class="select-float-label">Horas disponibles por semana</label>
+              </div>
+
+              <div class="input-group">
+                <textarea id="motivacion" name="motivacion" rows="4" required placeholder=" "></textarea>
+                <label for="motivacion">¿Por qué quieres unirte a Club Hello World?</label>
+              </div>
+
+              <!-- Feedback -->
+              <div id="form-feedback-seleccion" style="display:none; margin-bottom:1rem; padding:1rem 1.25rem; font-size:0.92rem; font-weight:500; text-align:center;"></div>
+
+              <div class="button-container">
+                <button type="submit" class="cta" id="submit-btn-seleccion">
+                  <span class="span" id="btn-text-seleccion">ENVIAR SOLICITUD</span>
+                  <span class="second">
+                    <svg width="50px" height="20px" viewBox="0 0 66 43">
+                      <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+                        <path class="one" d="M40.1543933,3.89485454 L43.9763149,0.139296592 C44.1708311,-0.0518420739 44.4826329,-0.0518571125 44.6771675,0.139262789 L65.6916134,20.7848311 C66.0855801,21.1718824 66.0911863,21.8050225 65.704135,22.1989893 C65.7000188,22.2031791 65.6958657,22.2073326 65.6916762,22.2114492 L44.677098,42.8607841 C44.4825957,43.0519059 44.1708242,43.0519358 43.9762853,42.8608513 L40.1545186,39.1069479 C39.9575152,38.9134427 39.9546793,38.5968729 40.1481845,38.3998695 C40.1502893,38.3977268 40.1524132,38.395603 40.1545562,38.3934985 L56.9937789,21.8567812 C57.1908028,21.6632968 57.193672,21.3467273 57.0001876,21.1497035 C56.9980647,21.1475418 56.9959223,21.1453995 56.9937605,21.1432767 L40.1545208,4.60825197 C39.9574869,4.41477773 39.9546013,4.09820839 40.1480756,3.90117456 C40.1501626,3.89904911 40.1522686,3.89694235 40.1543933,3.89485454 Z" fill="#FFFFFF"></path>
+                        <path class="two" d="M20.1543933,3.89485454 L23.9763149,0.139296592 C24.1708311,-0.0518420739 24.4826329,-0.0518571125 24.6771675,0.139262789 L45.6916134,20.7848311 C46.0855801,21.1718824 46.0911863,21.8050225 45.704135,22.1989893 C45.7000188,22.2031791 45.6958657,22.2073326 45.6916762,22.2114492 L24.677098,42.8607841 C24.4825957,43.0519059 24.1708242,43.0519358 23.9762853,42.8608513 L20.1545186,39.1069479 C19.9575152,38.9134427 19.9546793,38.5968729 20.1481845,38.3998695 C20.1502893,38.3977268 20.1524132,38.395603 20.1545562,38.3934985 L36.9937789,21.8567812 C37.1908028,21.6632968 37.193672,21.3467273 37.0001876,21.1497035 C36.9980647,21.1475418 36.9959223,21.1453995 36.9937605,21.1432767 L20.1545208,4.60825197 C19.9574869,4.41477773 19.9546013,4.09820839 20.1480756,3.90117456 C20.1501626,3.89904911 20.1522686,3.89694235 20.1543933,3.89485454 Z" fill="#FFFFFF"></path>
+                        <path class="three" d="M0.154393339,3.89485454 L3.97631488,0.139296592 C4.17083111,-0.0518420739 4.48263286,-0.0518571125 4.67716753,0.139262789 L25.6916134,20.7848311 C26.0855801,21.1718824 26.0911863,21.8050225 25.704135,22.1989893 C25.7000188,22.2031791 25.6958657,22.2073326 25.6916762,22.2114492 L4.67709797,42.8607841 C4.48259567,43.0519059 4.17082418,43.0519358 3.97628526,42.8608513 L0.154518591,39.1069479 C-0.0424848215,38.9134427 -0.0453206733,38.5968729 0.148184538,38.3998695 C0.150289256,38.3977268 0.152413239,38.395603 0.154556228,38.3934985 L16.9937789,21.8567812 C17.1908028,21.6632968 17.193672,21.3467273 17.0001876,21.1497035 C16.9980647,21.1475418 16.9959223,21.1453995 16.9937605,21.1432767 L0.15452076,4.60825197 C-0.0425130651,4.41477773 -0.0453986756,4.09820839 0.148075568,3.90117456 C0.150162624,3.89904911 0.152268631,3.89694235 0.154393339,3.89485454 Z" fill="#FFFFFF"></path>
+                      </g>
+                    </svg>
+                  </span>
+                </button>
+              </div>
+
+            </form>
+          </div>
+        )}
+
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('form-seleccion') as HTMLFormElement | null;
+  if (!form) return;
+
+  const btn = document.getElementById('submit-btn-seleccion') as HTMLButtonElement;
+  const btnText = document.getElementById('btn-text-seleccion') as HTMLElement;
+  const feedback = document.getElementById('form-feedback-seleccion') as HTMLElement;
+  const hiddenIntereses = document.getElementById('intereses-hidden') as HTMLInputElement;
+  const tagsContainer = document.getElementById('tags-seleccion') as HTMLElement;
+
+  function showFeedback(message: string, type: 'success' | 'error' | 'loading') {
+    const styles = {
+      success: { bg: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7' },
+      error:   { bg: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' },
+      loading: { bg: '#ede9fe', color: '#4c1d95', border: '1px solid #c4b5fd' },
+    };
+    const s = styles[type];
+    feedback.style.display = 'block';
+    feedback.style.background = s.bg;
+    feedback.style.color = s.color;
+    feedback.style.border = s.border;
+    feedback.textContent = message;
+  }
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+    const checkedTags = Array.from(
+      tagsContainer.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')
+    ).map(el => el.value);
+    hiddenIntereses.value = checkedTags.join(', ') || 'No especificado';
+
+    btn.disabled = true;
+    btnText.textContent = 'ENVIANDO...';
+    showFeedback('Enviando tu solicitud...', 'loading');
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch(form.action, {
+        method: form.method,
+        body: formData,
+        headers: { Accept: 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        form.reset();
+        tagsContainer.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        showFeedback('¡Solicitud enviada! Te contactaremos pronto con los resultados.', 'success');
+        btnText.textContent = '¡ENVIADO!';
+      } else {
+        let errorMsg = 'Hubo un problema al enviar el formulario.';
+        if (data.errors?.length) errorMsg = data.errors.map((e: any) => e.message || e.code).join(', ');
+        else if (data.error) errorMsg = data.error;
+        showFeedback('Error: ' + errorMsg + ' Intenta de nuevo.', 'error');
+        btn.disabled = false;
+        btnText.textContent = 'ENVIAR SOLICITUD';
+      }
+    } catch {
+      showFeedback('Sin conexión a internet. Revisa tu red e intenta de nuevo.', 'error');
+      btn.disabled = false;
+      btnText.textContent = 'ENVIAR SOLICITUD';
+    }
+  });
+});
+</script>

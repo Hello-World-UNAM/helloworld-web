@@ -1,0 +1,93 @@
+---
+import Layout from '@layouts/Layout.astro';
+import seleccionData from '@data/seleccion.json';
+
+const { open, season, deadline, tracks } = seleccionData;
+---
+
+<Layout
+  title={`Selección ${season} | Club Hello World`}
+  description="Proceso de selección para nuevos integrantes del Club Hello World FES Aragón UNAM. Prueba Técnica y Habilidades Blandas en una sola solicitud."
+  activeNav="seleccion"
+>
+
+  <!-- Hero -->
+  <section class="contact-hero">
+    <span class={`hw-badge ${open ? 'sel-badge-open' : 'sel-badge-closed'}`} style="transform: rotate(-2deg); display: inline-block;">
+      {open ? `✦ ABIERTO · ${season}` : '✦ CERRADA'}
+    </span>
+    <h1 style="margin-top: 16px;">Selección {season}</h1>
+    {open
+      ? <p>El proceso evalúa tanto tus habilidades técnicas como tu capacidad de trabajo en equipo. Todos los aspirantes completan ambas pruebas.</p>
+      : <p>La convocatoria está temporalmente cerrada. Mantente atento a nuestras redes sociales.</p>
+    }
+    {open && deadline && (
+      <p class="sel-deadline">Fecha límite: <strong>{deadline}</strong></p>
+    )}
+    {open && (
+      <a href="/seleccion/aplicar" class="hw-btn hw-btn-secondary" style="margin-top: 24px;">
+        Aplicar ahora →
+      </a>
+    )}
+  </section>
+
+  <!-- Contenido principal -->
+  <section class="seleccion-main">
+    <div class="container">
+
+      {!open && (
+        <div class="sel-closed-banner section-card">
+          <i class="bi bi-lock-fill sel-closed-icon"></i>
+          <h2>Próximamente</h2>
+          <p>La nueva convocatoria será anunciada en nuestras redes sociales. ¡Síguenos para no perderte nada!</p>
+          <a href="https://www.instagram.com/helloworld_unam/" target="_blank" rel="noopener noreferrer" class="hw-btn hw-btn-primary">
+            Seguir en Instagram
+          </a>
+        </div>
+      )}
+
+      <!-- Qué evalúa el proceso -->
+      <div class="sel-tracks-grid" style="margin-bottom: 32px;">
+        {tracks.map((track) => (
+          <div class={`sel-track-card ${!open ? 'sel-track-card--disabled' : ''}`} style="cursor: default;">
+            <div class="sel-track-icon">
+              <i class={`bi ${track.icon}`}></i>
+            </div>
+            <h2>{track.label}</h2>
+            <p>{track.description}</p>
+            {!open && (
+              <span class="sel-track-locked">
+                <i class="bi bi-lock"></i> No disponible
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <!-- Proceso -->
+      <div class="section-card" style="max-width: 900px; margin: 0 auto 32px;">
+        <h2 style="color: #6225e6; font-size: 1.4rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+          <span class="icon" style="background:#6225e6; color:#fff; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; border:2px solid #000; box-shadow:3px 3px 0 #000; flex-shrink:0;">
+            <i class="bi bi-question-lg"></i>
+          </span>
+          ¿Cómo funciona el proceso?
+        </h2>
+        <ol class="sel-steps">
+          <li>Completa la solicitud única en línea. Incluye <strong>Datos Personales</strong>, <strong>Prueba Técnica</strong> y <strong>Habilidades Blandas</strong> — todos los aspirantes responden las tres secciones.</li>
+          <li>Adjunta tu perfil de LinkedIn, portafolio o enlace a tu CV si lo tienes. No es obligatorio, pero suma.</li>
+          <li>Nuestro equipo revisará tu solicitud y te contactará por correo con los resultados.</li>
+        </ol>
+      </div>
+
+      {open && (
+        <div style="text-align: center;">
+          <a href="/seleccion/aplicar" class="hw-btn hw-btn-primary" style="font-size: 1.1rem; padding: 16px 36px;">
+            Completar solicitud →
+          </a>
+        </div>
+      )}
+
+    </div>
+  </section>
+
+</Layout>
