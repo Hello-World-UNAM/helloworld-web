@@ -1,93 +1,316 @@
 ---
 import Layout from '@layouts/Layout.astro';
-import seleccionData from '@data/seleccion.json';
 
-const { open, season, deadline, tracks } = seleccionData;
+const valores = [
+  {
+    icon: 'bi-trophy',
+    titulo: 'Mentalidad competitiva',
+    desc: 'El reto te activa, no te paraliza. Competir a nivel nacional es tu objetivo, no tu miedo. Empujas tus límites porque lo disfrutas.',
+  },
+  {
+    icon: 'bi-hammer',
+    titulo: 'Construyes sin que te lo pidan',
+    desc: 'Tienes proyectos que nadie encargó. Una idea que probar, algo que lanzar. La brecha entre imaginar y hacer es donde vives.',
+  },
+  {
+    icon: 'bi-people-fill',
+    titulo: 'Distinta carrera, mismo equipo',
+    desc: 'Cómputo, mecatrónica, electrónica — todos suman. Los mejores equipos mezclan perspectivas. Tú lo sabes y lo buscas.',
+  },
+];
+
+const pasos = [
+  {
+    titulo: 'Completa la solicitud',
+    desc: 'Unos 10 minutos. Honestidad ante todo — no buscamos la respuesta perfecta.',
+  },
+  {
+    titulo: 'Lo revisamos con cuidado',
+    desc: 'Gente real, no un algoritmo. Cada solicitud la lee alguien del equipo.',
+  },
+  {
+    titulo: 'Te escribimos',
+    desc: 'Por correo, sin importar el resultado. Siempre.',
+  },
+];
+
+// Acciones mostradas cuando las selecciones están cerradas
+const mientrasTanto = [
+  {
+    icon: 'bi-hammer',
+    titulo: 'Construye algo chiquito',
+    desc: 'Un proyecto terminado vale más que diez en tu cabeza.',
+  },
+  {
+    icon: 'bi-megaphone',
+    titulo: 'Aprende en público',
+    desc: 'Abre tu GitHub, postea lo que estás haciendo en LinkedIn.',
+  },
+  {
+    icon: 'bi-trophy',
+    titulo: 'Compite',
+    desc: 'El reto te enseña en horas lo que un curso te enseñaría en meses.',
+  },
+  {
+    icon: 'bi-book',
+    titulo: 'Lee código mejor que el tuyo',
+    desc: 'El camino más corto para subir de nivel es estudiar a quienes ya están más arriba.',
+  },
+];
+
+// Redes sociales del club (también en footer)
+const redes = [
+  {
+    label: 'Instagram',
+    handle: '@helloworld_unam',
+    href: 'https://www.instagram.com/helloworld_unam/',
+    icon: 'bi-instagram',
+  },
+  {
+    label: 'LinkedIn',
+    handle: 'Hello World UNAM',
+    href: 'https://www.linkedin.com/in/hello-world-5243573b5/',
+    icon: 'bi-linkedin',
+  },
+  {
+    label: 'GitHub',
+    handle: 'Hello-World-UNAM',
+    href: 'https://github.com/Hello-World-UNAM',
+    icon: 'bi-github',
+  },
+];
 ---
 
 <Layout
-  title={`Selección ${season} | Club Hello World`}
-  description="Proceso de selección para nuevos integrantes del Club Hello World FES Aragón UNAM. Prueba Técnica y Habilidades Blandas en una sola solicitud."
+  title="Selección | Club Hello World"
+  description="Proceso de selección para nuevos integrantes del Club Hello World FES Aragón UNAM."
   activeNav="seleccion"
 >
 
-  <!-- Hero -->
-  <section class="contact-hero">
-    <span class={`hw-badge ${open ? 'sel-badge-open' : 'sel-badge-closed'}`} style="transform: rotate(-2deg); display: inline-block;">
-      {open ? `✦ ABIERTO · ${season}` : '✦ CERRADA'}
-    </span>
-    <h1 style="margin-top: 16px;">Selección {season}</h1>
-    {open
-      ? <p>El proceso evalúa tanto tus habilidades técnicas como tu capacidad de trabajo en equipo. Todos los aspirantes completan ambas pruebas.</p>
-      : <p>La convocatoria está temporalmente cerrada. Mantente atento a nuestras redes sociales.</p>
-    }
-    {open && deadline && (
-      <p class="sel-deadline">Fecha límite: <strong>{deadline}</strong></p>
-    )}
-    {open && (
-      <a href="/seleccion/aplicar" class="hw-btn hw-btn-secondary" style="margin-top: 24px;">
-        Aplicar ahora →
-      </a>
-    )}
+  <!-- Hero (sólo se muestra cuando ABIERTO) -->
+  <section id="hero-open-section" class="sel-page-header" style="display:none;">
+    <div class="sel-page-header-inner">
+      <div class="sel-page-header-left">
+        <h1>Únete al equipo.</h1>
+        <p>
+          Buscamos personas que construyan, aprendan en público y empujen lo que se creen imposible.
+        </p>
+      </div>
+      <div class="sel-page-header-right">
+        <span id="season-badge"
+          class="hw-badge sel-season-badge sel-badge-open"
+          style="transform: rotate(-1.5deg); display: inline-block;">
+          ✦ ABIERTO
+        </span>
+        <div class="sel-apply-wrap">
+          <a href="/seleccion/aplicar" class="sel-apply-btn">
+            Aplicar ahora →
+          </a>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <!-- Contenido principal -->
+  <!-- Loading skeleton mientras determinamos estado -->
+  <section id="hero-loading-section" class="sel-loading-section">
+    <div class="sel-loading-wrap">
+      <div class="sel-skeleton-bar" style="width:60%; height:36px;"></div>
+      <div class="sel-skeleton-bar" style="width:80%;"></div>
+      <div class="sel-skeleton-bar" style="width:50%;"></div>
+    </div>
+  </section>
+
+  <!-- Main -->
   <section class="seleccion-main">
-    <div class="container">
+    <div class="container" style="max-width: 900px;">
 
-      {!open && (
-        <div class="sel-closed-banner section-card">
-          <i class="bi bi-lock-fill sel-closed-icon"></i>
-          <h2>Próximamente</h2>
-          <p>La nueva convocatoria será anunciada en nuestras redes sociales. ¡Síguenos para no perderte nada!</p>
-          <a href="https://www.instagram.com/helloworld_unam/" target="_blank" rel="noopener noreferrer" class="hw-btn hw-btn-primary">
-            Seguir en Instagram
-          </a>
-        </div>
-      )}
+      <!-- ═══ ESTADO CERRADO ═══ -->
+      <div id="state-closed" style="display:none;">
 
-      <!-- Qué evalúa el proceso -->
-      <div class="sel-tracks-grid" style="margin-bottom: 32px;">
-        {tracks.map((track) => (
-          <div class={`sel-track-card ${!open ? 'sel-track-card--disabled' : ''}`} style="cursor: default;">
-            <div class="sel-track-icon">
-              <i class={`bi ${track.icon}`}></i>
-            </div>
-            <h2>{track.label}</h2>
-            <p>{track.description}</p>
-            {!open && (
-              <span class="sel-track-locked">
-                <i class="bi bi-lock"></i> No disponible
-              </span>
-            )}
+        <!-- Hero cerrado con estrella flotante -->
+        <section class="sel-closed-hero">
+          <div class="sel-closed-star" aria-hidden="true">✦</div>
+          <div class="sel-closed-hero-inner">
+            <span class="sel-closed-eyebrow">
+              <i class="bi bi-moon-stars-fill"></i> Convocatoria cerrada
+            </span>
+            <h1 class="sel-closed-title">El semestre próximo<br><span>te esperamos.</span></h1>
+            <p class="sel-closed-subtitle">
+              Mientras tanto, sigue construyendo. El club no es el destino — es un punto en el camino.
+            </p>
           </div>
-        ))}
-      </div>
+        </section>
 
-      <!-- Proceso -->
-      <div class="section-card" style="max-width: 900px; margin: 0 auto 32px;">
-        <h2 style="color: #6225e6; font-size: 1.4rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
-          <span class="icon" style="background:#6225e6; color:#fff; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; font-size:1.1rem; border:2px solid #000; box-shadow:3px 3px 0 #000; flex-shrink:0;">
-            <i class="bi bi-question-lg"></i>
-          </span>
-          ¿Cómo funciona el proceso?
-        </h2>
-        <ol class="sel-steps">
-          <li>Completa la solicitud única en línea. Incluye <strong>Datos Personales</strong>, <strong>Prueba Técnica</strong> y <strong>Habilidades Blandas</strong> — todos los aspirantes responden las tres secciones.</li>
-          <li>Adjunta tu perfil de LinkedIn, portafolio o enlace a tu CV si lo tienes. No es obligatorio, pero suma.</li>
-          <li>Nuestro equipo revisará tu solicitud y te contactará por correo con los resultados.</li>
-        </ol>
-      </div>
-
-      {open && (
-        <div style="text-align: center;">
-          <a href="/seleccion/aplicar" class="hw-btn hw-btn-primary" style="font-size: 1.1rem; padding: 16px 36px;">
-            Completar solicitud →
-          </a>
+        <!-- Quote / manifesto -->
+        <div class="sel-closed-quote-block">
+          <span class="sel-closed-quote-mark" aria-hidden="true">"</span>
+          <p>
+            Lo que hace especial a quien entra al club no es <em>cuándo</em> aplica.<br>
+            Es lo que ya estaba haciendo antes de saber que existíamos.
+          </p>
         </div>
-      )}
+
+        <!-- Mientras tanto -->
+        <div class="section-card sel-closed-mientras">
+          <h2>
+            <span class="icon"><i class="bi bi-stars"></i></span>
+            Mientras tanto
+          </h2>
+          <p class="sel-closed-mientras-sub">
+            Cuatro cosas que puedes hacer hoy. Útiles entres o no al club.
+          </p>
+          <div class="sel-closed-mientras-grid">
+            {mientrasTanto.map((m) => (
+              <div class="sel-closed-mientras-card">
+                <div class="sel-closed-mientras-icon">
+                  <i class={`bi ${m.icon}`}></i>
+                </div>
+                <h3>{m.titulo}</h3>
+                <p>{m.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Mantente cerca / redes -->
+        <div class="sel-closed-redes-card">
+          <div class="sel-closed-redes-header">
+            <h2>Mantente cerca</h2>
+            <p>Anunciamos la próxima convocatoria por aquí primero. Síguenos donde te quede mejor.</p>
+          </div>
+          <div class="sel-closed-redes-grid">
+            {redes.map((r) => (
+              <a
+                href={r.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="sel-closed-red-card"
+              >
+                <div class="sel-closed-red-icon">
+                  <i class={`bi ${r.icon}`}></i>
+                </div>
+                <div class="sel-closed-red-text">
+                  <span class="sel-closed-red-label">{r.label}</span>
+                  <span class="sel-closed-red-handle">{r.handle}</span>
+                </div>
+                <i class="bi bi-arrow-up-right sel-closed-red-arrow"></i>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <!-- Cierre cálido -->
+        <div class="sel-closed-farewell">
+          <p class="sel-closed-farewell-line">
+            Nos vemos pronto.<br>
+            <strong>Sigue construyendo.</strong>
+          </p>
+          <p class="sel-closed-farewell-sign">— El equipo de Hello World</p>
+        </div>
+
+      </div>
+
+      <!-- ═══ ESTADO ABIERTO ═══ -->
+      <div id="state-open" style="display:none;">
+
+        <!-- Filosofía -->
+        <div class="section-card">
+          <div class="objetivo-general-block">
+            <p style="font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.25rem;">
+              "No buscamos el promedio más alto. Buscamos a quien quiera competir, construir cosas reales y dejar huella desde la UNAM."
+            </p>
+          </div>
+        </div>
+
+        <!-- ¿Eres de los nuestros? -->
+        <div class="section-card">
+          <h2>
+            <span class="icon"><i class="bi bi-stars"></i></span>
+            ¿Eres de los nuestros?
+          </h2>
+          <p style="margin-bottom: 24px; color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Esto describe a quien buscamos.
+          </p>
+          <div class="sel-valores-grid">
+            {valores.map((v) => (
+              <div class="sel-valor-card">
+                <div class="sel-valor-icon">
+                  <i class={`bi ${v.icon}`}></i>
+                </div>
+                <h3>{v.titulo}</h3>
+                <p>{v.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- El proceso -->
+        <div class="section-card">
+          <h2>
+            <span class="icon"><i class="bi bi-list-ol"></i></span>
+            El proceso
+          </h2>
+          <p style="margin-bottom: 20px; color: #666; font-size: 0.95rem; line-height: 1.6;">
+            Sin sustos. Solo tres pasos.
+          </p>
+          <ol class="sel-steps">
+            {pasos.map((paso) => (
+              <li>
+                <div>
+                  <strong>{paso.titulo}</strong><br />
+                  {paso.desc}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-section">
+          <h2>¿Listo para unirte?</h2>
+          <p>La solicitud toma unos 10 minutos. Sin trampa, sin sustos.</p>
+          <div class="cta-actions">
+            <a href="/seleccion/aplicar" class="hw-btn hw-btn-primary">
+              Completar solicitud →
+            </a>
+          </div>
+        </div>
+
+      </div>
 
     </div>
   </section>
 
 </Layout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const heroLoading = document.getElementById('hero-loading-section')!;
+    const heroOpen    = document.getElementById('hero-open-section')!;
+    const stateOpen   = document.getElementById('state-open')!;
+    const stateClosed = document.getElementById('state-closed')!;
+    const badge       = document.getElementById('season-badge')!;
+
+    const { data, error } = await supabase
+      .from('seleccion_config')
+      .select('is_open, active_season')
+      .eq('id', true)
+      .maybeSingle();
+
+    heroLoading.style.display = 'none';
+
+    if (error || !data || !data.is_open || !data.active_season) {
+      // Cerrado (o fallback): mostrar la pantalla cerrada completa
+      stateClosed.style.display = '';
+      return;
+    }
+
+    // ── ABIERTO ──────────────────────────────────────────────────────────
+    heroOpen.style.display = '';
+    badge.textContent = `✦ ABIERTO · ${data.active_season}`;
+    stateOpen.style.display = '';
+    document.title = `Selección ${data.active_season} | Club Hello World`;
+  });
+</script>
