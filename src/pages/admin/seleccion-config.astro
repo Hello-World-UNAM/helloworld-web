@@ -1,0 +1,254 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Selecciones · Panel Hello World">
+  <section class="admin-config">
+
+    <div id="config-loading" class="admin-redirect">
+      <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+      <p>Cargando…</p>
+    </div>
+
+    <!-- ═══ MODO: SELECCIONES CERRADAS — Abrir selecciones ═══ -->
+    <div id="config-mode-closed" style="display:none;">
+      <div class="admin-config-card">
+        <div class="admin-config-eyebrow">
+          <i class="bi bi-lock-fill"></i> Sin selecciones activas
+        </div>
+        <h1>Abrir nueva temporada</h1>
+        <p class="admin-config-sub">
+          Cuando abras las selecciones, el sitio público mostrará el flujo de aplicación con la temporada que elijas.
+          Los aspirantes podrán enviar su solicitud, y aquí podrás revisarlas.
+        </p>
+
+        <form id="open-form" class="admin-config-form" novalidate>
+          <div>
+            <label class="admin-field-label" for="season-select">
+              Temporada a abrir <span class="sel-req">*</span>
+            </label>
+            <select id="season-select" class="admin-select admin-select-block" required>
+              <option value="" disabled selected>Selecciona un semestre…</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="admin-field-label" for="hint-input">
+              Hint para próxima convocatoria
+              <span style="text-transform:none; color:#999; font-weight:500; font-size:0.78rem;">
+                (opcional, se mostrará al público cuando esta temporada se cierre)
+              </span>
+            </label>
+            <input type="text" id="hint-input" class="admin-text-input" placeholder="Ej: 2027-2 o &quot;el próximo semestre&quot;">
+          </div>
+
+          <button type="submit" id="open-submit" class="hw-btn hw-btn-primary admin-save-btn">
+            Abrir selecciones →
+          </button>
+
+          <div id="open-feedback" class="admin-save-feedback" style="display:none;"></div>
+        </form>
+
+        <div class="admin-config-meta">
+          <p>
+            <i class="bi bi-info-circle"></i>
+            Esta acción es manual y reversible — puedes cerrar las selecciones en cualquier momento.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ MODO: SELECCIONES ABIERTAS — Info + cerrar ═══ -->
+    <div id="config-mode-open" style="display:none;">
+      <div class="admin-config-card">
+        <div class="admin-config-eyebrow admin-config-eyebrow-active">
+          <i class="bi bi-broadcast"></i> Selecciones activas
+        </div>
+        <h1>Temporada <span id="active-season-display">—</span></h1>
+        <p class="admin-config-sub">
+          El sitio público está mostrando el flujo de aplicación. Los aspirantes pueden enviar su solicitud ahora mismo.
+        </p>
+
+        <dl class="admin-dl admin-dl-config">
+          <dt>Abierta desde</dt>
+          <dd id="opened-at-display">—</dd>
+          <dt>Por</dt>
+          <dd id="opened-by-display">—</dd>
+          <dt>Hint para próxima convocatoria</dt>
+          <dd id="hint-display">—</dd>
+        </dl>
+
+        <div class="admin-config-actions">
+          <a href="/admin/solicitudes" class="hw-btn hw-btn-primary">
+            Ver solicitudes →
+          </a>
+          <button type="button" id="close-btn" class="admin-action-btn admin-action-btn-danger">
+            <i class="bi bi-x-circle"></i> Cerrar selecciones
+          </button>
+        </div>
+
+        <div id="close-feedback" class="admin-save-feedback" style="display:none;"></div>
+      </div>
+    </div>
+
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+  import { nextSemesters, formatSemesterDisplay } from '@lib/season';
+
+  let userEmail = '';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // ── Auth guard ──────────────────────────────────────────────────────
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.email) {
+      window.location.replace('/admin/login');
+      return;
+    }
+    userEmail = session.user.email.toLowerCase();
+    const { data: directiva } = await supabase
+      .from('directiva').select('email').eq('email', userEmail).maybeSingle();
+    if (!directiva) {
+      await supabase.auth.signOut();
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    // ── Load current config ─────────────────────────────────────────────
+    await renderConfig();
+
+    // Submit handlers
+    document.getElementById('open-form')!.addEventListener('submit', openSelecciones);
+    document.getElementById('close-btn')!.addEventListener('click', closeSelecciones);
+  });
+
+  async function renderConfig() {
+    const loading     = document.getElementById('config-loading')!;
+    const modeOpen    = document.getElementById('config-mode-open')!;
+    const modeClosed  = document.getElementById('config-mode-closed')!;
+
+    const { data, error } = await supabase
+      .from('seleccion_config')
+      .select('*')
+      .eq('id', true)
+      .maybeSingle();
+
+    loading.style.display = 'none';
+
+    if (error) {
+      alert(`Error: ${error.message}`);
+      return;
+    }
+
+    if (data?.is_open && data.active_season) {
+      // Modo: abiertas
+      modeOpen.style.display = '';
+      modeClosed.style.display = 'none';
+      document.getElementById('active-season-display')!.textContent = formatSemesterDisplay(data.active_season);
+      document.getElementById('opened-at-display')!.textContent = data.opened_at
+        ? new Date(data.opened_at).toLocaleString('es-MX', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
+        : '—';
+      document.getElementById('opened-by-display')!.textContent = data.opened_by || '—';
+      document.getElementById('hint-display')!.textContent = data.next_season_hint || 'No definido — se mostrará mensaje genérico al cerrar';
+    } else {
+      // Modo: cerradas
+      modeClosed.style.display = '';
+      modeOpen.style.display = 'none';
+
+      // Poblar dropdown con próximos semestres
+      const select = document.getElementById('season-select') as HTMLSelectElement;
+      const semesters = nextSemesters(8);
+      select.innerHTML = '<option value="" disabled selected>Selecciona un semestre…</option>' +
+        semesters.map(s => `<option value="${s}">${formatSemesterDisplay(s)}</option>`).join('');
+    }
+  }
+
+  async function openSelecciones(e: Event) {
+    e.preventDefault();
+    const select = document.getElementById('season-select') as HTMLSelectElement;
+    const hint   = (document.getElementById('hint-input') as HTMLInputElement).value.trim();
+    const submit = document.getElementById('open-submit') as HTMLButtonElement;
+    const fb     = document.getElementById('open-feedback') as HTMLElement;
+
+    const season = select.value;
+    if (!season) {
+      showFeedback(fb, 'Selecciona una temporada primero.', 'error');
+      return;
+    }
+
+    const ok = confirm(
+      `¿Seguro que quieres abrir las selecciones para la temporada ${season}?\n\n` +
+      `El sitio público mostrará el formulario de aplicación de inmediato.`
+    );
+    if (!ok) return;
+
+    submit.disabled = true;
+    submit.textContent = 'Abriendo…';
+    fb.style.display = 'none';
+
+    const { error } = await supabase
+      .from('seleccion_config')
+      .update({
+        is_open: true,
+        active_season: season,
+        next_season_hint: hint || null,
+        opened_at: new Date().toISOString(),
+        opened_by: userEmail,
+        closed_at: null,
+        closed_by: null,
+      })
+      .eq('id', true);
+
+    if (error) {
+      showFeedback(fb, `Error: ${error.message}`, 'error');
+      submit.disabled = false;
+      submit.textContent = 'Abrir selecciones →';
+      return;
+    }
+
+    showFeedback(fb, '✓ Selecciones abiertas. Redirigiendo…', 'success');
+    setTimeout(() => window.location.replace('/admin/solicitudes'), 800);
+  }
+
+  async function closeSelecciones() {
+    const fb     = document.getElementById('close-feedback') as HTMLElement;
+    const closeBtn = document.getElementById('close-btn') as HTMLButtonElement;
+
+    const ok1 = confirm(
+      `Cerrar las selecciones desactivará el formulario público.\n\n` +
+      `Las solicitudes recibidas se conservarán intactas. Puedes reabrir o abrir una temporada nueva en cualquier momento.\n\n` +
+      `¿Confirmar el cierre?`
+    );
+    if (!ok1) return;
+
+    closeBtn.disabled = true;
+    closeBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Cerrando…';
+
+    const { error } = await supabase
+      .from('seleccion_config')
+      .update({
+        is_open: false,
+        closed_at: new Date().toISOString(),
+        closed_by: userEmail,
+      })
+      .eq('id', true);
+
+    if (error) {
+      showFeedback(fb, `Error: ${error.message}`, 'error');
+      closeBtn.disabled = false;
+      closeBtn.innerHTML = '<i class="bi bi-x-circle"></i> Cerrar selecciones';
+      return;
+    }
+
+    showFeedback(fb, '✓ Selecciones cerradas.', 'success');
+    setTimeout(() => renderConfig(), 800);
+  }
+
+  function showFeedback(el: HTMLElement, msg: string, type: 'success' | 'error') {
+    el.style.display = 'block';
+    el.className = `admin-save-feedback admin-save-feedback-${type}`;
+    el.textContent = msg;
+  }
+</script>

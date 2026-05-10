@@ -1,0 +1,101 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Acceso · Panel Hello World" showHeader={false}>
+  <section class="admin-login">
+    <div class="admin-login-card">
+      <div class="admin-login-eyebrow">
+        <i class="bi bi-shield-lock-fill"></i> Acceso restringido
+      </div>
+      <h1>Panel interno</h1>
+      <p class="admin-login-sub">
+        Solo miembros de la directiva. Te enviamos un link mágico al correo registrado — sin contraseñas.
+      </p>
+
+      <form id="admin-login-form" class="admin-login-form" novalidate>
+        <div class="input-group">
+          <input
+            type="email"
+            id="admin-login-email"
+            name="email"
+            required
+            autocomplete="email"
+            placeholder=" "
+          >
+          <label for="admin-login-email">Tu correo</label>
+        </div>
+
+        <button type="submit" id="admin-login-submit" class="hw-btn hw-btn-primary admin-login-submit">
+          Enviar link mágico →
+        </button>
+
+        <div id="admin-login-feedback" class="admin-login-feedback" style="display:none;"></div>
+      </form>
+
+      <p class="admin-login-tip">
+        <i class="bi bi-info-circle"></i>
+        Si tu correo no está autorizado, el link no llegará. Habla con la directiva.
+      </p>
+    </div>
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Si ya hay sesión, redirigir al panel
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      window.location.replace('/admin');
+      return;
+    }
+
+    const form     = document.getElementById('admin-login-form') as HTMLFormElement;
+    const input    = document.getElementById('admin-login-email') as HTMLInputElement;
+    const submit   = document.getElementById('admin-login-submit') as HTMLButtonElement;
+    const feedback = document.getElementById('admin-login-feedback') as HTMLElement;
+
+    function showFeedback(msg: string, type: 'success' | 'error') {
+      feedback.style.display = 'block';
+      feedback.className = `admin-login-feedback admin-login-feedback-${type}`;
+      feedback.innerHTML = msg;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = input.value.trim().toLowerCase();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showFeedback('Ese correo no se ve bien. Revísalo.', 'error');
+        return;
+      }
+
+      submit.disabled = true;
+      submit.textContent = 'Enviando…';
+
+      const redirect = `${window.location.origin}/admin/auth/callback`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirect,
+          shouldCreateUser: true, // El callback filtra por directiva — si no está, signOut
+        },
+      });
+
+      if (error) {
+        // Mensaje genérico — no revelar si el email existe o no
+        console.error('signInWithOtp error', error);
+        showFeedback(`Si tu correo está autorizado, te llegará un link en unos segundos.<br><small>${error.message}</small>`, 'error');
+      } else {
+        showFeedback(
+          `<strong>Listo.</strong><br>Si tu correo está autorizado, te llegará un link a <strong>${email}</strong>. Revisa también spam.`,
+          'success'
+        );
+        input.value = '';
+      }
+      submit.disabled = false;
+      submit.textContent = 'Enviar link mágico →';
+    });
+  });
+</script>

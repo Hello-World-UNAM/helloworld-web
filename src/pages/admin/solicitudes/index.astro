@@ -1,0 +1,397 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Solicitudes · Panel Hello World">
+  <section class="admin-list">
+    <!-- Auth guard placeholder — se evalúa en JS -->
+    <div id="admin-list-loading" class="admin-redirect">
+      <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+      <p>Cargando…</p>
+    </div>
+
+    <div id="admin-list-content" style="display:none;">
+
+      <!-- Header -->
+      <div class="admin-list-header">
+        <div>
+          <h1>Solicitudes</h1>
+          <p class="admin-list-subtitle">
+            Temporada <strong id="active-season">—</strong>
+            <span id="historical-badge" class="admin-historical-badge" style="display:none;">
+              <i class="bi bi-archive-fill"></i> Histórico · sólo lectura
+            </span>
+          </p>
+        </div>
+        <div class="admin-list-header-actions">
+          <select id="season-filter" class="admin-select"></select>
+          <a href="/admin/seleccion-config" class="admin-action-btn">
+            <i class="bi bi-gear-fill"></i> Configurar
+          </a>
+          <button id="btn-export" type="button" class="admin-action-btn">
+            <i class="bi bi-download"></i> CSV
+          </button>
+          <button id="btn-cierre" type="button" class="admin-action-btn admin-action-btn-primary" disabled>
+            <i class="bi bi-send-fill"></i> Cierre de inscripciones
+          </button>
+        </div>
+      </div>
+
+      <!-- Status counters -->
+      <div class="admin-stats" id="admin-stats">
+        <button data-status="all" class="admin-stat admin-stat-active">
+          <span class="admin-stat-num" id="count-all">0</span>
+          <span class="admin-stat-label">Total</span>
+        </button>
+        <button data-status="pending" class="admin-stat">
+          <span class="admin-stat-num" id="count-pending">0</span>
+          <span class="admin-stat-label">Pendientes</span>
+        </button>
+        <button data-status="reviewing" class="admin-stat">
+          <span class="admin-stat-num" id="count-reviewing">0</span>
+          <span class="admin-stat-label">En revisión</span>
+        </button>
+        <button data-status="accepted" class="admin-stat">
+          <span class="admin-stat-num" id="count-accepted">0</span>
+          <span class="admin-stat-label">Aceptados</span>
+        </button>
+        <button data-status="rejected" class="admin-stat">
+          <span class="admin-stat-num" id="count-rejected">0</span>
+          <span class="admin-stat-label">Rechazados</span>
+        </button>
+      </div>
+
+      <!-- Search -->
+      <div class="admin-search-wrap">
+        <i class="bi bi-search admin-search-icon"></i>
+        <input
+          type="search"
+          id="admin-search"
+          class="admin-search"
+          placeholder="Buscar por nombre, correo o carrera…"
+          autocomplete="off"
+        >
+      </div>
+
+      <!-- Table -->
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Carrera</th>
+              <th class="admin-th-num">Sem.</th>
+              <th>Estado</th>
+              <th>Recibida</th>
+              <th class="admin-th-actions"></th>
+            </tr>
+          </thead>
+          <tbody id="admin-tbody">
+            <tr><td colspan="6" class="admin-empty">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="admin-list-foot" id="admin-list-foot"></p>
+    </div>
+
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  type Status = 'pending' | 'reviewing' | 'accepted' | 'rejected';
+  type Row = {
+    id: string;
+    nombre: string;
+    correo: string;
+    carrera: string;
+    semestre: number;
+    status: Status;
+    season: string;
+    created_at: string;
+    email_notification_sent: boolean;
+  };
+
+  const STATUS_LABELS: Record<Status, string> = {
+    pending: 'Pendiente',
+    reviewing: 'En revisión',
+    accepted: 'Aceptado',
+    rejected: 'Rechazado',
+  };
+
+  let allRows: Row[] = [];
+  let activeFilter: Status | 'all' = 'all';
+  let searchQuery = '';
+  let activeSeason: string | null = null;
+  let viewingActiveSeason = false;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // ── Auth guard ──────────────────────────────────────────────────────
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.email) {
+      window.location.replace('/admin/login');
+      return;
+    }
+    const { data: directiva } = await supabase
+      .from('directiva')
+      .select('email')
+      .eq('email', session.user.email.toLowerCase())
+      .maybeSingle();
+    if (!directiva) {
+      await supabase.auth.signOut();
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    // ── Temporada activa (puede ser null si selecciones cerradas) ───────
+    const { data: config } = await supabase
+      .from('seleccion_config')
+      .select('is_open, active_season')
+      .eq('id', true)
+      .maybeSingle();
+    activeSeason = (config?.is_open && config.active_season) ? config.active_season : null;
+
+    // ── Seasons con solicitudes (histórico) ─────────────────────────────
+    const { data: seasonRows } = await supabase
+      .from('solicitudes')
+      .select('season')
+      .order('season', { ascending: false });
+    const uniqueSeasons = seasonRows ? [...new Set(seasonRows.map(r => r.season))] : [];
+
+    // Si no hay temporada activa Y no hay solicitudes históricas → onboarding
+    if (!activeSeason && uniqueSeasons.length === 0) {
+      window.location.replace('/admin/seleccion-config');
+      return;
+    }
+
+    document.getElementById('admin-list-loading')!.style.display = 'none';
+    document.getElementById('admin-list-content')!.style.display = 'block';
+
+    // ── Poblar selector ────────────────────────────────────────────────
+    // Combinar season activa + seasons históricas. Activa primero si existe.
+    const allSeasons = [...new Set([
+      ...(activeSeason ? [activeSeason] : []),
+      ...uniqueSeasons,
+    ])];
+    const seasonSelect = document.getElementById('season-filter') as HTMLSelectElement;
+    seasonSelect.innerHTML = allSeasons.map(s => {
+      const isActive = s === activeSeason;
+      return `<option value="${s}">${s}${isActive ? ' (activa)' : ''}</option>`;
+    }).join('');
+    seasonSelect.value = activeSeason || allSeasons[0];
+
+    seasonSelect.addEventListener('change', () => {
+      loadRows();
+    });
+
+    await loadRows();
+
+    // ── Status filter buttons ───────────────────────────────────────────
+    document.querySelectorAll<HTMLButtonElement>('#admin-stats .admin-stat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#admin-stats .admin-stat').forEach(b => b.classList.remove('admin-stat-active'));
+        btn.classList.add('admin-stat-active');
+        activeFilter = (btn.dataset.status as Status | 'all') || 'all';
+        renderTable();
+      });
+    });
+
+    // ── Search ──────────────────────────────────────────────────────────
+    const search = document.getElementById('admin-search') as HTMLInputElement;
+    search.addEventListener('input', () => {
+      searchQuery = search.value.trim().toLowerCase();
+      renderTable();
+    });
+
+    // ── Export CSV ──────────────────────────────────────────────────────
+    document.getElementById('btn-export')!.addEventListener('click', exportCsv);
+
+    // ── Cierre de inscripciones (placeholder, se conecta a edge function bulk) ──
+    document.getElementById('btn-cierre')!.addEventListener('click', triggerBulkSend);
+  });
+
+  async function loadRows() {
+    const seasonSelect = document.getElementById('season-filter') as HTMLSelectElement;
+    const tbody = document.getElementById('admin-tbody')!;
+    tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">Cargando…</td></tr>';
+
+    // Update header
+    const activeSeasonEl = document.getElementById('active-season')!;
+    const histBadge = document.getElementById('historical-badge')!;
+    activeSeasonEl.textContent = seasonSelect.value;
+    viewingActiveSeason = seasonSelect.value === activeSeason;
+    histBadge.style.display = viewingActiveSeason ? 'none' : 'inline-flex';
+
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .select('id, nombre, correo, carrera, semestre, status, season, created_at, email_notification_sent')
+      .eq('season', seasonSelect.value)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="6" class="admin-empty admin-empty-error">Error: ${escapeHtml(error.message)}</td></tr>`;
+      return;
+    }
+
+    allRows = (data || []) as Row[];
+    updateCounts();
+    renderTable();
+    updateBulkButton();
+  }
+
+  function updateCounts() {
+    const counts = { all: allRows.length, pending: 0, reviewing: 0, accepted: 0, rejected: 0 };
+    allRows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+    (Object.keys(counts) as Array<keyof typeof counts>).forEach(k => {
+      const el = document.getElementById(`count-${k}`);
+      if (el) el.textContent = String(counts[k]);
+    });
+  }
+
+  function updateBulkButton() {
+    const cierreBtn = document.getElementById('btn-cierre') as HTMLButtonElement;
+    const pendingNotifications = allRows.filter(
+      r => (r.status === 'accepted' || r.status === 'rejected') && !r.email_notification_sent
+    ).length;
+
+    // En histórico: deshabilitar siempre (no se envían emails de seasons pasadas)
+    if (!viewingActiveSeason) {
+      cierreBtn.disabled = true;
+      cierreBtn.title = 'Solo disponible en la temporada activa';
+      cierreBtn.innerHTML = `<i class="bi bi-archive"></i> Cierre (no aplica en histórico)`;
+      return;
+    }
+
+    cierreBtn.disabled = pendingNotifications === 0;
+    cierreBtn.title = pendingNotifications === 0
+      ? 'No hay decisiones pendientes de notificar'
+      : `Enviar ${pendingNotifications} email(s) de decisión`;
+    if (pendingNotifications > 0) {
+      cierreBtn.innerHTML = `<i class="bi bi-send-fill"></i> Cierre de inscripciones (${pendingNotifications})`;
+    } else {
+      cierreBtn.innerHTML = `<i class="bi bi-send-fill"></i> Cierre de inscripciones`;
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('admin-tbody')!;
+    const foot  = document.getElementById('admin-list-foot')!;
+
+    let filtered = allRows;
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(r => r.status === activeFilter);
+    }
+    if (searchQuery) {
+      filtered = filtered.filter(r =>
+        r.nombre.toLowerCase().includes(searchQuery) ||
+        r.correo.toLowerCase().includes(searchQuery) ||
+        r.carrera.toLowerCase().includes(searchQuery)
+      );
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">Sin solicitudes que mostrar.</td></tr>';
+      foot.textContent = '';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(r => `
+      <tr>
+        <td>
+          <div class="admin-row-name">${escapeHtml(r.nombre)}</div>
+          <div class="admin-row-sub">${escapeHtml(r.correo)}</div>
+        </td>
+        <td>${escapeHtml(r.carrera)}</td>
+        <td class="admin-th-num">${r.semestre}°</td>
+        <td><span class="admin-status admin-status-${r.status}">${STATUS_LABELS[r.status]}</span></td>
+        <td>${formatDate(r.created_at)}</td>
+        <td class="admin-th-actions">
+          <a href="/admin/solicitudes/detalle?id=${r.id}" class="admin-row-link" title="Ver detalle">
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </td>
+      </tr>
+    `).join('');
+    foot.textContent = `Mostrando ${filtered.length} de ${allRows.length} solicitud(es).`;
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function formatDate(iso: string): string {
+    const d = new Date(iso);
+    return d.toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function exportCsv() {
+    const headers = ['id','season','nombre','correo','carrera','semestre','status','created_at','email_notification_sent'];
+    const csvRows = [headers.join(',')];
+    allRows.forEach(r => {
+      const vals = headers.map(h => {
+        const v = (r as Record<string, unknown>)[h];
+        const s = v == null ? '' : String(v);
+        return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      });
+      csvRows.push(vals.join(','));
+    });
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const seasonSelect = document.getElementById('season-filter') as HTMLSelectElement;
+    link.download = `solicitudes-${seasonSelect.value}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  async function triggerBulkSend() {
+    const cierreBtn = document.getElementById('btn-cierre') as HTMLButtonElement;
+    const seasonSelect = document.getElementById('season-filter') as HTMLSelectElement;
+    const pending = allRows.filter(
+      r => (r.status === 'accepted' || r.status === 'rejected') && !r.email_notification_sent
+    ).length;
+    if (pending === 0) return;
+
+    const ok = confirm(
+      `Vas a enviar ${pending} correo(s) de decisión final a los solicitantes de la temporada ${seasonSelect.value}.\n\n` +
+      `Esto NO se puede deshacer. ¿Confirmar el cierre?`
+    );
+    if (!ok) return;
+
+    cierreBtn.disabled = true;
+    cierreBtn.innerHTML = `<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Enviando…`;
+
+    const { data, error } = await supabase.functions.invoke('send-decisions-bulk', {
+      body: { season: seasonSelect.value },
+    });
+
+    if (error) {
+      alert(`Error al enviar: ${error.message}`);
+      cierreBtn.disabled = false;
+      return;
+    }
+
+    const sent   = data?.sent ?? 0;
+    const failed = data?.failed ?? 0;
+    await loadRows();
+
+    if (failed > 0) {
+      alert(`Enviados: ${sent}\nFallidos: ${failed}\n\nRevisa la consola del navegador para más detalles.`);
+      console.warn('Bulk send errors:', data?.errors);
+    } else {
+      const goConfig = confirm(
+        `✓ ${sent} email(s) enviado(s) correctamente.\n\n` +
+        `¿Quieres ir ahora al panel de configuración para cerrar formalmente las selecciones?`
+      );
+      if (goConfig) {
+        window.location.href = '/admin/seleccion-config';
+      }
+    }
+  }
+</script>

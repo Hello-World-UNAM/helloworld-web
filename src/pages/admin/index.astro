@@ -1,0 +1,35 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Panel · Hello World" showHeader={false}>
+  <div class="admin-redirect">
+    <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+    <p>Redirigiendo…</p>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  (async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    // Verificar si hay temporada activa
+    const { data: config } = await supabase
+      .from('seleccion_config')
+      .select('is_open')
+      .eq('id', true)
+      .maybeSingle();
+
+    if (config?.is_open) {
+      window.location.replace('/admin/solicitudes');
+    } else {
+      window.location.replace('/admin/seleccion-config');
+    }
+  })();
+</script>
