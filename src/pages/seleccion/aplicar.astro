@@ -327,12 +327,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const { data: config, error: configErr } = await supabase
     .from('seleccion_config')
-    .select('is_open, active_season')
+    .select('is_open, active_season, applications_closed')
     .eq('id', true)
     .maybeSingle();
 
-  if (configErr || !config || !config.is_open || !config.active_season) {
-    // Cerrado o error: redirigir al index de selección
+  if (configErr || !config || !config.is_open || !config.active_season || config.applications_closed) {
+    // Cerrado, forms cerrado o error: redirigir al index
     window.location.replace('/seleccion');
     return;
   }
