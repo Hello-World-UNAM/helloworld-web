@@ -60,12 +60,69 @@ export type Database = {
         };
         Update: Partial<Database['public']['Tables']['directiva']['Row']>;
       };
+      interview_days: {
+        Row: {
+          id: string;
+          season: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          duration_minutes: number;
+          meet_url: string | null;
+          notes: string | null;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          season: string;
+          date: string;
+          start_time: string;
+          end_time: string;
+          duration_minutes?: number;
+          meet_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: Partial<Database['public']['Tables']['interview_days']['Row']>;
+      };
+      interviews: {
+        Row: {
+          id: string;
+          solicitud_id: string;
+          slot_datetime: string;
+          duration_minutes: number;
+          meet_url: string | null;
+          status: 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+          reschedule_count: number;
+          email_sent: boolean;
+          created_at: string;
+          cancelled_at: string | null;
+          notes: string | null;
+        };
+        Insert: never;
+        Update: Partial<Database['public']['Tables']['interviews']['Row']>;
+      };
+      interview_booking_tokens: {
+        Row: {
+          id: string;
+          solicitud_id: string;
+          token: string;
+          reschedule_count: number;
+          created_at: string;
+          used_at: string | null;
+        };
+        Insert: never;
+        Update: never;
+      };
       seleccion_config: {
         Row: {
           id: boolean;
           is_open: boolean;
           active_season: string | null;
           next_season_hint: string | null;
+          interview_deadline_at: string | null;
           opened_at: string | null;
           opened_by: string | null;
           closed_at: string | null;
@@ -75,7 +132,7 @@ export type Database = {
         Insert: never;
         Update: Partial<Pick<
           Database['public']['Tables']['seleccion_config']['Row'],
-          'is_open' | 'active_season' | 'next_season_hint' | 'opened_at' | 'opened_by' | 'closed_at' | 'closed_by'
+          'is_open' | 'active_season' | 'next_season_hint' | 'interview_deadline_at' | 'opened_at' | 'opened_by' | 'closed_at' | 'closed_by'
         >>;
       };
     };
