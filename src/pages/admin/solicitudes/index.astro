@@ -28,6 +28,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <a href="/admin/seleccion-config" class="admin-action-btn">
             <i class="bi bi-gear-fill"></i> Configurar
           </a>
+          <a href="/admin/entrevistas" class="admin-action-btn">
+            <i class="bi bi-calendar-week"></i> Entrevistas
+          </a>
           <button id="btn-export" type="button" class="admin-action-btn">
             <i class="bi bi-download"></i> CSV
           </button>
@@ -126,6 +129,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   let searchQuery = '';
   let activeSeason: string | null = null;
   let viewingActiveSeason = false;
+  let interviewDeadline: Date | null = null;
+  let interviewSlots = { total: 0, withMissingMeet: 0, daysCount: 0 };
 
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Auth guard ──────────────────────────────────────────────────────
@@ -145,13 +150,36 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       return;
     }
 
-    // ── Temporada activa (puede ser null si selecciones cerradas) ───────
+    // ── Temporada activa + deadline entrevista ─────────────────────────
     const { data: config } = await supabase
       .from('seleccion_config')
-      .select('is_open, active_season')
+      .select('is_open, active_season, interview_deadline_at')
       .eq('id', true)
       .maybeSingle();
     activeSeason = (config?.is_open && config.active_season) ? config.active_season : null;
+    interviewDeadline = config?.interview_deadline_at ? new Date(config.interview_deadline_at) : null;
+
+    // ── Slots de entrevistas configurados ──────────────────────────────
+    if (activeSeason) {
+      const { data: days } = await supabase
+        .from('interview_days')
+        .select('id, start_time, end_time, duration_minutes, meet_url, date')
+        .eq('season', activeSeason);
+      if (days) {
+        interviewSlots.daysCount = days.length;
+        interviewSlots.total = 0;
+        interviewSlots.withMissingMeet = 0;
+        for (const d of days) {
+          const [sh, sm] = d.start_time.split(':').map(Number);
+          const [eh, em] = d.end_time.split(':').map(Number);
+          const startMin = sh * 60 + sm;
+          const endMin   = eh * 60 + em;
+          const step = d.duration_minutes;
+          interviewSlots.total += Math.max(0, Math.floor((endMin - startMin) / step));
+          if (!d.meet_url || d.meet_url.trim() === '') interviewSlots.withMissingMeet++;
+        }
+      }
+    }
 
     // ── Seasons con solicitudes (histórico) ─────────────────────────────
     const { data: seasonRows } = await supabase
@@ -262,6 +290,43 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       cierreBtn.title = 'Solo disponible en la temporada activa';
       cierreBtn.innerHTML = `<i class="bi bi-archive"></i> Cierre (no aplica en histórico)`;
       return;
+    }
+
+    // Hay aceptados pendientes — validaciones críticas
+    const acceptedPending = allRows.filter(r => r.status === 'accepted' && !r.email_notification_sent).length;
+    const acceptedTotal = allRows.filter(r => r.status === 'accepted').length;
+
+    if (acceptedPending > 0) {
+      // 1. Deadline configurada y futura
+      if (!interviewDeadline || interviewDeadline.getTime() <= Date.now()) {
+        cierreBtn.disabled = true;
+        cierreBtn.title = !interviewDeadline
+          ? 'Configura la fecha límite de entrevista antes de mandar'
+          : 'La fecha límite ya pasó. Actualízala antes de mandar.';
+        cierreBtn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Falta fecha de entrevista`;
+        return;
+      }
+      // 2. Días de entrevista configurados
+      if (interviewSlots.daysCount === 0) {
+        cierreBtn.disabled = true;
+        cierreBtn.title = 'Configura al menos un día de entrevista antes de mandar';
+        cierreBtn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Faltan días de entrevista`;
+        return;
+      }
+      // 3. Capacidad suficiente para todos los aceptados (no solo pendientes)
+      if (acceptedTotal > interviewSlots.total) {
+        cierreBtn.disabled = true;
+        cierreBtn.title = `Tienes ${acceptedTotal} aceptados y solo ${interviewSlots.total} slots disponibles. Agrega más días.`;
+        cierreBtn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Faltan slots (${acceptedTotal - interviewSlots.total})`;
+        return;
+      }
+      // 4. Todos los días con Meet URL
+      if (interviewSlots.withMissingMeet > 0) {
+        cierreBtn.disabled = true;
+        cierreBtn.title = `${interviewSlots.withMissingMeet} día(s) sin Meet URL. Configúralos antes de mandar.`;
+        cierreBtn.innerHTML = `<i class="bi bi-exclamation-triangle"></i> Falta Meet URL`;
+        return;
+      }
     }
 
     cierreBtn.disabled = pendingNotifications === 0;
