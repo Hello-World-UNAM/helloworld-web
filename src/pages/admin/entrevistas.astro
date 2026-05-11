@@ -1,0 +1,221 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Entrevistas · Panel Hello World">
+  <section class="admin-interviews">
+
+    <div id="entrevistas-loading" class="admin-redirect">
+      <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+      <p>Cargando…</p>
+    </div>
+
+    <div id="entrevistas-content" style="display:none;">
+
+      <div class="admin-list-header">
+        <div>
+          <h1>Entrevistas</h1>
+          <p class="admin-list-subtitle">Temporada <strong id="active-season">—</strong></p>
+        </div>
+        <div class="admin-list-header-actions">
+          <a href="/admin/solicitudes" class="admin-action-btn">
+            <i class="bi bi-list-ul"></i> Ver solicitudes
+          </a>
+          <a href="/admin/seleccion-config" class="admin-action-btn">
+            <i class="bi bi-gear-fill"></i> Configurar días
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="admin-stats" id="entrevistas-stats">
+        <div class="admin-stat admin-stat-active">
+          <span class="admin-stat-num" id="stat-confirmed">0</span>
+          <span class="admin-stat-label">Confirmadas</span>
+        </div>
+        <div class="admin-stat">
+          <span class="admin-stat-num" id="stat-completed">0</span>
+          <span class="admin-stat-label">Completadas</span>
+        </div>
+        <div class="admin-stat">
+          <span class="admin-stat-num" id="stat-no-show">0</span>
+          <span class="admin-stat-label">No show</span>
+        </div>
+        <div class="admin-stat">
+          <span class="admin-stat-num" id="stat-cancelled">0</span>
+          <span class="admin-stat-label">Canceladas</span>
+        </div>
+      </div>
+
+      <!-- Agenda por día -->
+      <div id="agenda-by-day" class="admin-agenda-days"></div>
+
+    </div>
+
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+  import { formatDayLong } from '@lib/interview-slots';
+
+  type InterviewRow = {
+    id: string;
+    solicitud_id: string;
+    slot_datetime: string;
+    duration_minutes: number;
+    meet_url: string | null;
+    status: 'confirmed' | 'cancelled' | 'completed' | 'no_show';
+    notes: string | null;
+    solicitudes: { nombre: string; correo: string; carrera: string; semestre: number } | null;
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    confirmed: 'Confirmada',
+    completed: 'Completada',
+    no_show: 'No show',
+    cancelled: 'Cancelada',
+  };
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Auth guard
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.email) { window.location.replace('/admin/login'); return; }
+    const { data: directiva } = await supabase
+      .from('directiva').select('email').eq('email', session.user.email.toLowerCase()).maybeSingle();
+    if (!directiva) {
+      await supabase.auth.signOut();
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    // Activa season
+    const { data: config } = await supabase
+      .from('seleccion_config').select('active_season').eq('id', true).maybeSingle();
+    const season = config?.active_season;
+    document.getElementById('active-season')!.textContent = season || '—';
+
+    if (!season) {
+      document.getElementById('entrevistas-loading')!.innerHTML =
+        '<p>Sin temporada activa. Abre una desde <a href="/admin/seleccion-config">configuración</a>.</p>';
+      return;
+    }
+
+    // Cargar entrevistas con join a solicitudes
+    const { data: interviews, error } = await supabase
+      .from('interviews')
+      .select(`
+        id, solicitud_id, slot_datetime, duration_minutes, meet_url, status, notes,
+        solicitudes!inner ( nombre, correo, carrera, semestre, season )
+      `)
+      .eq('solicitudes.season', season)
+      .order('slot_datetime', { ascending: true });
+
+    document.getElementById('entrevistas-loading')!.style.display = 'none';
+    document.getElementById('entrevistas-content')!.style.display = 'block';
+
+    if (error) {
+      document.getElementById('agenda-by-day')!.innerHTML =
+        `<div class="admin-empty admin-empty-error">Error: ${error.message}</div>`;
+      return;
+    }
+
+    const rows = (interviews || []) as unknown as InterviewRow[];
+    renderStats(rows);
+    renderAgenda(rows);
+  });
+
+  function renderStats(rows: InterviewRow[]) {
+    const counts = { confirmed: 0, completed: 0, no_show: 0, cancelled: 0 };
+    rows.forEach(r => { counts[r.status] = (counts[r.status] || 0) + 1; });
+    document.getElementById('stat-confirmed')!.textContent = String(counts.confirmed);
+    document.getElementById('stat-completed')!.textContent = String(counts.completed);
+    document.getElementById('stat-no-show')!.textContent = String(counts.no_show);
+    document.getElementById('stat-cancelled')!.textContent = String(counts.cancelled);
+  }
+
+  function renderAgenda(rows: InterviewRow[]) {
+    const container = document.getElementById('agenda-by-day')!;
+    if (rows.length === 0) {
+      container.innerHTML = '<div class="admin-empty">Sin entrevistas agendadas todavía.</div>';
+      return;
+    }
+
+    // Agrupar por día
+    const byDay = new Map<string, InterviewRow[]>();
+    rows.forEach(r => {
+      const day = r.slot_datetime.slice(0, 10);
+      if (!byDay.has(day)) byDay.set(day, []);
+      byDay.get(day)!.push(r);
+    });
+
+    const html = [...byDay.entries()].map(([day, items]) => {
+      const dayLabel = formatDayLong(day);
+      const itemsHtml = items.map(r => {
+        const time = formatTime(r.slot_datetime);
+        const sol = r.solicitudes;
+        return `
+          <article class="admin-agenda-item admin-agenda-status-${r.status}">
+            <div class="admin-agenda-time">${time}</div>
+            <div class="admin-agenda-info">
+              <div class="admin-agenda-name">${escapeHtml(sol?.nombre || 'Sin nombre')}</div>
+              <div class="admin-agenda-sub">${escapeHtml(sol?.carrera || '—')} · ${sol?.semestre || '?'}° sem</div>
+            </div>
+            <div class="admin-agenda-status-cell">
+              <span class="admin-status admin-status-${r.status === 'confirmed' ? 'reviewing' : (r.status === 'completed' ? 'accepted' : (r.status === 'cancelled' ? 'rejected' : 'pending'))}">
+                ${STATUS_LABELS[r.status]}
+              </span>
+            </div>
+            <div class="admin-agenda-actions">
+              ${r.meet_url ? `<a href="${escapeAttr(r.meet_url)}" target="_blank" rel="noopener noreferrer" class="admin-agenda-meet" title="Abrir Meet"><i class="bi bi-camera-video-fill"></i></a>` : ''}
+              <a href="/admin/solicitudes/detalle?id=${r.solicitud_id}" class="admin-agenda-detail" title="Ver solicitud">
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
+            ${r.status === 'confirmed' ? `
+              <div class="admin-agenda-row-actions">
+                <button type="button" class="admin-mini-btn admin-mini-btn-success" data-id="${r.id}" data-action="completed">
+                  <i class="bi bi-check2"></i> Marcar completada
+                </button>
+                <button type="button" class="admin-mini-btn admin-mini-btn-warn" data-id="${r.id}" data-action="no_show">
+                  <i class="bi bi-person-x"></i> No show
+                </button>
+              </div>
+            ` : ''}
+          </article>
+        `;
+      }).join('');
+
+      return `
+        <section class="admin-agenda-day">
+          <h2 class="admin-agenda-day-header">${escapeHtml(dayLabel)} <span class="admin-agenda-day-count">${items.length}</span></h2>
+          <div class="admin-agenda-list">${itemsHtml}</div>
+        </section>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
+
+    // Bind acciones
+    container.querySelectorAll<HTMLButtonElement>('.admin-mini-btn').forEach(btn => {
+      btn.addEventListener('click', () => updateStatus(btn.dataset.id!, btn.dataset.action as 'completed' | 'no_show'));
+    });
+  }
+
+  async function updateStatus(id: string, action: 'completed' | 'no_show') {
+    const label = action === 'completed' ? 'completada' : 'no show';
+    const ok = confirm(`¿Marcar esta entrevista como ${label}?`);
+    if (!ok) return;
+    const { error } = await supabase.from('interviews').update({ status: action }).eq('id', id);
+    if (error) { alert(`Error: ${error.message}`); return; }
+    location.reload();
+  }
+
+  function formatTime(iso: string): string {
+    return new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+  }
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeAttr(s: string): string { return escapeHtml(s); }
+</script>
