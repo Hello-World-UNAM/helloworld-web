@@ -72,24 +72,50 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       }
 
       submit.disabled = true;
-      submit.textContent = 'Enviando…';
+      submit.textContent = 'Verificando…';
 
+      // Pre-check: ¿el email está en la allowlist de directiva?
+      // Si no, NO disparamos signInWithOtp para no mandar correos a no autorizados.
+      const { data: isAllowed, error: rpcErr } = await supabase
+        .rpc('is_email_in_directiva', { p_email: email });
+
+      if (rpcErr) {
+        console.error('directiva check error', rpcErr);
+        showFeedback('No pudimos verificar tu acceso ahora. Intenta en un momento.', 'error');
+        submit.disabled = false;
+        submit.textContent = 'Enviar link mágico →';
+        return;
+      }
+
+      if (!isAllowed) {
+        // Mensaje genérico — no revelamos explícitamente que no está autorizado
+        showFeedback(
+          `Si tu correo está autorizado, te llegará un link a <strong>${email}</strong>. Revisa también spam.`,
+          'success'
+        );
+        input.value = '';
+        submit.disabled = false;
+        submit.textContent = 'Enviar link mágico →';
+        return;
+      }
+
+      // Está autorizado: ahora sí mandamos magic link
+      submit.textContent = 'Enviando…';
       const redirect = `${window.location.origin}/admin/auth/callback`;
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: redirect,
-          shouldCreateUser: true, // El callback filtra por directiva — si no está, signOut
+          shouldCreateUser: true,
         },
       });
 
       if (error) {
-        // Mensaje genérico — no revelar si el email existe o no
         console.error('signInWithOtp error', error);
-        showFeedback(`Si tu correo está autorizado, te llegará un link en unos segundos.<br><small>${error.message}</small>`, 'error');
+        showFeedback(`Hubo un problema enviando el link. Intenta de nuevo.<br><small>${error.message}</small>`, 'error');
       } else {
         showFeedback(
-          `<strong>Listo.</strong><br>Si tu correo está autorizado, te llegará un link a <strong>${email}</strong>. Revisa también spam.`,
+          `<strong>Listo.</strong><br>Te enviamos un link a <strong>${email}</strong>. Revisa tu correo (y spam).`,
           'success'
         );
         input.value = '';
