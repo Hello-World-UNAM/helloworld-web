@@ -86,11 +86,12 @@ const navItems = [
   (async () => {
     const { data } = await supabase
       .from('seleccion_config')
-      .select('is_open')
+      .select('is_open, applications_closed')
       .eq('id', true)
       .maybeSingle();
 
     const isOpen = !!data?.is_open;
+    const interviewing = isOpen && !!data?.applications_closed;
 
     // Update cache
     try {
@@ -111,7 +112,10 @@ const navItems = [
       if (!currentlySecond) {
         inicioLi.insertAdjacentElement('afterend', seleccionLi);
       }
-      if (dot) dot.style.display = '';
+      if (dot) {
+        dot.style.display = '';
+        dot.classList.toggle('nav-seleccion-dot-interviewing', interviewing);
+      }
     } else {
       if (currentlySecond) {
         list.appendChild(seleccionLi);
