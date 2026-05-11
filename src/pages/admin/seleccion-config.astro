@@ -66,6 +66,32 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <dd id="opened-by-display">—</dd>
         </dl>
 
+        <!-- ═══ Estado del formulario público ═══ -->
+        <div class="admin-forms-section">
+          <h3 class="admin-deadline-title">
+            <i class="bi bi-clipboard-check"></i>
+            Formulario de inscripciones
+          </h3>
+          <p class="admin-deadline-hint">
+            Cuando el form está abierto, cualquiera puede aplicar desde la web pública.
+            Cuando se cierra (manual o al enviar el bulk a entrevista), el sitio público
+            muestra "En fase de entrevistas" hasta que se reabra o se cierre el ciclo.
+          </p>
+
+          <div class="admin-forms-row">
+            <div class="admin-forms-status">
+              <span class="admin-forms-label">Estado actual:</span>
+              <span id="forms-status-pill" class="admin-forms-pill admin-forms-pill-open">
+                <i class="bi bi-unlock-fill"></i> Abierto
+              </span>
+            </div>
+            <button type="button" id="forms-toggle-btn" class="admin-action-btn admin-action-btn-primary">
+              <i class="bi bi-lock-fill"></i> Cerrar inscripciones
+            </button>
+          </div>
+          <div id="forms-feedback" class="admin-save-feedback" style="display:none;"></div>
+        </div>
+
         <!-- ═══ Fecha límite entrevista (configurable) ═══ -->
         <div class="admin-deadline-section">
           <h3 class="admin-deadline-title">
@@ -99,6 +125,36 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             Guardar fecha
           </button>
           <div id="deadline-feedback" class="admin-save-feedback" style="display:none;"></div>
+        </div>
+
+        <!-- ═══ URL del grupo de WhatsApp ═══ -->
+        <div class="admin-deadline-section">
+          <h3 class="admin-deadline-title">
+            <i class="bi bi-whatsapp"></i>
+            Grupo de WhatsApp del club
+          </h3>
+          <p class="admin-deadline-hint">
+            Se incluye en el correo de bienvenida final que reciben los aceptados al
+            terminar el proceso de selección. Cada generación nueva debería crear su propio
+            link y actualizarlo aquí.
+          </p>
+
+          <input
+            type="url"
+            id="whatsapp-input"
+            class="admin-text-input"
+            placeholder="https://chat.whatsapp.com/..."
+          >
+
+          <div class="admin-deadline-preview" id="whatsapp-preview" style="margin-top:14px;">
+            <i class="bi bi-envelope-paper"></i>
+            <span>El correo dirá: <strong>Únete al grupo de WhatsApp →</strong> (link a <span id="whatsapp-preview-text">—</span>)</span>
+          </div>
+
+          <button type="button" id="whatsapp-save" class="hw-btn hw-btn-primary admin-deadline-save">
+            Guardar URL
+          </button>
+          <div id="whatsapp-feedback" class="admin-save-feedback" style="display:none;"></div>
         </div>
 
         <div class="admin-config-actions">
@@ -238,8 +294,101 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     // Interviews section (solo si hay temporada activa)
     if (activeSeasonGlobal) {
       setupInterviewsSection();
+      setupWhatsappSection();
+      setupFormsToggle();
     }
   });
+
+  function renderFormsStatus(closed: boolean) {
+    const pill = document.getElementById('forms-status-pill');
+    const btn  = document.getElementById('forms-toggle-btn') as HTMLButtonElement | null;
+    if (!pill || !btn) return;
+    if (closed) {
+      pill.className = 'admin-forms-pill admin-forms-pill-closed';
+      pill.innerHTML = '<i class="bi bi-lock-fill"></i> Cerrado';
+      btn.innerHTML = '<i class="bi bi-unlock-fill"></i> Reabrir inscripciones';
+      btn.dataset.action = 'reopen';
+    } else {
+      pill.className = 'admin-forms-pill admin-forms-pill-open';
+      pill.innerHTML = '<i class="bi bi-unlock-fill"></i> Abierto';
+      btn.innerHTML = '<i class="bi bi-lock-fill"></i> Cerrar inscripciones';
+      btn.dataset.action = 'close';
+    }
+  }
+
+  function setupFormsToggle() {
+    const btn = document.getElementById('forms-toggle-btn') as HTMLButtonElement | null;
+    const fb  = document.getElementById('forms-feedback') as HTMLElement | null;
+    if (!btn || !fb) return;
+
+    btn.addEventListener('click', async () => {
+      const action = btn.dataset.action || 'close';
+      const willClose = action === 'close';
+      const msg = willClose
+        ? '¿Cerrar el formulario de inscripciones?\n\nNadie podrá enviar solicitudes nuevas desde la web pública. Los visitantes verán "En fase de entrevistas".'
+        : '¿Reabrir el formulario de inscripciones?\n\nLa web pública volverá a permitir aplicaciones nuevas para esta temporada.';
+      if (!confirm(msg)) return;
+
+      btn.disabled = true;
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Guardando…';
+
+      const { error } = await supabase
+        .from('seleccion_config')
+        .update({ applications_closed: willClose })
+        .eq('id', true);
+
+      if (error) {
+        showFeedback(fb, `Error: ${error.message}`, 'error');
+        btn.disabled = false;
+        btn.innerHTML = original;
+        return;
+      }
+      showFeedback(fb, willClose ? '✓ Inscripciones cerradas.' : '✓ Inscripciones reabiertas.', 'success');
+      renderFormsStatus(willClose);
+      btn.disabled = false;
+    });
+  }
+
+  function setupWhatsappSection() {
+    const input  = document.getElementById('whatsapp-input')   as HTMLInputElement | null;
+    const preview = document.getElementById('whatsapp-preview-text');
+    const saveBtn = document.getElementById('whatsapp-save')   as HTMLButtonElement | null;
+    const fb      = document.getElementById('whatsapp-feedback') as HTMLElement | null;
+    if (!input || !saveBtn || !fb) return;
+
+    input.addEventListener('input', () => {
+      if (preview) preview.textContent = input.value.trim() || '—';
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      const url = input.value.trim();
+      if (!url) {
+        showFeedback(fb, 'Pon una URL primero.', 'error');
+        return;
+      }
+      if (!/^https:\/\/chat\.whatsapp\.com\//i.test(url)) {
+        const ok = confirm('Esta URL no parece de un grupo de WhatsApp (chat.whatsapp.com). ¿Continuar de todos modos?');
+        if (!ok) return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Guardando…';
+
+      const { error } = await supabase
+        .from('seleccion_config')
+        .update({ whatsapp_url: url })
+        .eq('id', true);
+
+      if (error) {
+        showFeedback(fb, `Error: ${error.message}`, 'error');
+      } else {
+        showFeedback(fb, '✓ URL guardada.', 'success');
+      }
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Guardar URL';
+    });
+  }
 
   // ── Formato fecha en español ─────────────────────────────────────────
   function formatDeadlineSpanish(date: Date): string {
@@ -369,6 +518,17 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         deadlineInput.value = toLocalInputValue(new Date(data.interview_deadline_at));
         deadlineInput.dispatchEvent(new Event('input'));
       }
+
+      // Pre-llenar WhatsApp URL
+      const whatsappInput = document.getElementById('whatsapp-input') as HTMLInputElement | null;
+      const whatsappPreview = document.getElementById('whatsapp-preview-text');
+      if (whatsappInput && data.whatsapp_url) {
+        whatsappInput.value = data.whatsapp_url;
+        if (whatsappPreview) whatsappPreview.textContent = data.whatsapp_url;
+      }
+
+      // Estado del forms público
+      renderFormsStatus(data.applications_closed);
     } else {
       // Modo: cerradas
       modeClosed.style.display = '';
@@ -410,6 +570,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         is_open: true,
         active_season: season,
         next_season_hint: null,
+        applications_closed: false,
         opened_at: new Date().toISOString(),
         opened_by: userEmail,
         closed_at: null,
