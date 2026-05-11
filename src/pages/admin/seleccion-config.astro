@@ -32,16 +32,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             </select>
           </div>
 
-          <div>
-            <label class="admin-field-label" for="hint-input">
-              Hint para próxima convocatoria
-              <span style="text-transform:none; color:#999; font-weight:500; font-size:0.78rem;">
-                (opcional, se mostrará al público cuando esta temporada se cierre)
-              </span>
-            </label>
-            <input type="text" id="hint-input" class="admin-text-input" placeholder="Ej: 2027-2 o &quot;el próximo semestre&quot;">
-          </div>
-
           <button type="submit" id="open-submit" class="hw-btn hw-btn-primary admin-save-btn">
             Abrir selecciones →
           </button>
@@ -74,9 +64,42 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <dd id="opened-at-display">—</dd>
           <dt>Por</dt>
           <dd id="opened-by-display">—</dd>
-          <dt>Hint para próxima convocatoria</dt>
-          <dd id="hint-display">—</dd>
         </dl>
+
+        <!-- ═══ Fecha límite entrevista (configurable) ═══ -->
+        <div class="admin-deadline-section">
+          <h3 class="admin-deadline-title">
+            <i class="bi bi-calendar-event"></i>
+            Fecha límite para agendar entrevista
+          </h3>
+          <p class="admin-deadline-hint">
+            Esta fecha aparece en el correo de aceptación. Debe ser futura.
+            Sin ella, el botón "Cierre de inscripciones" estará bloqueado.
+          </p>
+
+          <div class="admin-deadline-row">
+            <input
+              type="datetime-local"
+              id="deadline-input"
+              class="admin-text-input admin-deadline-input"
+            >
+            <div class="admin-deadline-presets">
+              <button type="button" class="admin-preset-btn" data-days="7">+7 días</button>
+              <button type="button" class="admin-preset-btn" data-days="14">+14 días</button>
+              <button type="button" class="admin-preset-btn" data-days="21">+21 días</button>
+            </div>
+          </div>
+
+          <div class="admin-deadline-preview" id="deadline-preview">
+            <i class="bi bi-envelope-paper"></i>
+            <span>El correo dirá: <strong id="deadline-preview-text">—</strong></span>
+          </div>
+
+          <button type="button" id="deadline-save" class="hw-btn hw-btn-primary admin-deadline-save">
+            Guardar fecha
+          </button>
+          <div id="deadline-feedback" class="admin-save-feedback" style="display:none;"></div>
+        </div>
 
         <div class="admin-config-actions">
           <a href="/admin/solicitudes" class="hw-btn hw-btn-primary">
@@ -89,6 +112,90 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
         <div id="close-feedback" class="admin-save-feedback" style="display:none;"></div>
       </div>
+
+      <!-- ═══════════════ DIVISOR FUERTE ═══════════════ -->
+      <div class="admin-section-divider">
+        <span class="admin-section-divider-label">
+          <i class="bi bi-calendar-week-fill"></i> Configuración de entrevistas
+        </span>
+      </div>
+
+      <!-- ═══ Card: configuración de días de entrevista ═══ -->
+      <div class="admin-config-card">
+        <h2 class="admin-interviews-title">Días disponibles para entrevistas</h2>
+        <p class="admin-config-sub">
+          Define los días en los que el equipo podrá entrevistar. Los slots se generan
+          automáticamente desde el rango horario y la duración elegida. Cada día tiene una
+          sala de Google Meet única que todos los entrevistados ese día usarán.
+        </p>
+
+        <!-- Stats de capacidad -->
+        <div class="admin-stats-row" id="interview-stats">
+          <div class="admin-stat-pill">
+            <span class="admin-stat-pill-num" id="stat-slots">0</span>
+            <span class="admin-stat-pill-label">Slots</span>
+          </div>
+          <div class="admin-stat-pill">
+            <span class="admin-stat-pill-num" id="stat-accepted">0</span>
+            <span class="admin-stat-pill-label">Aceptados</span>
+          </div>
+          <div class="admin-stat-pill" id="stat-warning-pill" style="display:none;">
+            <span class="admin-stat-pill-num" id="stat-missing">0</span>
+            <span class="admin-stat-pill-label">Faltan</span>
+          </div>
+        </div>
+
+        <!-- Lista de días configurados -->
+        <div id="interview-days-list" class="admin-days-list">
+          <div class="admin-empty admin-days-empty">Sin días configurados todavía.</div>
+        </div>
+
+        <!-- Form: añadir día -->
+        <details class="admin-add-day-details">
+          <summary class="admin-add-day-summary">
+            <i class="bi bi-plus-circle"></i> Agregar día de entrevista
+          </summary>
+          <form id="day-form" class="admin-day-form" novalidate>
+            <div class="admin-day-form-row">
+              <div class="admin-day-form-field">
+                <label class="admin-field-label" for="day-date">Fecha</label>
+                <input type="date" id="day-date" class="admin-text-input" required>
+              </div>
+              <div class="admin-day-form-field">
+                <label class="admin-field-label" for="day-start">Hora inicio</label>
+                <input type="time" id="day-start" class="admin-text-input" required>
+              </div>
+              <div class="admin-day-form-field">
+                <label class="admin-field-label" for="day-end">Hora fin</label>
+                <input type="time" id="day-end" class="admin-text-input" required>
+              </div>
+              <div class="admin-day-form-field">
+                <label class="admin-field-label" for="day-duration">Duración</label>
+                <select id="day-duration" class="admin-select admin-select-block">
+                  <option value="15">15 min</option>
+                  <option value="20">20 min</option>
+                  <option value="30" selected>30 min</option>
+                  <option value="45">45 min</option>
+                  <option value="60">60 min</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="admin-field-label" for="day-meet">URL de Google Meet</label>
+              <input type="url" id="day-meet" class="admin-text-input" required
+                placeholder="https://meet.google.com/abc-defg-hij">
+            </div>
+            <div id="day-slots-preview" class="admin-slots-preview" style="display:none;">
+              <span class="admin-slots-preview-label">Slots que se generarán:</span>
+              <span id="day-slots-list"></span>
+            </div>
+            <button type="submit" id="day-add-btn" class="hw-btn hw-btn-primary admin-deadline-save">
+              Agregar día
+            </button>
+            <div id="day-feedback" class="admin-save-feedback" style="display:none;"></div>
+          </form>
+        </details>
+      </div>
     </div>
 
   </section>
@@ -97,8 +204,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 <script>
   import { supabase } from '@lib/supabase';
   import { nextSemesters, formatSemesterDisplay } from '@lib/season';
+  import { generateSlots, formatSlotTime, formatDayShort, type InterviewDay } from '@lib/interview-slots';
 
   let userEmail = '';
+  let activeSeasonGlobal: string | null = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Auth guard ──────────────────────────────────────────────────────
@@ -122,7 +231,108 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     // Submit handlers
     document.getElementById('open-form')!.addEventListener('submit', openSelecciones);
     document.getElementById('close-btn')!.addEventListener('click', closeSelecciones);
+
+    // Deadline section
+    setupDeadlineSection();
+
+    // Interviews section (solo si hay temporada activa)
+    if (activeSeasonGlobal) {
+      setupInterviewsSection();
+    }
   });
+
+  // ── Formato fecha en español ─────────────────────────────────────────
+  function formatDeadlineSpanish(date: Date): string {
+    return new Intl.DateTimeFormat('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }).format(date);
+  }
+
+  // Convierte un Date a string apto para datetime-local input (sin zona)
+  function toLocalInputValue(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function setupDeadlineSection() {
+    const input    = document.getElementById('deadline-input')    as HTMLInputElement | null;
+    const previewT = document.getElementById('deadline-preview-text') as HTMLElement | null;
+    const saveBtn  = document.getElementById('deadline-save')     as HTMLButtonElement | null;
+    const fb       = document.getElementById('deadline-feedback') as HTMLElement | null;
+    if (!input || !previewT || !saveBtn || !fb) return;
+
+    function updatePreview() {
+      const v = input!.value;
+      if (!v) {
+        previewT!.textContent = '— (sin fecha definida)';
+        saveBtn!.disabled = true;
+        return;
+      }
+      const d = new Date(v);
+      if (isNaN(d.getTime())) {
+        previewT!.textContent = '— (fecha inválida)';
+        saveBtn!.disabled = true;
+        return;
+      }
+      const isFuture = d.getTime() > Date.now() + 60_000; // mínimo +1 min
+      previewT!.textContent = `Tienes hasta el ${formatDeadlineSpanish(d)} para agendar.`;
+      saveBtn!.disabled = !isFuture;
+      if (!isFuture) {
+        previewT!.textContent += ' (debe ser futura)';
+      }
+    }
+
+    input.addEventListener('input', updatePreview);
+    input.addEventListener('change', updatePreview);
+
+    // Presets
+    document.querySelectorAll<HTMLButtonElement>('.admin-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const days = parseInt(btn.dataset.days || '7', 10);
+        const target = new Date();
+        target.setDate(target.getDate() + days);
+        target.setHours(23, 59, 0, 0);
+        input.value = toLocalInputValue(target);
+        updatePreview();
+      });
+    });
+
+    saveBtn.addEventListener('click', saveDeadline);
+    updatePreview();
+  }
+
+  async function saveDeadline() {
+    const input   = document.getElementById('deadline-input')    as HTMLInputElement;
+    const saveBtn = document.getElementById('deadline-save')     as HTMLButtonElement;
+    const fb      = document.getElementById('deadline-feedback') as HTMLElement;
+
+    const v = input.value;
+    if (!v) {
+      showFeedback(fb, 'Pon una fecha primero.', 'error');
+      return;
+    }
+    const d = new Date(v);
+    if (isNaN(d.getTime()) || d.getTime() <= Date.now()) {
+      showFeedback(fb, 'La fecha debe ser futura.', 'error');
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando…';
+
+    const { error } = await supabase
+      .from('seleccion_config')
+      .update({ interview_deadline_at: d.toISOString() })
+      .eq('id', true);
+
+    if (error) {
+      showFeedback(fb, `Error: ${error.message}`, 'error');
+    } else {
+      showFeedback(fb, '✓ Fecha guardada. Ya puedes mandar el bulk de aceptados.', 'success');
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Guardar fecha';
+  }
 
   async function renderConfig() {
     const loading     = document.getElementById('config-loading')!;
@@ -144,6 +354,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     if (data?.is_open && data.active_season) {
       // Modo: abiertas
+      activeSeasonGlobal = data.active_season;
       modeOpen.style.display = '';
       modeClosed.style.display = 'none';
       document.getElementById('active-season-display')!.textContent = formatSemesterDisplay(data.active_season);
@@ -151,7 +362,13 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         ? new Date(data.opened_at).toLocaleString('es-MX', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })
         : '—';
       document.getElementById('opened-by-display')!.textContent = data.opened_by || '—';
-      document.getElementById('hint-display')!.textContent = data.next_season_hint || 'No definido — se mostrará mensaje genérico al cerrar';
+
+      // Pre-llenar deadline input con valor actual
+      const deadlineInput = document.getElementById('deadline-input') as HTMLInputElement | null;
+      if (deadlineInput && data.interview_deadline_at) {
+        deadlineInput.value = toLocalInputValue(new Date(data.interview_deadline_at));
+        deadlineInput.dispatchEvent(new Event('input'));
+      }
     } else {
       // Modo: cerradas
       modeClosed.style.display = '';
@@ -168,7 +385,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   async function openSelecciones(e: Event) {
     e.preventDefault();
     const select = document.getElementById('season-select') as HTMLSelectElement;
-    const hint   = (document.getElementById('hint-input') as HTMLInputElement).value.trim();
     const submit = document.getElementById('open-submit') as HTMLButtonElement;
     const fb     = document.getElementById('open-feedback') as HTMLElement;
 
@@ -193,7 +409,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       .update({
         is_open: true,
         active_season: season,
-        next_season_hint: hint || null,
+        next_season_hint: null,
         opened_at: new Date().toISOString(),
         opened_by: userEmail,
         closed_at: null,
@@ -251,4 +467,219 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     el.className = `admin-save-feedback admin-save-feedback-${type}`;
     el.textContent = msg;
   }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // Sección: días de entrevista
+  // ══════════════════════════════════════════════════════════════════════
+
+  function setupInterviewsSection() {
+    refreshInterviewDays();
+
+    const dayForm = document.getElementById('day-form') as HTMLFormElement;
+    const dateInput     = document.getElementById('day-date')     as HTMLInputElement;
+    const startInput    = document.getElementById('day-start')    as HTMLInputElement;
+    const endInput      = document.getElementById('day-end')      as HTMLInputElement;
+    const durationInput = document.getElementById('day-duration') as HTMLSelectElement;
+
+    // Live preview de los slots que se van a generar
+    function updateSlotsPreview() {
+      const previewWrap = document.getElementById('day-slots-preview') as HTMLElement;
+      const previewList = document.getElementById('day-slots-list')    as HTMLElement;
+      if (!dateInput.value || !startInput.value || !endInput.value) {
+        previewWrap.style.display = 'none';
+        return;
+      }
+      try {
+        const slots = generateSlots({
+          id: '', date: dateInput.value,
+          start_time: startInput.value + ':00',
+          end_time:   endInput.value + ':00',
+          duration_minutes: parseInt(durationInput.value, 10),
+        });
+        if (slots.length === 0) {
+          previewWrap.style.display = 'block';
+          previewList.textContent = '(rango inválido — ningún slot cabe)';
+          return;
+        }
+        previewWrap.style.display = 'block';
+        previewList.textContent = `${slots.length} slots: ${slots.map(formatSlotTime).join(', ')}`;
+      } catch {
+        previewWrap.style.display = 'none';
+      }
+    }
+
+    [dateInput, startInput, endInput, durationInput].forEach(el => {
+      el.addEventListener('input', updateSlotsPreview);
+      el.addEventListener('change', updateSlotsPreview);
+    });
+
+    dayForm.addEventListener('submit', addDay);
+  }
+
+  async function refreshInterviewDays() {
+    const list = document.getElementById('interview-days-list')!;
+    if (!activeSeasonGlobal) return;
+
+    const { data: days, error } = await supabase
+      .from('interview_days')
+      .select('*')
+      .eq('season', activeSeasonGlobal)
+      .order('date', { ascending: true });
+
+    if (error) {
+      list.innerHTML = `<div class="admin-empty admin-empty-error">Error: ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+
+    if (!days || days.length === 0) {
+      list.innerHTML = '<div class="admin-empty admin-days-empty">Sin días configurados todavía.</div>';
+    } else {
+      list.innerHTML = days.map(d => {
+        const slots = generateSlots(d as InterviewDay);
+        const missingMeet = !d.meet_url || d.meet_url.trim() === '';
+        return `
+          <article class="admin-day-card ${missingMeet ? 'admin-day-card-warning' : ''}">
+            <div class="admin-day-card-main">
+              <div class="admin-day-card-date">${escapeHtml(formatDayShort(d.date))}</div>
+              <div class="admin-day-card-meta">
+                ${escapeHtml(d.start_time.slice(0,5))} – ${escapeHtml(d.end_time.slice(0,5))}
+                · ${d.duration_minutes} min · <strong>${slots.length} slots</strong>
+              </div>
+              <div class="admin-day-card-meet">
+                ${missingMeet
+                  ? `<span class="admin-day-meet-missing"><i class="bi bi-exclamation-triangle"></i> Falta URL de Meet</span>`
+                  : `<a href="${escapeAttr(d.meet_url!)}" target="_blank" rel="noopener noreferrer" class="admin-day-meet-link"><i class="bi bi-camera-video"></i> ${escapeHtml(d.meet_url!)}</a>`
+                }
+              </div>
+            </div>
+            <button type="button" class="admin-day-delete-btn" data-day-id="${d.id}" aria-label="Borrar día">
+              <i class="bi bi-trash"></i>
+            </button>
+          </article>
+        `;
+      }).join('');
+
+      list.querySelectorAll<HTMLButtonElement>('.admin-day-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => deleteDay(btn.dataset.dayId!));
+      });
+    }
+
+    await refreshInterviewStats(days || []);
+  }
+
+  async function refreshInterviewStats(days: { duration_minutes: number; start_time: string; end_time: string; date: string; id: string; }[]) {
+    let totalSlots = 0;
+    for (const d of days) {
+      totalSlots += generateSlots(d as InterviewDay).length;
+    }
+
+    // Aceptados de la season activa
+    let accepted = 0;
+    if (activeSeasonGlobal) {
+      const { count } = await supabase
+        .from('solicitudes')
+        .select('*', { count: 'exact', head: true })
+        .eq('season', activeSeasonGlobal)
+        .eq('status', 'accepted');
+      accepted = count || 0;
+    }
+
+    document.getElementById('stat-slots')!.textContent = String(totalSlots);
+    document.getElementById('stat-accepted')!.textContent = String(accepted);
+
+    const warningPill = document.getElementById('stat-warning-pill')!;
+    const missingEl = document.getElementById('stat-missing')!;
+    const missing = accepted - totalSlots;
+    if (missing > 0) {
+      warningPill.style.display = 'inline-flex';
+      missingEl.textContent = String(missing);
+    } else {
+      warningPill.style.display = 'none';
+    }
+  }
+
+  async function addDay(e: Event) {
+    e.preventDefault();
+    const dateInput     = document.getElementById('day-date')     as HTMLInputElement;
+    const startInput    = document.getElementById('day-start')    as HTMLInputElement;
+    const endInput      = document.getElementById('day-end')      as HTMLInputElement;
+    const durationInput = document.getElementById('day-duration') as HTMLSelectElement;
+    const meetInput     = document.getElementById('day-meet')     as HTMLInputElement;
+    const btn           = document.getElementById('day-add-btn')  as HTMLButtonElement;
+    const fb            = document.getElementById('day-feedback') as HTMLElement;
+
+    const date     = dateInput.value;
+    const start    = startInput.value;
+    const end      = endInput.value;
+    const duration = parseInt(durationInput.value, 10);
+    const meet     = meetInput.value.trim();
+
+    if (!date || !start || !end || !meet) {
+      showFeedback(fb, 'Llena todos los campos.', 'error');
+      return;
+    }
+    if (start >= end) {
+      showFeedback(fb, 'La hora de fin debe ser después de la hora de inicio.', 'error');
+      return;
+    }
+    if (!/^https:\/\/(meet\.google\.com|.*zoom\.us|.*teams\.microsoft\.com)\//i.test(meet)) {
+      const ok = confirm('La URL no parece de Meet/Zoom/Teams. ¿Continuar de todos modos?');
+      if (!ok) return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Agregando…';
+
+    const { error } = await supabase
+      .from('interview_days')
+      .insert({
+        season: activeSeasonGlobal!,
+        date,
+        start_time: start + ':00',
+        end_time:   end + ':00',
+        duration_minutes: duration,
+        meet_url: meet,
+        created_by: userEmail,
+      });
+
+    if (error) {
+      if (error.code === '23505') {
+        showFeedback(fb, 'Ya tienes un día configurado para esa fecha.', 'error');
+      } else {
+        showFeedback(fb, `Error: ${error.message}`, 'error');
+      }
+    } else {
+      showFeedback(fb, '✓ Día agregado.', 'success');
+      (document.getElementById('day-form') as HTMLFormElement).reset();
+      document.getElementById('day-slots-preview')!.style.display = 'none';
+      await refreshInterviewDays();
+      // Cerrar el details
+      const details = document.querySelector<HTMLDetailsElement>('.admin-add-day-details');
+      if (details) details.open = false;
+    }
+    btn.disabled = false;
+    btn.textContent = 'Agregar día';
+  }
+
+  async function deleteDay(id: string) {
+    const ok = confirm('¿Borrar este día de entrevista?\n\nSi ya hay entrevistas agendadas para este día, no se podrán cancelar desde aquí — esto solo borra el día del listado.');
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from('interview_days')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert(`Error: ${error.message}`);
+      return;
+    }
+    await refreshInterviewDays();
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeAttr(s: string): string { return escapeHtml(s); }
 </script>
