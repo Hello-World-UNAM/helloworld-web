@@ -424,8 +424,15 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (pending === 0) return;
 
     const ok = confirm(
-      `Vas a enviar ${pending} correo(s) de decisión final a los solicitantes de la temporada ${seasonSelect.value}.\n\n` +
-      `Esto NO se puede deshacer. ¿Confirmar el cierre?`
+      `Vas a enviar ${pending} correo(s) de decisión a los solicitantes de la temporada ${seasonSelect.value}.\n\n` +
+      `IMPORTANTE: Al confirmar:\n` +
+      `  · Los aceptados reciben link para agendar entrevista\n` +
+      `  · Los rechazados reciben mensaje final\n` +
+      `  · EL FORMULARIO DE INSCRIPCIONES SE CERRARÁ automáticamente.\n` +
+      `    Los visitantes nuevos verán "En fase de entrevistas".\n\n` +
+      `Esta acción NO se puede deshacer (puedes reabrir el form manualmente\n` +
+      `desde /admin/seleccion-config si fuera necesario).\n\n` +
+      `¿Continuar?`
     );
     if (!ok) return;
 
