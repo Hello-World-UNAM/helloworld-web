@@ -33,6 +33,21 @@ export type Database = {
           fortalezas_areas: string;
           curiosidad: string;
           horas_disponibles: string;
+          eval_blandas_score: number | null;
+          eval_blandas_notes: string | null;
+          eval_motivacion_score: number | null;
+          eval_motivacion_notes: string | null;
+          eval_proyectos_score: number | null;
+          eval_proyectos_notes: string | null;
+          eval_aporte_score: number | null;
+          eval_aporte_notes: string | null;
+          eval_tecnica_score: number | null;
+          eval_tecnica_notes: string | null;
+          eval_overall_notes: string | null;
+          evaluated_by: string | null;
+          evaluated_at: string | null;
+          final_decision: 'accepted' | 'rejected' | null;
+          final_email_sent: boolean;
         };
         Insert: Omit<
           Database['public']['Tables']['solicitudes']['Row'],
@@ -123,6 +138,8 @@ export type Database = {
           active_season: string | null;
           next_season_hint: string | null;
           interview_deadline_at: string | null;
+          whatsapp_url: string;
+          applications_closed: boolean;
           opened_at: string | null;
           opened_by: string | null;
           closed_at: string | null;
@@ -132,7 +149,7 @@ export type Database = {
         Insert: never;
         Update: Partial<Pick<
           Database['public']['Tables']['seleccion_config']['Row'],
-          'is_open' | 'active_season' | 'next_season_hint' | 'interview_deadline_at' | 'opened_at' | 'opened_by' | 'closed_at' | 'closed_by'
+          'is_open' | 'active_season' | 'next_season_hint' | 'interview_deadline_at' | 'whatsapp_url' | 'applications_closed' | 'opened_at' | 'opened_by' | 'closed_at' | 'closed_by'
         >>;
       };
     };
