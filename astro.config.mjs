@@ -5,4 +5,7 @@ export default defineConfig({
   site: 'https://clubhelloworld.com',
   output: 'server',
   adapter: vercel(),
+  build: {
+    inlineStylesheets: 'always'
+  }
 });
