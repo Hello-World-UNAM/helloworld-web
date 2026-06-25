@@ -19,6 +19,29 @@ if (session?.user?.email) {
 
 <MiCuentaLayout title="Mi Cuenta | Leaderboard" showHeader={isAuthorized}>
   
+  <style>
+    .member-dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 800px) {
+      .member-dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .history-card summary::-webkit-details-marker {
+      display: none;
+    }
+    .history-card[open] .details-icon {
+      transform: rotate(180deg);
+    }
+    .history-card:hover {
+      border-color: #6225e6 !important;
+    }
+  </style>
+
   {!isAuthorized ? (
     <div id="unauthorized-state" style="text-align: center; padding: 4rem 0; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; max-width: 600px; margin: 2rem auto;">
       <i class="bi bi-shield-lock" style="font-size: 3rem; color: #ef4444;"></i>
@@ -27,48 +50,28 @@ if (session?.user?.email) {
       <button id="re-login-btn" class="hw-btn hw-btn-secondary" style="margin-top: 1.5rem;">Intentar con otra cuenta</button>
     </div>
   ) : (
-    <div id="dashboard-state" style="display: none; font-family: 'DM Sans', sans-serif;">
+    <>
       <div id="loading-state" style="text-align: center; padding: 4rem 0;">
         <i class="bi bi-arrow-clockwise admin-redirect-spin" style="font-size: 2rem;"></i>
         <p style="margin-top: 1rem; color: var(--color-text-muted);">Cargando tu perfil...</p>
       </div>
-    <!-- Profile Header -->
-    <div style="background: #fff; padding: 2rem; border: 2px solid #000; box-shadow: 4px 4px 0 #6225e6; display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; flex-wrap: wrap; gap: 2rem; border-radius: 8px;">
-      <div>
-        <span class="hw-badge" style="margin-bottom: 0.8rem; font-size: 0.75rem; padding: 6px 12px; border-width: 2px; box-shadow: 2px 2px 0 #000; border-radius: 4px;">✦ MIEMBRO ACTIVO</span>
-        <h1 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); font-weight: 800; margin-bottom: 0.3rem; letter-spacing: -0.5px; line-height: 1.1;" id="profile-name">Cargando...</h1>
-        <p style="font-size: 1rem; font-weight: 500; color: #555;"><i class="bi bi-person-badge"></i> Cuenta: <span id="profile-cuenta"></span></p>
-      </div>
-      <div style="text-align: right; background: #fdfdfd; padding: 1.2rem 2rem; border: 2px solid #000; border-radius: 8px;">
-        <p style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6225e6; margin-bottom: 0.2rem;">Puntaje Total</p>
-        <p style="font-size: 3.5rem; font-weight: 900; color: #000; line-height: 1;" id="profile-points">0</p>
-      </div>
-    </div>
 
-    <!-- Actions & History -->
-    <style>
-      .member-dashboard-grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 2rem;
-        align-items: start;
-      }
-      @media (max-width: 800px) {
-        .member-dashboard-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-      .history-card summary::-webkit-details-marker {
-        display: none;
-      }
-      .history-card[open] .details-icon {
-        transform: rotate(180deg);
-      }
-      .history-card:hover {
-        border-color: #6225e6 !important;
-      }
-    </style>
-    <div class="member-dashboard-grid">
+      <div id="dashboard-state" style="display: none; font-family: 'DM Sans', sans-serif;">
+        <!-- Profile Header -->
+        <div style="background: #fff; padding: 2rem; border: 2px solid #000; box-shadow: 4px 4px 0 #6225e6; display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; flex-wrap: wrap; gap: 2rem; border-radius: 8px;">
+          <div>
+            <span class="hw-badge" style="margin-bottom: 0.8rem; font-size: 0.75rem; padding: 6px 12px; border-width: 2px; box-shadow: 2px 2px 0 #000; border-radius: 4px;">✦ MIEMBRO ACTIVO</span>
+            <h1 style="font-size: clamp(1.8rem, 3.5vw, 2.5rem); font-weight: 800; margin-bottom: 0.3rem; letter-spacing: -0.5px; line-height: 1.1;" id="profile-name">Cargando...</h1>
+            <p style="font-size: 1rem; font-weight: 500; color: #555;"><i class="bi bi-person-badge"></i> Cuenta: <span id="profile-cuenta"></span></p>
+          </div>
+          <div style="text-align: right; background: #fdfdfd; padding: 1.2rem 2rem; border: 2px solid #000; border-radius: 8px;">
+            <p style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6225e6; margin-bottom: 0.2rem;">Puntaje Total</p>
+            <p style="font-size: 3.5rem; font-weight: 900; color: #000; line-height: 1;" id="profile-points">0</p>
+          </div>
+        </div>
+
+        <!-- Actions & History -->
+        <div class="member-dashboard-grid">
       
       <!-- Upload Card -->
       <div style="background: #f1ecff; padding: 1.8rem; border: 2px solid #000; box-shadow: 4px 4px 0 #000; position: sticky; top: 2rem; border-radius: 8px;">
@@ -122,6 +125,8 @@ if (session?.user?.email) {
         </table>
       </div>
     </div>
+    </div>
+    </>
   )}
 
 </MiCuentaLayout>
