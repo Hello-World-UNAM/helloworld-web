@@ -161,12 +161,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <a href="/admin/solicitudes" class="hw-btn hw-btn-primary">
             Ver solicitudes →
           </a>
-          <button type="button" id="close-btn" class="admin-action-btn admin-action-btn-danger">
-            <i class="bi bi-x-circle"></i> Cerrar selecciones
-          </button>
+          <a href="/admin/entrevistas" class="admin-action-btn">
+            <i class="bi bi-calendar-week"></i> Ver entrevistas
+          </a>
         </div>
-
-        <div id="close-feedback" class="admin-save-feedback" style="display:none;"></div>
       </div>
 
       <!-- ═══════════════ DIVISOR FUERTE ═══════════════ -->
@@ -212,6 +210,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             <i class="bi bi-plus-circle"></i> Agregar día de entrevista
           </summary>
           <form id="day-form" class="admin-day-form" novalidate>
+            <div id="day-deadline-hint" style="display:none; padding:12px 16px; background:#fef3c7; border:3px solid #92400e; color:#92400e; font-weight:700; margin-bottom:16px; font-size:14px;">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              Primero guarda la <strong>Fecha límite para agendar entrevista</strong> (sección de arriba).
+              Los días de entrevista deben ser <em>posteriores</em> a esa fecha.
+            </div>
             <div class="admin-day-form-row">
               <div class="admin-day-form-field">
                 <label class="admin-field-label" for="day-date">Fecha</label>
@@ -225,6 +228,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
                 <label class="admin-field-label" for="day-end">Hora fin</label>
                 <input type="time" id="day-end" class="admin-text-input" required>
               </div>
+            </div>
+            <div class="admin-day-form-row admin-day-form-row-meet">
               <div class="admin-day-form-field">
                 <label class="admin-field-label" for="day-duration">Duración</label>
                 <select id="day-duration" class="admin-select admin-select-block">
@@ -235,11 +240,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
                   <option value="60">60 min</option>
                 </select>
               </div>
-            </div>
-            <div>
-              <label class="admin-field-label" for="day-meet">URL de Google Meet</label>
-              <input type="url" id="day-meet" class="admin-text-input" required
-                placeholder="https://meet.google.com/abc-defg-hij">
+              <div class="admin-day-form-field">
+                <label class="admin-field-label" for="day-meet">URL de Google Meet</label>
+                <input type="url" id="day-meet" class="admin-text-input" required
+                  placeholder="https://meet.google.com/abc-defg-hij">
+              </div>
             </div>
             <div id="day-slots-preview" class="admin-slots-preview" style="display:none;">
               <span class="admin-slots-preview-label">Slots que se generarán:</span>
@@ -251,6 +256,33 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             <div id="day-feedback" class="admin-save-feedback" style="display:none;"></div>
           </form>
         </details>
+      </div>
+
+      <!-- ═══════════════ DIVISOR FUERTE ═══════════════ -->
+      <div class="admin-section-divider">
+        <span class="admin-section-divider-label">
+          <i class="bi bi-slash-circle-fill"></i> Cierre del proceso
+        </span>
+      </div>
+
+      <!-- ═══ Card: Cerrar ciclo de selección ═══ -->
+      <div class="admin-config-card">
+        <div class="admin-config-eyebrow" style="background:#fee2e2;border-color:#991b1b;color:#991b1b;">
+          <i class="bi bi-x-octagon-fill"></i> Fin del ciclo de selección
+        </div>
+        <h2>Cerrar el proceso de selección</h2>
+        <p class="admin-config-sub">
+          Una vez enviados todos los correos finales, cierra el ciclo formalmente. El sitio público
+          dejará de mostrar cualquier estado de selecciones activo. Los datos del ciclo se conservan
+          en el histórico para consulta futura.
+        </p>
+        <p class="admin-config-sub" style="font-weight:700;">
+          Esta acción es reversible — puedes abrir un nuevo ciclo en cualquier momento desde este mismo panel.
+        </p>
+        <button type="button" id="close-btn" class="admin-action-btn admin-action-btn-danger" style="margin-top:4px;">
+          <i class="bi bi-x-circle"></i> Cerrar ciclo de selección
+        </button>
+        <div id="close-feedback" class="admin-save-feedback" style="display:none;"></div>
       </div>
     </div>
 
@@ -264,6 +296,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   let userEmail = '';
   let activeSeasonGlobal: string | null = null;
+  let interviewDeadlineGlobal: Date | null = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Auth guard ──────────────────────────────────────────────────────
@@ -447,6 +480,14 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     });
 
     saveBtn.addEventListener('click', saveDeadline);
+
+    // Sin deadline guardada → default +7 días
+    if (!input.value) {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      d.setHours(23, 59, 0, 0);
+      input.value = toLocalInputValue(d);
+    }
     updatePreview();
   }
 
@@ -477,7 +518,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (error) {
       showFeedback(fb, `Error: ${error.message}`, 'error');
     } else {
-      showFeedback(fb, '✓ Fecha guardada. Ya puedes mandar el bulk de aceptados.', 'success');
+      interviewDeadlineGlobal = d;
+      updateDayFormDeadlineState();
+      showFeedback(fb, '✓ Fecha guardada. Ya puedes agregar días de entrevista.', 'success');
     }
     saveBtn.disabled = false;
     saveBtn.textContent = 'Guardar fecha';
@@ -513,6 +556,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       document.getElementById('opened-by-display')!.textContent = data.opened_by || '—';
 
       // Pre-llenar deadline input con valor actual
+      interviewDeadlineGlobal = data.interview_deadline_at ? new Date(data.interview_deadline_at) : null;
       const deadlineInput = document.getElementById('deadline-input') as HTMLInputElement | null;
       if (deadlineInput && data.interview_deadline_at) {
         deadlineInput.value = toLocalInputValue(new Date(data.interview_deadline_at));
@@ -629,11 +673,23 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     el.textContent = msg;
   }
 
+  function updateDayFormDeadlineState() {
+    const btn  = document.getElementById('day-add-btn') as HTMLButtonElement | null;
+    const hint = document.getElementById('day-deadline-hint') as HTMLElement | null;
+    if (!btn || !hint) return;
+    const valid = !!interviewDeadlineGlobal && interviewDeadlineGlobal.getTime() > Date.now();
+    hint.style.display = valid ? 'none' : '';
+    btn.disabled = !valid;
+    if (!valid) btn.title = 'Primero guarda la fecha límite para agendar entrevista';
+    else btn.title = '';
+  }
+
   // ══════════════════════════════════════════════════════════════════════
   // Sección: días de entrevista
   // ══════════════════════════════════════════════════════════════════════
 
   function setupInterviewsSection() {
+    updateDayFormDeadlineState();
     refreshInterviewDays();
 
     const dayForm = document.getElementById('day-form') as HTMLFormElement;
@@ -675,6 +731,26 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     });
 
     dayForm.addEventListener('submit', addDay);
+
+    // Al abrir el details: default date = deadline+1 (si hay deadline) o hoy
+    const detailsEl = document.querySelector<HTMLDetailsElement>('.admin-add-day-details');
+    if (detailsEl) {
+      detailsEl.addEventListener('toggle', () => {
+        if (!detailsEl.open || dateInput.value) return;
+        let defaultDateStr: string;
+        if (interviewDeadlineGlobal) {
+          const deadlineLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadlineGlobal);
+          const [y, m, d] = deadlineLocal.split('-').map(Number);
+          const next = new Date(y, m - 1, d + 1);
+          defaultDateStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+        } else {
+          const today = new Date();
+          defaultDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        }
+        dateInput.value = defaultDateStr;
+        updateSlotsPreview();
+      });
+    }
   }
 
   async function refreshInterviewDays() {
@@ -774,6 +850,19 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const end      = endInput.value;
     const duration = parseInt(durationInput.value, 10);
     const meet     = meetInput.value.trim();
+
+    if (!interviewDeadlineGlobal || interviewDeadlineGlobal.getTime() <= Date.now()) {
+      showFeedback(fb, 'Configura primero la fecha límite para agendar entrevista.', 'error');
+      return;
+    }
+    const deadlineDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadlineGlobal);
+    if (date <= deadlineDateStr) {
+      const deadlineFormatted = interviewDeadlineGlobal.toLocaleDateString('es-MX', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City',
+      });
+      showFeedback(fb, `La fecha de entrevista debe ser posterior a la fecha límite de agendado (${deadlineFormatted}).`, 'error');
+      return;
+    }
 
     if (!date || !start || !end || !meet) {
       showFeedback(fb, 'Llena todos los campos.', 'error');

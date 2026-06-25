@@ -1,0 +1,347 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Revisión Leaderboard | Admin">
+  
+  <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-award"></i> Revisión de Puntos</h1>
+      <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; width: 100%;">
+      <div style="flex: 1; min-width: 250px; position: relative;">
+        <i class="bi bi-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #555; font-weight: bold;"></i>
+        <input type="text" id="search-input" placeholder="Buscar por nombre, cuenta o correo..." style="width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem; border: 2px solid #000; border-radius: 6px; font-weight: 500; font-family: inherit; font-size: 0.95rem; box-shadow: 2px 2px 0 rgba(0,0,0,0.1);">
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-weight: 700; color: #555; font-size: 0.95rem;">Ordenar:</label>
+        <select id="sort-selector" style="padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; background: #fff; font-weight: 800; font-family: inherit; font-size: 0.95rem; cursor: pointer; box-shadow: 2px 2px 0 #000;">
+          <option value="desc" selected>Más recientes</option>
+          <option value="asc">Más antiguos</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-weight: 700; color: #555; font-size: 0.95rem;">Estado:</label>
+        <select id="status-selector" style="padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; background: #fff; font-weight: 800; font-family: inherit; font-size: 0.95rem; cursor: pointer; box-shadow: 2px 2px 0 #000;">
+          <option value="pending" selected>Pendientes</option>
+          <option value="approved">Aprobados</option>
+          <option value="rejected">Rechazados</option>
+          <option value="all">Todos</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-weight: 700; color: #555; font-size: 0.95rem;">Semestre:</label>
+        <select id="period-selector" style="padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; background: #fff; font-weight: 800; font-family: inherit; font-size: 0.95rem; cursor: pointer; box-shadow: 2px 2px 0 #000;">
+          <option value="">Cargando...</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="pending-list" style="display: grid; gap: 1.5rem;">
+    <!-- Populated by JS -->
+    <div id="loading" style="text-align: center; padding: 3rem;">
+      <i class="bi bi-arrow-clockwise admin-redirect-spin" style="font-size: 2rem;"></i>
+      <p style="margin-top: 1rem; color: var(--color-text-muted);">Cargando solicitudes pendientes...</p>
+    </div>
+    
+    <div id="empty-state" style="display: none; text-align: center; padding: 4rem; background: var(--color-surface); border-radius: 12px; border: 1px dashed var(--color-border);">
+      <i class="bi bi-check-circle" style="font-size: 3rem; color: #22c55e;"></i>
+      <h2 style="margin-top: 1rem;">¡Todo al día!</h2>
+      <p style="color: var(--color-text-muted);">No hay evidencias pendientes por revisar.</p>
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  let sessionEmail = '';
+  let selectedPeriodId = '';
+  let selectedStatus = 'pending';
+  let searchQuery = '';
+  let sortOrder = 'desc';
+
+  async function loadPeriods() {
+    const selector = document.getElementById('period-selector') as HTMLSelectElement;
+    const statusSelector = document.getElementById('status-selector') as HTMLSelectElement;
+
+    const { data: periodos, error } = await supabase
+      .from('periodos')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error || !periodos) return;
+
+    selector.innerHTML = periodos.map(p => 
+      `<option value="${p.id}" ${p.es_activo ? 'selected' : ''}>${p.nombre} ${p.es_activo ? '(Activo)' : ''}</option>`
+    ).join('');
+
+    selectedPeriodId = selector.value;
+    selectedStatus = statusSelector.value;
+
+    selector.addEventListener('change', (e) => {
+      selectedPeriodId = (e.target as HTMLSelectElement).value;
+      loadPending();
+    });
+
+    statusSelector.addEventListener('change', (e) => {
+      selectedStatus = (e.target as HTMLSelectElement).value;
+      loadPending();
+    });
+
+    document.getElementById('sort-selector')?.addEventListener('change', (e) => {
+      sortOrder = (e.target as HTMLSelectElement).value;
+      loadPending();
+    });
+
+    let searchTimeout: any = null;
+    document.getElementById('search-input')?.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchQuery = (e.target as HTMLInputElement).value.trim();
+      searchTimeout = setTimeout(() => {
+        loadPending();
+      }, 400); // 400ms debounce
+    });
+
+    // Call loadPending initially
+    loadPending();
+  }
+
+  async function loadPending() {
+    const list = document.getElementById('pending-list')!;
+    const loading = document.getElementById('loading')!;
+    const empty = document.getElementById('empty-state')!;
+
+    // Reset view
+    list.querySelectorAll('.card-registro').forEach(el => el.remove());
+    loading.style.display = 'block';
+    empty.style.display = 'none';
+
+    let query = supabase
+      .from('puntos_registros')
+      .select(`
+        id, created_at, horas_reportadas, es_evento_externo, url_evidencia, puntos_solicitados, estado_aprobacion, notas_admin,
+        miembros_activos!inner(nombre, correo, numero_cuenta),
+        leaderboard_config(accion, permite_sponsor_alto_valor, multiplicador_externo)
+      `)
+      .eq('periodo_id', selectedPeriodId);
+
+    if (selectedStatus !== 'all') {
+      query = query.eq('estado_aprobacion', selectedStatus);
+    }
+
+    const { data: records, error } = await query.order('created_at', { ascending: sortOrder === 'asc' });
+
+    loading.style.display = 'none';
+
+    if (error) {
+      console.error(error);
+      alert('Error cargando solicitudes.');
+      return;
+    }
+
+    let filteredRecords = records || [];
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      filteredRecords = filteredRecords.filter(row => {
+        const miembro = row.miembros_activos as any;
+        const nombre = (miembro?.nombre || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const correo = (miembro?.correo || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const cuenta = (miembro?.numero_cuenta || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return nombre.includes(q) || correo.includes(q) || cuenta.includes(q);
+      });
+    }
+
+    if (filteredRecords.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    filteredRecords.forEach(row => {
+      const card = document.createElement('div');
+      card.className = 'card-registro';
+      card.style.cssText = 'background: #fff; border: 2px solid #000; border-radius: 8px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; box-shadow: 4px 4px 0 rgba(0,0,0,0.05);';
+      
+      const miembro = row.miembros_activos as any;
+      const config = row.leaderboard_config as any;
+      const date = new Date(row.created_at).toLocaleString('es-MX');
+
+      let dynamicInfo = '';
+      if (row.horas_reportadas) dynamicInfo += `<span style="background: #f3e8ff; color: #6b21a8; font-size: 0.75rem; border: 1.5px solid #d8b4fe; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">${row.horas_reportadas} hrs reportadas</span>`;
+      if (row.es_evento_externo) dynamicInfo += `<span style="background: #fef08a; color: #854d0e; font-size: 0.75rem; border: 1.5px solid #fde047; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">Evento Externo (x${config.multiplicador_externo})</span>`;
+
+      // Status Badge
+      let statusHTML = '';
+      if (row.estado_aprobacion === 'approved') {
+        statusHTML = `<span style="background: rgba(34, 197, 94, 0.15); color: #16a34a; padding: 0.3rem 0.6rem; border: 1.5px solid #16a34a; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-check-circle"></i> Aprobado</span>`;
+      } else if (row.estado_aprobacion === 'rejected') {
+        statusHTML = `<span style="background: rgba(239, 68, 68, 0.1); color: #dc2626; padding: 0.3rem 0.6rem; border: 1.5px solid #dc2626; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-x-circle"></i> Rechazado</span>`;
+      } else {
+        statusHTML = `<span style="background: rgba(234, 179, 8, 0.15); color: #ca8a04; padding: 0.3rem 0.6rem; border: 1.5px solid #ca8a04; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-clock-history"></i> Pendiente</span>`;
+      }
+
+      // Sponsor logic for admin (only if pending)
+      let adminSponsorHTML = '';
+      if (config.permite_sponsor_alto_valor && row.estado_aprobacion === 'pending') {
+        adminSponsorHTML = `
+          <div style="margin-top: 1.5rem; background: #fffbeb; padding: 1rem 1.2rem; border: 2px solid #fde047; border-radius: 6px;">
+            <label style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; margin: 0;">
+              <input type="checkbox" id="sponsor_${row.id}" style="width: 20px; height: 20px; accent-color: #ca8a04;">
+              <span style="font-weight: 700; color: #854d0e; font-size: 0.95rem;">Marcar como Patrocinio de Alto Valor (x1.5)</span>
+            </label>
+          </div>
+        `;
+      }
+
+      let actionsHTML = '';
+      if (row.estado_aprobacion === 'pending') {
+        actionsHTML = `
+          <div style="margin-top: 1.5rem;">
+            <label style="display: block; font-size: 0.9rem; font-weight: 700; color: #333; margin-bottom: 0.4rem;">Notas de auditoría (opcional)</label>
+            <input type="text" id="notas_${row.id}" placeholder="Ej: Excelente trabajo, o faltó adjuntar X..." style="width: 100%; padding: 0.8rem; border-radius: 6px; background: #fafafa; border: 2px solid #ddd; color: #000; font-family: inherit; font-size: 0.95rem; transition: border-color 0.2s;">
+          </div>
+        `;
+      } else if (row.notas_admin) {
+        actionsHTML = `
+          <div style="margin-top: 1.5rem; background: #fdfdfd; padding: 1rem; border-left: 4px solid #6225e6; border-radius: 0 4px 4px 0; border-top: 1px solid #ddd; border-right: 1px solid #ddd; border-bottom: 1px solid #ddd;">
+            <p style="font-size: 0.8rem; font-weight: 800; color: #6225e6; margin-bottom: 0.3rem; text-transform: uppercase;">Nota de Auditoría</p>
+            <p style="color: #333; font-size: 0.95rem; margin: 0; font-style: italic;">"${row.notas_admin}"</p>
+          </div>
+        `;
+      }
+
+      let actionButtons = '';
+      if (row.estado_aprobacion === 'pending') {
+        actionButtons = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <button class="approve-btn" data-id="${row.id}" data-base-pts="${row.puntos_solicitados}" data-sponsor-allowed="${config.permite_sponsor_alto_valor}" style="background: #22c55e; color: #000; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; cursor: pointer;">
+              <i class="bi bi-check-lg"></i> Aprobar
+            </button>
+            <button class="reject-btn" data-id="${row.id}" style="background: #fff; color: #ef4444; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #ef4444; border-radius: 6px; box-shadow: 3px 3px 0 rgba(239,68,68,0.2); cursor: pointer;">
+              <i class="bi bi-x-lg"></i> Rechazar
+            </button>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 300px;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
+              <h2 style="font-size: 1.3rem; font-weight: 800; margin: 0; color: #000;">${config.accion}</h2>
+              ${statusHTML}
+              ${dynamicInfo}
+            </div>
+            <p style="color: #444; font-size: 0.95rem; margin-bottom: 0.3rem;">
+              <strong>${miembro.nombre}</strong> (${miembro.correo}) • Cta: <span style="font-weight: 700;">${miembro.numero_cuenta}</span>
+            </p>
+            <p style="color: #666; font-size: 0.85rem; font-weight: 500;"><i class="bi bi-clock"></i> Enviado: ${date}</p>
+            
+            ${adminSponsorHTML}
+            ${actionsHTML}
+          </div>
+
+          <div style="width: 320px; display: flex; flex-direction: column; gap: 1.2rem;">
+            ${row.url_evidencia ? `<a href="${row.url_evidencia}" target="_blank" style="text-align: center; display: block; width: 100%; padding: 0.8rem; background: #fff; color: #000; font-weight: 800; text-transform: uppercase; text-decoration: none; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; font-size: 0.9rem; letter-spacing: 0.5px;">
+              <i class="bi bi-box-arrow-up-right"></i> Ver Evidencia
+            </a>` : `<div style="text-align: center; padding: 0.8rem; border: 2px dashed #ccc; border-radius: 6px; color: #666; font-weight: bold;">Sin evidencia adjunta</div>`}
+            
+            <div style="background: #f1ecff; border: 2px solid #e9e2ff; border-radius: 8px; padding: 1.2rem; text-align: center;">
+              <p style="font-size: 0.85rem; font-weight: 700; color: #6225e6; text-transform: uppercase; margin-bottom: 0.3rem; letter-spacing: 1px;">Puntos Solicitados</p>
+              <p style="font-size: 2.5rem; font-weight: 900; color: #6225e6; line-height: 1; margin: 0;" id="puntos_${row.id}">${row.puntos_solicitados}</p>
+            </div>
+
+            ${actionButtons}
+          </div>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+
+    // Attach event listeners to Sponsor checkbox to update visual points
+    filteredRecords.forEach(row => {
+      const config = row.leaderboard_config as any;
+      if (config.permite_sponsor_alto_valor) {
+        const check = document.getElementById(`sponsor_${row.id}`) as HTMLInputElement;
+        const ptsEl = document.getElementById(`puntos_${row.id}`)!;
+        check?.addEventListener('change', () => {
+          if (check.checked) {
+            ptsEl.textContent = Math.round(row.puntos_solicitados * 1.5).toString();
+          } else {
+            ptsEl.textContent = row.puntos_solicitados.toString();
+          }
+        });
+      }
+    });
+
+    // Attach event listeners to buttons
+    document.querySelectorAll('.approve-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const id = target.getAttribute('data-id')!;
+        const basePts = parseInt(target.getAttribute('data-base-pts')!);
+        const sponsorAllowed = target.getAttribute('data-sponsor-allowed') === 'true';
+        
+        let finalPts = basePts;
+        if (sponsorAllowed) {
+          const isHighValue = (document.getElementById(`sponsor_${id}`) as HTMLInputElement).checked;
+          if (isHighValue) finalPts = Math.round(basePts * 1.5);
+        }
+
+        const notas = (document.getElementById(`notas_${id}`) as HTMLInputElement).value;
+        await processAction('approve', id, finalPts, notas, target);
+      });
+    });
+
+    document.querySelectorAll('.reject-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const id = target.getAttribute('data-id')!;
+        const notas = (document.getElementById(`notas_${id}`) as HTMLInputElement).value;
+        if (!notas) {
+          alert('Por favor, agrega una nota explicando por qué se rechaza la evidencia.');
+          return;
+        }
+        await processAction('reject', id, 0, notas, target);
+      });
+    });
+  }
+
+  async function processAction(action: 'approve' | 'reject', id: string, pts: number, notas: string, btnElement: HTMLButtonElement) {
+    btnElement.disabled = true;
+    btnElement.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i>';
+
+    const rpcName = action === 'approve' ? 'approve_puntos' : 'reject_puntos';
+    const payload = action === 'approve' 
+      ? { p_registro_id: id, p_puntos_aprobados: pts, p_admin_email: sessionEmail, p_notas: notas }
+      : { p_registro_id: id, p_admin_email: sessionEmail, p_notas: notas };
+
+    const { error } = await supabase.rpc(rpcName, payload);
+
+    if (error) {
+      console.error(error);
+      alert('Hubo un error al procesar el registro.');
+      btnElement.disabled = false;
+      btnElement.innerHTML = action === 'approve' ? '<i class="bi bi-check-lg"></i> Aprobar' : '<i class="bi bi-x-lg"></i> Rechazar';
+      return;
+    }
+
+    // Remove card from UI
+    btnElement.closest('div[style*="background: var(--color-surface);"]')?.remove();
+    
+    // Check if empty
+    loadPending(); // Reload entirely to refresh UI safely
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.email) {
+      sessionEmail = session.user.email;
+      await loadPeriods();
+    }
+  });
+</script>

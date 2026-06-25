@@ -153,11 +153,17 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     // ── Temporada activa + deadline entrevista ─────────────────────────
     const { data: config } = await supabase
       .from('seleccion_config')
-      .select('is_open, active_season, interview_deadline_at')
+      .select('is_open, active_season, interview_deadline_at, applications_closed')
       .eq('id', true)
       .maybeSingle();
     activeSeason = (config?.is_open && config.active_season) ? config.active_season : null;
     interviewDeadline = config?.interview_deadline_at ? new Date(config.interview_deadline_at) : null;
+
+    // En fase de entrevistas: entrevistas es el panel principal (bypass con ?view=1)
+    if (config?.is_open && config?.applications_closed && new URLSearchParams(window.location.search).get('view') !== '1') {
+      window.location.replace('/admin/entrevistas');
+      return;
+    }
 
     // ── Slots de entrevistas configurados ──────────────────────────────
     if (activeSeason) {
@@ -454,16 +460,34 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     await loadRows();
 
     if (failed > 0) {
-      alert(`Enviados: ${sent}\nFallidos: ${failed}\n\nRevisa la consola del navegador para más detalles.`);
-      console.warn('Bulk send errors:', data?.errors);
-    } else {
-      const goConfig = confirm(
-        `✓ ${sent} email(s) enviado(s) correctamente.\n\n` +
-        `¿Quieres ir ahora al panel de configuración para cerrar formalmente las selecciones?`
-      );
-      if (goConfig) {
-        window.location.href = '/admin/seleccion-config';
+      type BulkError = { id: string; correo: string; error: string };
+      const failedLines = ((data?.errors || []) as BulkError[]).map(e => {
+        const row = allRows.find(r => r.id === e.id || r.correo === e.correo);
+        const label = row ? `${row.nombre} — ${e.correo} (${row.status === 'accepted' ? 'Aceptado' : 'Rechazado'})` : e.correo;
+        return `  · ${label}`;
+      }).join('\n');
+
+      if (sent > 0) {
+        // Parcial: algunos enviados, el form ya se cerró automáticamente
+        alert(
+          `⚠ Se enviaron ${sent} de ${sent + failed} correo(s).\n\n` +
+          `No llegaron (${failed}):\n${failedLines}\n\n` +
+          `Contacta manualmente a quien aparece arriba antes de continuar.\n` +
+          `El formulario de inscripciones ya se cerró automáticamente.`
+        );
+        window.location.replace('/admin/entrevistas');
+      } else {
+        // Todos fallaron: el form NO se cerró (edge fn solo lo cierra si sent > 0)
+        cierreBtn.disabled = false;
+        alert(
+          `✗ Ningún correo pudo enviarse (${failed} fallidos).\n\n` +
+          `Fallidos:\n${failedLines}\n\n` +
+          `El formulario de inscripciones NO se cerró. Revisa la configuración de Resend e inténtalo de nuevo.`
+        );
       }
+    } else {
+      window.location.replace('/admin/entrevistas');
+      return;
     }
   }
 </script>

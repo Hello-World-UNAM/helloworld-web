@@ -18,7 +18,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <p class="admin-list-subtitle">Temporada <strong id="active-season">—</strong></p>
         </div>
         <div class="admin-list-header-actions">
-          <a href="/admin/solicitudes" class="admin-action-btn">
+          <a href="/admin/solicitudes?view=1" class="admin-action-btn">
             <i class="bi bi-list-ul"></i> Ver solicitudes
           </a>
           <a href="/admin/seleccion-config" class="admin-action-btn">
@@ -31,7 +31,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       </div>
 
       <!-- Stats: estado entrevistas + decisión final -->
-      <div class="admin-stats admin-stats-extended">
+      <div id="entrevistas-stats" class="admin-stats admin-stats-extended">
         <div class="admin-stat">
           <span class="admin-stat-num" id="stat-total">0</span>
           <span class="admin-stat-label">Pasaron forms</span>
@@ -54,7 +54,14 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </div>
       </div>
 
-      <!-- Agenda por día -->
+      <!-- Periodo de agendado (antes del deadline) -->
+      <div id="booking-phase-section" style="display:none;">
+        <div id="booking-phase-banner"></div>
+        <div id="booking-with-interview"></div>
+        <div id="booking-without-interview"></div>
+      </div>
+
+      <!-- Agenda por día (post-deadline) -->
       <div id="agenda-by-day" class="admin-agenda-days"></div>
 
       <!-- Solicitudes accepted sin entrevista -->
@@ -121,9 +128,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     }
 
     const { data: config } = await supabase
-      .from('seleccion_config').select('active_season').eq('id', true).maybeSingle();
+      .from('seleccion_config').select('active_season, interview_deadline_at').eq('id', true).maybeSingle();
     activeSeason = config?.active_season || '';
     document.getElementById('active-season')!.textContent = activeSeason || '—';
+    const interviewDeadline = config?.interview_deadline_at ? new Date(config.interview_deadline_at) : null;
 
     if (!activeSeason) {
       document.getElementById('entrevistas-loading')!.innerHTML =
@@ -160,11 +168,97 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const sols = (solicitudes || []) as SolicitudWithEval[];
     const ivs = (interviews || []) as unknown as InterviewRow[];
 
-    renderStats(sols);
-    renderAgenda(ivs);
-    renderNoInterview(sols, ivs);
-    setupBulkBtn(sols);
+    const deadlinePassed = !interviewDeadline || Date.now() >= interviewDeadline.getTime();
+
+    if (deadlinePassed) {
+      renderStats(sols);
+      renderAgenda(ivs);
+      renderNoInterview(sols, ivs);
+      setupBulkBtn(sols);
+    } else {
+      renderBookingPhase(sols, ivs, interviewDeadline!);
+    }
   });
+
+  function renderBookingPhase(sols: SolicitudWithEval[], ivs: InterviewRow[], deadline: Date) {
+    // Ocultar stats de evaluación (no aplican aún) y agenda post-deadline
+    document.getElementById('entrevistas-stats')!.style.display = 'none';
+    document.getElementById('booking-phase-section')!.style.display = '';
+
+    // Bulk btn: no disponible hasta post-deadline
+    const btn = document.getElementById('btn-bulk-final') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Esperando fin de agendado`;
+    btn.title = 'Disponible una vez que pase la fecha límite de agendado';
+
+    const scheduledIds = new Set(ivs.filter(i => i.status !== 'cancelled').map(i => i.solicitud_id));
+    const withList  = sols.filter(s => scheduledIds.has(s.id));
+    const noList    = sols.filter(s => !scheduledIds.has(s.id));
+
+    const deadlineFormatted = deadline.toLocaleDateString('es-MX', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City',
+    });
+
+    document.getElementById('booking-phase-banner')!.innerHTML = `
+      <div class="admin-booking-banner">
+        <div class="admin-booking-banner-text">
+          <i class="bi bi-hourglass-split"></i>
+          <span>Periodo de agendado activo — los candidatos tienen hasta el <strong>${deadlineFormatted}</strong> para elegir su horario.</span>
+        </div>
+        <div class="admin-booking-banner-counts">
+          <span class="admin-booking-count admin-booking-count-done"><i class="bi bi-check2"></i> ${withList.length} agendados</span>
+          <span class="admin-booking-count admin-booking-count-pending"><i class="bi bi-hourglass"></i> ${noList.length} pendientes</span>
+        </div>
+      </div>`;
+
+    document.getElementById('booking-with-interview')!.innerHTML = `
+      <section class="admin-agenda-day" style="margin-top:20px;">
+        <h2 class="admin-agenda-day-header">
+          <i class="bi bi-check2-circle"></i> Con entrevista agendada
+          <span class="admin-agenda-day-count">${withList.length}</span>
+        </h2>
+        <div class="admin-agenda-list">
+          ${withList.length === 0
+            ? '<div class="admin-empty">Ningún candidato ha agendado aún.</div>'
+            : withList.map(s => {
+                const iv = ivs.find(i => i.solicitud_id === s.id && i.status !== 'cancelled');
+                const time = iv ? formatTime(iv.slot_datetime) : '—';
+                const meet = iv?.meet_url
+                  ? `<a href="${escapeAttr(iv.meet_url)}" target="_blank" rel="noopener noreferrer" class="admin-agenda-meet" title="Abrir Meet"><i class="bi bi-camera-video-fill"></i></a>`
+                  : '';
+                return `<article class="admin-agenda-item">
+                  <div class="admin-agenda-time">${time}</div>
+                  <div class="admin-agenda-info">
+                    <div class="admin-agenda-name">${escapeHtml(s.nombre)}</div>
+                    <div class="admin-agenda-sub">${escapeHtml(s.carrera)} · ${s.semestre}° sem</div>
+                  </div>
+                  <div class="admin-agenda-actions">${meet}</div>
+                </article>`;
+              }).join('')}
+        </div>
+      </section>`;
+
+    document.getElementById('booking-without-interview')!.innerHTML = `
+      <section class="admin-agenda-day" style="margin-top:16px;">
+        <h2 class="admin-agenda-day-header">
+          <i class="bi bi-hourglass"></i> Pendiente de agendar
+          <span class="admin-agenda-day-count">${noList.length}</span>
+        </h2>
+        ${noList.length === 0
+          ? '<p class="admin-no-interview-hint">Todos han agendado su entrevista.</p>'
+          : `<p class="admin-no-interview-hint">Aún no han elegido horario. Tienen hasta el deadline para hacerlo.</p>
+             <div class="admin-agenda-list">
+               ${noList.map(s => `<article class="admin-agenda-item admin-agenda-no-interview">
+                 <div class="admin-agenda-time">—</div>
+                 <div class="admin-agenda-info">
+                   <div class="admin-agenda-name">${escapeHtml(s.nombre)}</div>
+                   <div class="admin-agenda-sub">${escapeHtml(s.carrera)} · ${s.semestre}° sem</div>
+                 </div>
+               </article>`).join('')}
+             </div>`}
+      </section>`;
+  }
 
   function renderStats(sols: SolicitudWithEval[]) {
     const total = sols.length;
@@ -336,7 +430,15 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         alert(`Enviados: ${sent}\nFallidos: ${failed}\n\nRevisa la consola.`);
         console.warn('Bulk final errors:', data?.errors);
       } else {
-        alert(`✓ ${sent} correo(s) enviado(s).`);
+        const goCierre = confirm(
+          `✓ ${sent} correo(s) enviado(s).\n\n` +
+          `El proceso de selección de la temporada ${activeSeason} ha concluido.\n\n` +
+          `¿Ir al panel de configuración para cerrar formalmente el ciclo?`
+        );
+        if (goCierre) {
+          window.location.replace('/admin/seleccion-config');
+          return;
+        }
       }
       location.reload();
     });
