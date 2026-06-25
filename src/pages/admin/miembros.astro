@@ -1,0 +1,320 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Directorio de Miembros | Admin">
+  
+  <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-people-fill"></i> Directorio de Miembros</h1>
+      <p class="admin-page-subtitle">Gestiona la información de todos los miembros activos del club.</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+      <button id="btn-add-member" class="hw-btn hw-btn-primary" style="background: #22c55e; color: #000; border: 2px solid #000; box-shadow: 3px 3px 0 #000; font-weight: 800; border-radius: 6px; padding: 0.6rem 1.2rem;">
+        <i class="bi bi-person-plus-fill"></i> Añadir Miembro
+      </button>
+    </div>
+  </div>
+
+  <!-- Search & Filter -->
+  <div style="margin-bottom: 2rem; display: flex; gap: 1rem;">
+    <input type="text" id="search-input" placeholder="Buscar por nombre, correo o cuenta..." style="flex: 1; padding: 0.8rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-family: inherit; font-size: 1rem;">
+  </div>
+
+  <!-- Table Container -->
+  <div style="background: #fff; border: 2px solid #000; border-radius: 8px; box-shadow: 4px 4px 0 rgba(0,0,0,0.05); overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+      <thead style="background: #fdfdfd; border-bottom: 2px solid #000;">
+        <tr>
+          <th style="padding: 1rem; font-weight: 800;">Nombre</th>
+          <th style="padding: 1rem; font-weight: 800;">No. Cuenta</th>
+          <th style="padding: 1rem; font-weight: 800;">Correo</th>
+          <th style="padding: 1rem; font-weight: 800;">Cargo</th>
+          <th style="padding: 1rem; font-weight: 800;">Semestre</th>
+          <th style="padding: 1rem; font-weight: 800; text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="members-tbody">
+        <tr><td colspan="6" style="text-align: center; padding: 3rem;"><i class="bi bi-arrow-clockwise admin-redirect-spin" style="font-size: 2rem;"></i></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Modal/Form for Add/Edit -->
+  <div id="member-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; padding: 1rem;">
+    <div style="background: #fff; border: 3px solid #000; border-radius: 12px; box-shadow: 8px 8px 0 #6225e6; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
+      
+      <div style="padding: 1.5rem 2rem; border-bottom: 2px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="modal-title" style="font-size: 1.5rem; font-weight: 900; margin: 0;">Añadir Miembro</h2>
+        <button id="btn-close-modal" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;"><i class="bi bi-x-lg"></i></button>
+      </div>
+
+      <div style="padding: 2rem;">
+        <form id="member-form" style="display: flex; flex-direction: column; gap: 1.2rem;">
+          <input type="hidden" id="member-id">
+          
+          <div>
+            <label style="display: block; font-weight: 700; margin-bottom: 0.4rem;">Nombre Completo <span style="color: red;">*</span></label>
+            <input type="text" id="input-nombre" required style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px; font-family: inherit;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;">
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.4rem;">No. de Cuenta <span style="color: red;">*</span></label>
+              <input type="text" id="input-cuenta" required style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px; font-family: inherit;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.4rem;">Semestre</label>
+              <input type="number" id="input-semestre" min="1" max="15" value="7" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px; font-family: inherit;">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; font-weight: 700; margin-bottom: 0.4rem;">Correo Institucional <span style="color: red;">*</span></label>
+            <input type="email" id="input-correo" required style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px; font-family: inherit;">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;">
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.4rem;">Teléfono</label>
+              <input type="text" id="input-telefono" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px; font-family: inherit;">
+            </div>
+            <div>
+              <label style="display: block; font-weight: 700; margin-bottom: 0.4rem;">Cargo / Rol</label>
+              <select id="input-cargo" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 6px; font-family: inherit; background: #fff;">
+                <option value="member">Miembro</option>
+                <option value="admin">Mesa directiva</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" id="btn-save" class="hw-btn hw-btn-primary" style="margin-top: 1rem; width: 100%; text-align: center; font-size: 1.1rem; padding: 1rem; border: 2px solid #000; box-shadow: 3px 3px 0 #000;">
+            Guardar Miembro
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  let allMembers: any[] = [];
+
+  const tbody = document.getElementById('members-tbody')!;
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  
+  // Modal Elements
+  const modal = document.getElementById('member-modal')!;
+  const btnAdd = document.getElementById('btn-add-member')!;
+  const btnClose = document.getElementById('btn-close-modal')!;
+  const form = document.getElementById('member-form') as HTMLFormElement;
+  const modalTitle = document.getElementById('modal-title')!;
+  
+  // Inputs
+  const inputId = document.getElementById('member-id') as HTMLInputElement;
+  const inputNombre = document.getElementById('input-nombre') as HTMLInputElement;
+  const inputCuenta = document.getElementById('input-cuenta') as HTMLInputElement;
+  const inputSemestre = document.getElementById('input-semestre') as HTMLInputElement;
+  const inputCorreo = document.getElementById('input-correo') as HTMLInputElement;
+  const inputTelefono = document.getElementById('input-telefono') as HTMLInputElement;
+  const inputCargo = document.getElementById('input-cargo') as HTMLInputElement;
+  const btnSave = document.getElementById('btn-save') as HTMLButtonElement;
+
+  async function loadMembers() {
+    const { data, error } = await supabase
+      .from('miembros_activos')
+      .select('*')
+      .order('nombre', { ascending: true });
+
+    if (error) {
+      console.error(error);
+      alert('Error cargando miembros');
+      return;
+    }
+
+    allMembers = data || [];
+    renderTable(allMembers);
+  }
+
+  function renderTable(members: any[]) {
+    if (members.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 3rem; color: #666;">No hay miembros registrados.</td></tr>`;
+      return;
+    }
+
+    const admins = members.filter(m => m.rol === 'admin' || m.cargo === 'Mesa directiva');
+    const regulars = members.filter(m => m.rol !== 'admin' && m.cargo !== 'Mesa directiva');
+
+    const renderRow = (m: any) => {
+      const displayRole = m.rol === 'admin' ? 'Mesa directiva' : 'Miembro';
+      const roleColor = m.rol === 'admin' ? '#1e40af' : '#3730a3';
+      const roleBg = m.rol === 'admin' ? '#dbeafe' : '#e0e7ff';
+      return `
+        <tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='transparent'">
+          <td style="padding: 1rem;">
+            <div style="font-weight: 700; color: #000;">${m.nombre}</div>
+          </td>
+          <td style="padding: 1rem; font-family: monospace; color: #555;">${m.numero_cuenta || 'N/A'}</td>
+          <td style="padding: 1rem; color: #444;">${m.correo}</td>
+          <td style="padding: 1rem;">
+            <span style="background: ${roleBg}; color: ${roleColor}; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.8rem; font-weight: 700;">${displayRole}</span>
+          </td>
+          <td style="padding: 1rem; font-weight: 500;">${m.semestre ? m.semestre + 'mo' : 'N/A'}</td>
+          <td style="padding: 1rem; text-align: right;">
+            <button class="btn-edit" data-id="${m.id}" style="background: none; border: none; cursor: pointer; color: #3b82f6; font-size: 1.1rem; padding: 0.3rem;"><i class="bi bi-pencil-square"></i></button>
+            <button class="btn-delete" data-id="${m.id}" data-name="${m.nombre}" style="background: none; border: none; cursor: pointer; color: #ef4444; font-size: 1.1rem; padding: 0.3rem;"><i class="bi bi-trash-fill"></i></button>
+          </td>
+        </tr>
+      `;
+    };
+
+    let html = '';
+
+    if (admins.length > 0) {
+      html += `<tr><td colspan="6" style="background: #f8fafc; padding: 1rem; font-weight: 900; color: #0f172a; text-transform: uppercase; font-size: 0.9rem; border-bottom: 2px solid #cbd5e1;"><i class="bi bi-star-fill" style="color: #ca8a04;"></i> Mesa Directiva</td></tr>`;
+      html += admins.map(renderRow).join('');
+    }
+
+    if (regulars.length > 0) {
+      html += `<tr><td colspan="6" style="background: #fdfdfd; padding: 1rem; font-weight: 900; color: #334155; text-transform: uppercase; font-size: 0.9rem; border-bottom: 2px solid #e2e8f0; border-top: 4px solid #fff;"><i class="bi bi-people-fill" style="color: #64748b;"></i> Miembros Generales</td></tr>`;
+      html += regulars.map(renderRow).join('');
+    }
+
+    tbody.innerHTML = html;
+
+    // Attach Edit Listeners
+    document.querySelectorAll('.btn-edit').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id');
+        openEditModal(id!);
+      });
+    });
+
+    // Attach Delete Listeners
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).getAttribute('data-id')!;
+        const name = (e.currentTarget as HTMLElement).getAttribute('data-name')!;
+        if (confirm(`¿Estás SEGURO de querer eliminar a "${name}"?\n\nESTO BORRARÁ TODO SU HISTORIAL DE PUNTOS PERMANENTEMENTE.`)) {
+          await deleteMember(id);
+        }
+      });
+    });
+  }
+
+  // Search filter
+  searchInput.addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.toLowerCase();
+    const filtered = allMembers.filter(m => 
+      m.nombre?.toLowerCase().includes(q) || 
+      m.correo?.toLowerCase().includes(q) || 
+      m.numero_cuenta?.includes(q)
+    );
+    renderTable(filtered);
+  });
+
+  // Modal Logic
+  function openAddModal() {
+    form.reset();
+    inputId.value = '';
+    modalTitle.textContent = 'Añadir Miembro';
+    inputSemestre.value = '7'; // default
+    inputCargo.value = 'member';
+    modal.style.display = 'flex';
+  }
+
+  function openEditModal(id: string) {
+    const m = allMembers.find(x => x.id === id);
+    if (!m) return;
+    
+    form.reset();
+    inputId.value = m.id;
+    inputNombre.value = m.nombre || '';
+    inputCuenta.value = m.numero_cuenta || '';
+    inputCorreo.value = m.correo || '';
+    inputTelefono.value = m.telefono || '';
+    inputSemestre.value = m.semestre || '7';
+    
+    if (m.rol === 'admin' || m.cargo === 'Mesa directiva') {
+      inputCargo.value = 'admin';
+    } else {
+      inputCargo.value = 'member';
+    }
+
+    modalTitle.textContent = 'Editar Miembro';
+    modal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  inputCargo.addEventListener('change', (e) => {
+    if ((e.target as HTMLSelectElement).value === 'admin') {
+      const confirmed = confirm('ATENCIÓN: Al darle permisos de Mesa Directiva, este usuario obtendrá acceso total al panel de administración del club y formará parte de la whitelist automáticamente. \n\n¿Deseas continuar?');
+      if (!confirmed) {
+        inputCargo.value = 'member';
+      }
+    }
+  });
+
+  btnAdd.addEventListener('click', openAddModal);
+  btnClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btnSave.disabled = true;
+    btnSave.textContent = 'Guardando...';
+
+    const payload = {
+      nombre: inputNombre.value.trim(),
+      numero_cuenta: inputCuenta.value.trim(),
+      correo: inputCorreo.value.trim(),
+      telefono: inputTelefono.value.trim(),
+      semestre: parseInt(inputSemestre.value) || 7,
+      rol: inputCargo.value.trim()
+    };
+
+    const id = inputId.value;
+
+    let error;
+    if (id) {
+      // Update
+      const { error: updErr } = await supabase.from('miembros_activos').update(payload).eq('id', id);
+      error = updErr;
+    } else {
+      // Insert
+      const { error: insErr } = await supabase.from('miembros_activos').insert(payload);
+      error = insErr;
+    }
+
+    if (error) {
+      console.error(error);
+      alert('Error al guardar: ' + error.message);
+    } else {
+      closeModal();
+      await loadMembers();
+      searchInput.value = ''; // clear search on save
+    }
+
+    btnSave.disabled = false;
+    btnSave.textContent = 'Guardar Miembro';
+  });
+
+  async function deleteMember(id: string) {
+    // Delete from DB. CASCADE handles puntos_registros.
+    const { error } = await supabase.from('miembros_activos').delete().eq('id', id);
+    if (error) {
+      alert('Error eliminando miembro: ' + error.message);
+    } else {
+      await loadMembers();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadMembers);
+</script>

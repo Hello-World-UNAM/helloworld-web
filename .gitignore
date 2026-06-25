@@ -19,3 +19,8 @@ pnpm-debug.log*
 
 # astro
 .astro/
+
+# Claude Code artefactos locales
+.claude/
+.agents/
+skills-lock.json

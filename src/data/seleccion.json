@@ -1,0 +1,21 @@
+{
+  "open": true,
+  "season": "2026-2027",
+  "deadline": "",
+  "tracks": [
+    {
+      "key": "prueba-tecnica",
+      "label": "Prueba Técnica",
+      "description": "Para quienes dominan o están aprendiendo a programar. Demuestra tu potencial técnico.",
+      "icon": "bi-code-slash",
+      "href": "/seleccion/prueba-tecnica"
+    },
+    {
+      "key": "habilidades-blandas",
+      "label": "Habilidades Blandas",
+      "description": "Para quienes destacan en comunicación, liderazgo y trabajo en equipo.",
+      "icon": "bi-people-fill",
+      "href": "/seleccion/habilidades-blandas"
+    }
+  ]
+}

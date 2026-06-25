@@ -60,14 +60,36 @@ const socialLinks = [
     </div>
 
     <!-- Columna central: Links rápidos -->
+    <!-- Orden default = "cerrado" (Selección al final). JS reordena si cache=abierto. -->
     <div class="footer-col footer-col-nav">
       <h4 class="footer-heading">Navegación</h4>
-      <nav class="footer-nav">
-        <a href="/">Inicio</a>
-        <a href="/nuestro-club">Sobre Nosotros</a>
-        <a href="/ranking">Leaderboard</a>
-        <a href="/contacto">Contacto</a>
+      <!-- Reorder optimista pre-paint si cache dice abierto -->
+      <script is:inline>
+        (function () {
+          try {
+            if (localStorage.getItem('hw-sel-open') === 'true') {
+              document.documentElement.dataset.hwSelOpenCached = '1';
+            }
+          } catch (_) {}
+        })();
+      </script>
+      <nav class="footer-nav" id="footer-nav">
+        <a href="/" data-foot-key="inicio">Inicio</a>
+        <a href="/nuestro-club" data-foot-key="nuestro-club">Sobre Nosotros</a>
+        <a href="/ranking" data-foot-key="ranking">Leaderboard</a>
+        <a href="/contacto" data-foot-key="contacto">Contacto</a>
+        <a href="/seleccion" data-foot-key="seleccion">Selección</a>
       </nav>
+      <script is:inline>
+        (function () {
+          if (document.documentElement.dataset.hwSelOpenCached !== '1') return;
+          var nav = document.getElementById('footer-nav');
+          if (!nav) return;
+          var sel    = nav.querySelector('[data-foot-key="seleccion"]');
+          var inicio = nav.querySelector('[data-foot-key="inicio"]');
+          if (sel && inicio) inicio.insertAdjacentElement('afterend', sel);
+        })();
+      </script>
     </div>
 
     <!-- Columna derecha: Instituciones -->
@@ -82,3 +104,32 @@ const socialLinks = [
   <!-- Copyright -->
   <p class="footer-copy">© 2026 Hello World University Technology Club</p>
 </footer>
+
+<script>
+  // Async: confirma estado real con Supabase y reordena footer nav si cambió.
+  import { supabase } from '@lib/supabase';
+
+  (async () => {
+    const { data } = await supabase
+      .from('seleccion_config')
+      .select('is_open')
+      .eq('id', true)
+      .maybeSingle();
+
+    const isOpen = !!data?.is_open;
+    try { localStorage.setItem('hw-sel-open', isOpen ? 'true' : 'false'); } catch {}
+
+    const nav = document.getElementById('footer-nav');
+    if (!nav) return;
+    const sel    = nav.querySelector<HTMLAnchorElement>('[data-foot-key="seleccion"]');
+    const inicio = nav.querySelector<HTMLAnchorElement>('[data-foot-key="inicio"]');
+    if (!sel || !inicio) return;
+
+    const currentlySecond = inicio.nextElementSibling === sel;
+    if (isOpen && !currentlySecond) {
+      inicio.insertAdjacentElement('afterend', sel);
+    } else if (!isOpen && currentlySecond) {
+      nav.appendChild(sel);
+    }
+  })();
+</script>

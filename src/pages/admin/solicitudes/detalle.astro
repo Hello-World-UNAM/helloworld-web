@@ -1,0 +1,719 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Detalle · Panel Hello World">
+  <section class="admin-detalle">
+    <div id="detalle-loading" class="admin-redirect">
+      <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+      <p>Cargando…</p>
+    </div>
+
+    <div id="detalle-content" style="display:none;">
+      <a href="/admin/solicitudes" class="admin-back-link">
+        <i class="bi bi-arrow-left"></i> Volver a la lista
+      </a>
+
+      <!-- Cabecera -->
+      <header class="admin-detalle-header">
+        <div>
+          <h1 id="d-nombre">—</h1>
+          <p class="admin-detalle-meta">
+            <span id="d-correo"></span> · <span id="d-carrera"></span> · <span id="d-semestre"></span>° semestre
+          </p>
+          <p class="admin-detalle-sub">
+            Recibida el <span id="d-fecha">—</span> · Temporada <strong id="d-season">—</strong>
+          </p>
+        </div>
+        <div>
+          <span id="d-status-badge" class="admin-status">—</span>
+        </div>
+      </header>
+
+      <!-- Layout: 2 cols (contenido | gestión) -->
+      <div class="admin-detalle-grid">
+
+        <!-- Columna izquierda: respuestas -->
+        <div class="admin-detalle-main">
+
+          <!-- Datos básicos -->
+          <article class="admin-card">
+            <h2><i class="bi bi-person-badge"></i> Datos básicos</h2>
+            <dl class="admin-dl">
+              <dt>Número de cuenta</dt><dd id="d-cuenta">—</dd>
+              <dt>Áreas de interés</dt><dd id="d-intereses">—</dd>
+            </dl>
+          </article>
+
+          <!-- Tu mundo -->
+          <article class="admin-card">
+            <h2><i class="bi bi-code-square"></i> Tu mundo</h2>
+            <dl class="admin-dl">
+              <dt>Lenguajes</dt><dd id="d-lenguajes">—</dd>
+              <dt>Nivel de experiencia</dt><dd id="d-nivel">—</dd>
+              <dt>Algo que ha construido</dt>
+              <dd class="admin-dd-text" id="d-proyecto">—</dd>
+            </dl>
+            <div id="d-links-section" class="admin-links" style="display:none;">
+              <h3>Perfiles</h3>
+              <div id="d-links" class="admin-links-grid"></div>
+            </div>
+          </article>
+
+          <!-- Última vuelta -->
+          <article class="admin-card">
+            <h2><i class="bi bi-chat-quote"></i> Última vuelta</h2>
+            <dl class="admin-dl">
+              <dt>¿Qué harías en HW que no puedes hacer solo?</dt>
+              <dd class="admin-dd-text" id="d-motivacion">—</dd>
+
+              <dt>Liderazgo / sacar algo adelante con otros</dt>
+              <dd class="admin-dd-text" id="d-liderazgo">—</dd>
+
+              <dt>Equipo en dirección que no convencía</dt>
+              <dd class="admin-dd-text" id="d-conflicto">—</dd>
+
+              <dt>Primero en ofrecerse</dt>
+              <dd class="admin-dd-text" id="d-fortalezas">—</dd>
+
+              <dt>Última cosa que le emocionó descubrir</dt>
+              <dd class="admin-dd-text" id="d-curiosidad">—</dd>
+
+              <dt>Disponibilidad</dt>
+              <dd id="d-horas">—</dd>
+            </dl>
+          </article>
+
+          <!-- ═══ Evaluación post-entrevista (solo si pasó forms) ═══ -->
+          <article class="admin-card admin-eval-card" id="eval-card" style="display:none;">
+            <h2 id="eval-anchor"><i class="bi bi-clipboard-data"></i> Evaluación de entrevista</h2>
+
+            <!-- Banners contextuales -->
+            <div id="eval-banner-noshow" class="admin-historical-banner admin-eval-banner-warn" style="display:none;">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              No-show o cancelación. Aun así necesita una decisión final manual antes del cierre.
+            </div>
+            <div id="eval-banner-noiview" class="admin-historical-banner admin-eval-banner-warn" style="display:none;">
+              <i class="bi bi-exclamation-triangle-fill"></i>
+              Este candidato no agendó entrevista. Necesita decisión manual antes del cierre.
+            </div>
+            <div id="eval-banner-locked" class="admin-historical-banner admin-eval-banner-locked" style="display:none;">
+              <i class="bi bi-lock-fill"></i>
+              Resultado final ya enviado. La evaluación queda como registro y no es editable.
+            </div>
+
+            <p class="admin-eval-intro" id="eval-intro">
+              Califica cada área del 1 al 5 y deja notas. Cuando guardes, la entrevista se marca como completada automáticamente.
+            </p>
+
+            <form id="eval-form" class="admin-eval-form" novalidate>
+              <!-- 5 áreas -->
+              <div class="admin-eval-area" data-area="blandas">
+                <div class="admin-eval-area-header">
+                  <label class="admin-field-label">Habilidades blandas</label>
+                  <div class="admin-eval-scale" data-score-for="blandas">
+                    <button type="button" class="admin-eval-score-btn" data-score="1">1</button><button type="button" class="admin-eval-score-btn" data-score="2">2</button><button type="button" class="admin-eval-score-btn" data-score="3">3</button><button type="button" class="admin-eval-score-btn" data-score="4">4</button><button type="button" class="admin-eval-score-btn" data-score="5">5</button>
+                  </div>
+                </div>
+                <textarea name="eval_blandas_notes" class="admin-textarea admin-eval-textarea" rows="2" placeholder="Comunicación, escucha, claridad…"></textarea>
+              </div>
+
+              <div class="admin-eval-area" data-area="motivacion">
+                <div class="admin-eval-area-header">
+                  <label class="admin-field-label">Motivación e intereses</label>
+                  <div class="admin-eval-scale" data-score-for="motivacion">
+                    <button type="button" class="admin-eval-score-btn" data-score="1">1</button><button type="button" class="admin-eval-score-btn" data-score="2">2</button><button type="button" class="admin-eval-score-btn" data-score="3">3</button><button type="button" class="admin-eval-score-btn" data-score="4">4</button><button type="button" class="admin-eval-score-btn" data-score="5">5</button>
+                  </div>
+                </div>
+                <textarea name="eval_motivacion_notes" class="admin-textarea admin-eval-textarea" rows="2" placeholder="Por qué le interesan las áreas que marcó, qué busca…"></textarea>
+              </div>
+
+              <div class="admin-eval-area" data-area="proyectos">
+                <div class="admin-eval-area-header">
+                  <label class="admin-field-label">Proyectos</label>
+                  <div class="admin-eval-scale" data-score-for="proyectos">
+                    <button type="button" class="admin-eval-score-btn" data-score="1">1</button><button type="button" class="admin-eval-score-btn" data-score="2">2</button><button type="button" class="admin-eval-score-btn" data-score="3">3</button><button type="button" class="admin-eval-score-btn" data-score="4">4</button><button type="button" class="admin-eval-score-btn" data-score="5">5</button>
+                  </div>
+                </div>
+                <textarea name="eval_proyectos_notes" class="admin-textarea admin-eval-textarea" rows="2" placeholder="Profundidad, ownership, qué aprendió…"></textarea>
+              </div>
+
+              <div class="admin-eval-area" data-area="aporte">
+                <div class="admin-eval-area-header">
+                  <label class="admin-field-label">Aporte al club</label>
+                  <div class="admin-eval-scale" data-score-for="aporte">
+                    <button type="button" class="admin-eval-score-btn" data-score="1">1</button><button type="button" class="admin-eval-score-btn" data-score="2">2</button><button type="button" class="admin-eval-score-btn" data-score="3">3</button><button type="button" class="admin-eval-score-btn" data-score="4">4</button><button type="button" class="admin-eval-score-btn" data-score="5">5</button>
+                  </div>
+                </div>
+                <textarea name="eval_aporte_notes" class="admin-textarea admin-eval-textarea" rows="2" placeholder="Qué cree que aporta, encaje con el club…"></textarea>
+              </div>
+
+              <div class="admin-eval-area" data-area="tecnica">
+                <div class="admin-eval-area-header">
+                  <label class="admin-field-label">Conocimiento técnico</label>
+                  <div class="admin-eval-scale" data-score-for="tecnica">
+                    <button type="button" class="admin-eval-score-btn" data-score="1">1</button><button type="button" class="admin-eval-score-btn" data-score="2">2</button><button type="button" class="admin-eval-score-btn" data-score="3">3</button><button type="button" class="admin-eval-score-btn" data-score="4">4</button><button type="button" class="admin-eval-score-btn" data-score="5">5</button>
+                  </div>
+                </div>
+                <textarea name="eval_tecnica_notes" class="admin-textarea admin-eval-textarea" rows="2" placeholder="Preguntas básicas adaptadas a su carrera…"></textarea>
+              </div>
+
+              <!-- Notas generales -->
+              <div>
+                <label class="admin-field-label" for="eval-overall">Notas generales (opcional)</label>
+                <textarea id="eval-overall" name="eval_overall_notes" class="admin-textarea" rows="3" placeholder="Cualquier observación adicional sobre la entrevista…"></textarea>
+              </div>
+
+              <!-- Decisión final -->
+              <div class="admin-eval-decision">
+                <span class="admin-field-label">Decisión final</span>
+                <div class="admin-eval-decision-options">
+                  <label class="admin-eval-decision-option admin-eval-decision-accept">
+                    <input type="radio" name="final_decision" value="accepted">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>Aceptar</span>
+                  </label>
+                  <label class="admin-eval-decision-option admin-eval-decision-reject">
+                    <input type="radio" name="final_decision" value="rejected">
+                    <i class="bi bi-x-circle-fill"></i>
+                    <span>Rechazar</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Auditoría -->
+              <div class="admin-eval-meta" id="eval-meta" style="display:none;">
+                <i class="bi bi-person-check"></i>
+                Última evaluación: <strong id="eval-meta-by">—</strong> <span id="eval-meta-when">—</span>
+              </div>
+
+              <button type="submit" id="eval-save" class="hw-btn hw-btn-primary admin-save-btn">
+                Guardar evaluación
+              </button>
+              <div id="eval-feedback" class="admin-save-feedback" style="display:none;"></div>
+            </form>
+          </article>
+
+        </div>
+
+        <!-- Columna derecha: gestión / acciones -->
+        <aside class="admin-detalle-side">
+
+          <!-- Gestión de revisión -->
+          <article class="admin-card admin-card-sticky">
+            <h2><i class="bi bi-clipboard-check"></i> Revisión</h2>
+
+            <label class="admin-field-label" for="status-select">Estado</label>
+            <select id="status-select" class="admin-select admin-select-block">
+              <option value="pending">Pendiente</option>
+              <option value="reviewing">En revisión</option>
+              <option value="accepted">Aceptado</option>
+              <option value="rejected">Rechazado</option>
+            </select>
+
+            <label class="admin-field-label" for="notes-textarea">Notas internas</label>
+            <textarea id="notes-textarea" class="admin-textarea" rows="6" placeholder="Notas privadas del equipo. El solicitante no las ve."></textarea>
+
+            <div class="admin-review-meta" id="d-review-meta">
+              <p>Sin revisión aún.</p>
+            </div>
+
+            <button type="button" id="btn-save" class="hw-btn hw-btn-primary admin-save-btn">
+              Guardar cambios
+            </button>
+            <div id="save-feedback" class="admin-save-feedback" style="display:none;"></div>
+          </article>
+
+          <!-- CV -->
+          <article class="admin-card" id="cv-card" style="display:none;">
+            <h2><i class="bi bi-file-earmark-pdf"></i> CV</h2>
+            <p class="admin-cv-info">Link de descarga válido por 1 hora.</p>
+            <button type="button" id="btn-cv" class="admin-action-btn admin-action-btn-primary admin-action-block">
+              <i class="bi bi-download"></i> Generar link de descarga
+            </button>
+            <a id="cv-link" href="#" target="_blank" rel="noopener noreferrer" style="display:none;" class="admin-cv-link">
+              <i class="bi bi-box-arrow-up-right"></i> Abrir CV en pestaña nueva
+            </a>
+          </article>
+
+        </aside>
+
+      </div>
+    </div>
+
+    <div id="detalle-error" style="display:none;">
+      <div class="admin-callback-card">
+        <i class="bi bi-exclamation-triangle admin-callback-error-icon"></i>
+        <h1>No encontramos la solicitud</h1>
+        <p id="error-msg">El ID no existe o ya no tienes acceso.</p>
+        <a href="/admin/solicitudes" class="hw-btn hw-btn-secondary">Volver</a>
+      </div>
+    </div>
+
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  type Status = 'pending' | 'reviewing' | 'accepted' | 'rejected';
+  type Solicitud = {
+    id: string;
+    season: string;
+    status: Status;
+    created_at: string;
+    reviewed_at: string | null;
+    reviewed_by: string | null;
+    notes: string | null;
+    nombre: string;
+    numero_cuenta: string;
+    correo: string;
+    carrera: string;
+    semestre: number;
+    intereses: string[] | null;
+    lenguajes: string[] | null;
+    nivel_experiencia: string | null;
+    proyecto_descripcion: string;
+    github_url: string | null;
+    linkedin_url: string | null;
+    portfolio_url: string | null;
+    cv_storage_path: string | null;
+    motivacion: string;
+    experiencia_liderazgo: string;
+    manejo_conflicto: string;
+    fortalezas_areas: string;
+    curiosidad: string;
+    horas_disponibles: string;
+    eval_blandas_score: number | null;
+    eval_blandas_notes: string | null;
+    eval_motivacion_score: number | null;
+    eval_motivacion_notes: string | null;
+    eval_proyectos_score: number | null;
+    eval_proyectos_notes: string | null;
+    eval_aporte_score: number | null;
+    eval_aporte_notes: string | null;
+    eval_tecnica_score: number | null;
+    eval_tecnica_notes: string | null;
+    eval_overall_notes: string | null;
+    evaluated_by: string | null;
+    evaluated_at: string | null;
+    final_decision: 'accepted' | 'rejected' | null;
+    final_email_sent: boolean;
+  };
+
+  const STATUS_LABELS: Record<Status, string> = {
+    pending: 'Pendiente',
+    reviewing: 'En revisión',
+    accepted: 'Aceptado',
+    rejected: 'Rechazado',
+  };
+
+  let solicitud: Solicitud | null = null;
+  let userEmail = '';
+  let isHistorical = false;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    // ── Auth ────────────────────────────────────────────────────────────
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.email) {
+      window.location.replace('/admin/login');
+      return;
+    }
+    userEmail = session.user.email.toLowerCase();
+    const { data: directiva } = await supabase
+      .from('directiva')
+      .select('email')
+      .eq('email', userEmail)
+      .maybeSingle();
+    if (!directiva) {
+      await supabase.auth.signOut();
+      window.location.replace('/admin/login');
+      return;
+    }
+
+    // ── ID de query string ──────────────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+      showError('ID inválido en la URL.');
+      return;
+    }
+
+    // ── Fetch solicitud ─────────────────────────────────────────────────
+    const { data, error } = await supabase
+      .from('solicitudes')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      showError(error.message);
+      return;
+    }
+    if (!data) {
+      showError('La solicitud no existe.');
+      return;
+    }
+
+    solicitud = data as Solicitud;
+
+    // Verificar si es de season activa o histórica
+    const { data: config } = await supabase
+      .from('seleccion_config')
+      .select('is_open, active_season')
+      .eq('id', true)
+      .maybeSingle();
+    const activeSeason = (config?.is_open && config.active_season) ? config.active_season : null;
+    isHistorical = solicitud.season !== activeSeason;
+
+    document.getElementById('detalle-loading')!.style.display = 'none';
+    document.getElementById('detalle-content')!.style.display = 'block';
+    renderSolicitud();
+    applyHistoricalLock();
+    await setupEvaluation();
+
+    document.getElementById('btn-save')!.addEventListener('click', saveChanges);
+    document.getElementById('btn-cv')?.addEventListener('click', generateCvLink);
+
+    // Scroll a evaluación si viene anchor #evaluacion
+    if (window.location.hash === '#evaluacion') {
+      setTimeout(() => {
+        document.getElementById('eval-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
+  });
+
+  function applyHistoricalLock() {
+    if (!isHistorical) return;
+
+    // Banner sobre el header
+    const content = document.getElementById('detalle-content')!;
+    const banner = document.createElement('div');
+    banner.className = 'admin-historical-banner';
+    banner.innerHTML = `<i class="bi bi-archive-fill"></i> Esta solicitud es de una temporada pasada. La revisión está en modo de sólo lectura.`;
+    content.insertBefore(banner, content.firstChild);
+
+    // Disable controls
+    (document.getElementById('status-select') as HTMLSelectElement).disabled = true;
+    (document.getElementById('notes-textarea') as HTMLTextAreaElement).disabled = true;
+    const saveBtn = document.getElementById('btn-save') as HTMLButtonElement;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Sólo lectura';
+  }
+
+  function showError(msg: string) {
+    document.getElementById('detalle-loading')!.style.display = 'none';
+    document.getElementById('detalle-error')!.style.display = 'block';
+    document.getElementById('error-msg')!.textContent = msg;
+  }
+
+  function setText(id: string, value: string | number | null | undefined) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = (value === null || value === undefined || value === '') ? '—' : String(value);
+  }
+
+  function renderSolicitud() {
+    if (!solicitud) return;
+    const s = solicitud;
+
+    setText('d-nombre', s.nombre);
+    setText('d-correo', s.correo);
+    setText('d-carrera', s.carrera);
+    setText('d-semestre', s.semestre);
+    setText('d-fecha', new Date(s.created_at).toLocaleString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }));
+    setText('d-season', s.season);
+    setText('d-cuenta', s.numero_cuenta);
+    setText('d-intereses', s.intereses?.join(', ') || null);
+    setText('d-lenguajes', s.lenguajes?.join(', ') || null);
+    setText('d-nivel', s.nivel_experiencia);
+    setText('d-proyecto', s.proyecto_descripcion);
+    setText('d-motivacion', s.motivacion);
+    setText('d-liderazgo', s.experiencia_liderazgo);
+    setText('d-conflicto', s.manejo_conflicto);
+    setText('d-fortalezas', s.fortalezas_areas);
+    setText('d-curiosidad', s.curiosidad);
+    setText('d-horas', s.horas_disponibles);
+
+    const badge = document.getElementById('d-status-badge')!;
+    badge.textContent = STATUS_LABELS[s.status];
+    badge.className = `admin-status admin-status-${s.status}`;
+
+    // Links
+    const linksSection = document.getElementById('d-links-section')!;
+    const linksDiv = document.getElementById('d-links')!;
+    const links: Array<[string, string | null, string]> = [
+      ['GitHub', s.github_url, 'bi-github'],
+      ['LinkedIn', s.linkedin_url, 'bi-linkedin'],
+      ['Portafolio', s.portfolio_url, 'bi-globe'],
+    ];
+    const validLinks = links.filter(([, url]) => url);
+    if (validLinks.length > 0) {
+      linksSection.style.display = 'block';
+      linksDiv.innerHTML = validLinks.map(([label, url, icon]) => `
+        <a href="${escapeAttr(url!)}" target="_blank" rel="noopener noreferrer" class="admin-link-tile">
+          <i class="bi ${icon}"></i>
+          <span>${escapeHtml(label)}</span>
+        </a>
+      `).join('');
+    }
+
+    // Form
+    (document.getElementById('status-select') as HTMLSelectElement).value = s.status;
+    (document.getElementById('notes-textarea') as HTMLTextAreaElement).value = s.notes || '';
+
+    // Review metadata
+    const meta = document.getElementById('d-review-meta')!;
+    if (s.reviewed_by) {
+      meta.innerHTML = `
+        <p>Última revisión: <strong>${escapeHtml(s.reviewed_by)}</strong></p>
+        <p class="admin-review-when">${new Date(s.reviewed_at!).toLocaleString('es-MX')}</p>
+      `;
+    } else {
+      meta.innerHTML = '<p>Sin revisión aún.</p>';
+    }
+
+    // CV
+    if (s.cv_storage_path) {
+      document.getElementById('cv-card')!.style.display = 'block';
+    }
+  }
+
+  async function saveChanges() {
+    if (!solicitud) return;
+    const status = (document.getElementById('status-select') as HTMLSelectElement).value as Status;
+    const notes = (document.getElementById('notes-textarea') as HTMLTextAreaElement).value.trim() || null;
+    const saveBtn = document.getElementById('btn-save') as HTMLButtonElement;
+    const fb = document.getElementById('save-feedback') as HTMLElement;
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando…';
+    fb.style.display = 'none';
+
+    const updates: Record<string, unknown> = {
+      status,
+      notes,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: userEmail,
+    };
+    // Si cambió el status a accepted/rejected, resetear notification flag
+    // para que entre en el próximo bulk send.
+    if (status !== solicitud.status && (status === 'accepted' || status === 'rejected')) {
+      updates.email_notification_sent = false;
+    }
+
+    const { error } = await supabase
+      .from('solicitudes')
+      .update(updates)
+      .eq('id', solicitud.id);
+
+    if (error) {
+      fb.style.display = 'block';
+      fb.className = 'admin-save-feedback admin-save-feedback-error';
+      fb.textContent = `Error: ${error.message}`;
+    } else {
+      Object.assign(solicitud, updates);
+      fb.style.display = 'block';
+      fb.className = 'admin-save-feedback admin-save-feedback-success';
+      fb.textContent = '✓ Cambios guardados.';
+      renderSolicitud();
+    }
+
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Guardar cambios';
+  }
+
+  async function generateCvLink() {
+    if (!solicitud?.cv_storage_path) return;
+    const btn = document.getElementById('btn-cv') as HTMLButtonElement;
+    const link = document.getElementById('cv-link') as HTMLAnchorElement;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Generando…';
+
+    const { data, error } = await supabase.storage
+      .from('cvs')
+      .createSignedUrl(solicitud.cv_storage_path, 3600);
+
+    if (error || !data) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-download"></i> Reintentar';
+      alert(`Error generando link: ${error?.message || 'desconocido'}`);
+      return;
+    }
+
+    link.href = data.signedUrl;
+    link.style.display = 'inline-flex';
+    btn.style.display = 'none';
+  }
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeAttr(s: string): string {
+    return escapeHtml(s);
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Evaluación post-entrevista
+  // ════════════════════════════════════════════════════════════════════════
+
+  type EvalArea = 'blandas' | 'motivacion' | 'proyectos' | 'aporte' | 'tecnica';
+  const EVAL_AREAS: EvalArea[] = ['blandas', 'motivacion', 'proyectos', 'aporte', 'tecnica'];
+  const scores: Record<EvalArea, number | null> = {
+    blandas: null, motivacion: null, proyectos: null, aporte: null, tecnica: null,
+  };
+
+  async function setupEvaluation() {
+    if (!solicitud) return;
+    // Solo si pasó forms (accepted)
+    if (solicitud.status !== 'accepted') return;
+    // Solo en season activa (no histórico)
+    if (isHistorical) return;
+
+    const card = document.getElementById('eval-card')!;
+    card.style.display = 'block';
+
+    // Detectar contexto: ¿tiene entrevista? ¿qué estado?
+    const { data: iv } = await supabase
+      .from('interviews')
+      .select('id, status, slot_datetime')
+      .eq('solicitud_id', solicitud.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!iv) {
+      document.getElementById('eval-banner-noiview')!.style.display = '';
+    } else if (iv.status === 'cancelled' || iv.status === 'no_show') {
+      document.getElementById('eval-banner-noshow')!.style.display = '';
+    }
+
+    // Lock si ya se envió el correo final
+    const locked = !!solicitud.final_email_sent;
+    if (locked) {
+      document.getElementById('eval-banner-locked')!.style.display = '';
+    }
+
+    // Pre-llenar valores actuales
+    EVAL_AREAS.forEach(area => {
+      const score = (solicitud as any)[`eval_${area}_score`] as number | null;
+      const notes = (solicitud as any)[`eval_${area}_notes`] as string | null;
+      if (score) scores[area] = score;
+      const notesEl = document.querySelector<HTMLTextAreaElement>(`textarea[name="eval_${area}_notes"]`);
+      if (notesEl && notes) notesEl.value = notes;
+      updateScoreUI(area);
+    });
+
+    (document.getElementById('eval-overall') as HTMLTextAreaElement).value =
+      solicitud.eval_overall_notes || '';
+
+    if (solicitud.final_decision) {
+      const radio = document.querySelector<HTMLInputElement>(`input[name="final_decision"][value="${solicitud.final_decision}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    if (solicitud.evaluated_at && solicitud.evaluated_by) {
+      const meta = document.getElementById('eval-meta')!;
+      meta.style.display = '';
+      document.getElementById('eval-meta-by')!.textContent = solicitud.evaluated_by;
+      document.getElementById('eval-meta-when')!.textContent =
+        ' · ' + new Date(solicitud.evaluated_at).toLocaleString('es-MX', {
+          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        });
+    }
+
+    // Bind score buttons
+    document.querySelectorAll<HTMLButtonElement>('.admin-eval-score-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (locked) return;
+        const wrap = btn.closest<HTMLElement>('.admin-eval-scale');
+        const area = wrap?.dataset.scoreFor as EvalArea;
+        if (!area) return;
+        const score = parseInt(btn.dataset.score || '0', 10);
+        scores[area] = scores[area] === score ? null : score; // toggle
+        updateScoreUI(area);
+      });
+    });
+
+    // Lock all inputs si email enviado
+    if (locked) {
+      card.querySelectorAll<HTMLElement>('button, textarea, input').forEach(el => {
+        (el as HTMLButtonElement | HTMLInputElement | HTMLTextAreaElement).disabled = true;
+      });
+    }
+
+    // Submit
+    (document.getElementById('eval-form') as HTMLFormElement)
+      .addEventListener('submit', saveEvaluation);
+  }
+
+  function updateScoreUI(area: EvalArea) {
+    const wrap = document.querySelector<HTMLElement>(`.admin-eval-scale[data-score-for="${area}"]`);
+    if (!wrap) return;
+    wrap.querySelectorAll<HTMLButtonElement>('.admin-eval-score-btn').forEach(btn => {
+      const v = parseInt(btn.dataset.score || '0', 10);
+      btn.classList.toggle('admin-eval-score-btn-active', scores[area] === v);
+    });
+  }
+
+  async function saveEvaluation(e: Event) {
+    e.preventDefault();
+    if (!solicitud) return;
+    const fb     = document.getElementById('eval-feedback') as HTMLElement;
+    const saveBtn = document.getElementById('eval-save') as HTMLButtonElement;
+
+    const finalDecisionEl = document.querySelector<HTMLInputElement>('input[name="final_decision"]:checked');
+    const finalDecision = finalDecisionEl?.value as 'accepted' | 'rejected' | undefined;
+    if (!finalDecision) {
+      showEvalFeedback(fb, 'Elige la decisión final (Aceptar o Rechazar).', 'error');
+      return;
+    }
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando…';
+    fb.style.display = 'none';
+
+    const update: Record<string, unknown> = {
+      eval_overall_notes: (document.getElementById('eval-overall') as HTMLTextAreaElement).value.trim() || null,
+      evaluated_by: userEmail,
+      evaluated_at: new Date().toISOString(),
+      final_decision: finalDecision,
+    };
+    EVAL_AREAS.forEach(area => {
+      update[`eval_${area}_score`] = scores[area];
+      const notesEl = document.querySelector<HTMLTextAreaElement>(`textarea[name="eval_${area}_notes"]`);
+      update[`eval_${area}_notes`] = notesEl?.value.trim() || null;
+    });
+
+    const { error } = await supabase
+      .from('solicitudes')
+      .update(update)
+      .eq('id', solicitud.id);
+
+    if (error) {
+      showEvalFeedback(fb, `Error: ${error.message}`, 'error');
+    } else {
+      // Mantener en sync local
+      Object.assign(solicitud as any, update);
+      showEvalFeedback(fb, '✓ Evaluación guardada. La entrevista se marcó como completada.', 'success');
+      const meta = document.getElementById('eval-meta')!;
+      meta.style.display = '';
+      document.getElementById('eval-meta-by')!.textContent = userEmail;
+      document.getElementById('eval-meta-when')!.textContent =
+        ' · ' + new Date().toLocaleString('es-MX', {
+          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        });
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Guardar evaluación';
+  }
+
+  function showEvalFeedback(el: HTMLElement, msg: string, type: 'success' | 'error') {
+    el.style.display = 'block';
+    el.className = `admin-save-feedback admin-save-feedback-${type}`;
+    el.textContent = msg;
+  }
+</script>

@@ -5,11 +5,14 @@ interface Props {
 
 const { activeNav = "" } = Astro.props;
 
+// Orden por defecto = "selecciones cerradas" (Selección al final).
+// JS reordena al inicio si el estado real es "abierto" (vía caché o fetch).
 const navItems = [
   { href: "/", label: "Inicio", key: "inicio" },
   { href: "/nuestro-club", label: "Sobre nosotros", key: "nuestro-club" },
   { href: "/ranking", label: "Leaderboard", key: "ranking" },
   { href: "/contacto", label: "Contacto", key: "contacto" },
+  { href: "/seleccion", label: "Selección", key: "seleccion" },
 ];
 ---
 
@@ -28,19 +31,96 @@ const navItems = [
         </svg>
       </label>
       <nav class="navbar" aria-label="Menú principal">
-        <ul>
+        <!--
+          Script inline síncrono: lee caché localStorage ANTES del paint.
+          Si última visita = abierto → reordena Selección a posición 2 + muestra dot.
+          Esto evita parpadeo en visitas repetidas (el caso más común).
+        -->
+        <script is:inline>
+          (function () {
+            try {
+              if (localStorage.getItem('hw-sel-open') !== 'true') return;
+              // Marker que el async script lee para saber que ya hicimos reorder optimista
+              document.documentElement.dataset.hwSelOpenCached = '1';
+            } catch (_) {}
+          })();
+        </script>
+        <ul id="nav-list">
           {navItems.map((item) => (
-            <li>
-              <a 
-                href={item.href} 
+            <li data-nav-key={item.key}>
+              <a
+                href={item.href}
                 class={activeNav === item.key ? "nav-active" : ""}
               >
                 {item.label}
+                {item.key === "seleccion" && (
+                  <span class="nav-seleccion-dot" aria-label="Convocatoria abierta" style="display:none;"></span>
+                )}
               </a>
             </li>
           ))}
         </ul>
+        <!-- Aplicar reorder optimista ANTES del paint si cache dice abierto -->
+        <script is:inline>
+          (function () {
+            if (document.documentElement.dataset.hwSelOpenCached !== '1') return;
+            var list = document.getElementById('nav-list');
+            if (!list) return;
+            var seleccionLi = list.querySelector('li[data-nav-key="seleccion"]');
+            var inicioLi    = list.querySelector('li[data-nav-key="inicio"]');
+            if (!seleccionLi || !inicioLi) return;
+            inicioLi.insertAdjacentElement('afterend', seleccionLi);
+            var dot = seleccionLi.querySelector('.nav-seleccion-dot');
+            if (dot) dot.style.display = '';
+          })();
+        </script>
       </nav>
     </div>
   </div>
 </header>
+
+<script>
+  // Async: confirma estado real con Supabase y actualiza caché + DOM si difiere.
+  import { supabase } from '@lib/supabase';
+
+  (async () => {
+    const { data } = await supabase
+      .from('seleccion_config')
+      .select('is_open, applications_closed')
+      .eq('id', true)
+      .maybeSingle();
+
+    const isOpen = !!data?.is_open;
+    const interviewing = isOpen && !!data?.applications_closed;
+
+    // Update cache
+    try {
+      localStorage.setItem('hw-sel-open', isOpen ? 'true' : 'false');
+    } catch {}
+
+    const list = document.getElementById('nav-list');
+    if (!list) return;
+    const seleccionLi = list.querySelector<HTMLLIElement>('li[data-nav-key="seleccion"]');
+    const inicioLi    = list.querySelector<HTMLLIElement>('li[data-nav-key="inicio"]');
+    if (!seleccionLi || !inicioLi) return;
+    const dot = seleccionLi.querySelector<HTMLElement>('.nav-seleccion-dot');
+
+    // Determinar posición actual real
+    const currentlySecond = inicioLi.nextElementSibling === seleccionLi;
+
+    if (isOpen) {
+      if (!currentlySecond) {
+        inicioLi.insertAdjacentElement('afterend', seleccionLi);
+      }
+      if (dot) {
+        dot.style.display = '';
+        dot.classList.toggle('nav-seleccion-dot-interviewing', interviewing);
+      }
+    } else {
+      if (currentlySecond) {
+        list.appendChild(seleccionLi);
+      }
+      if (dot) dot.style.display = 'none';
+    }
+  })();
+</script>

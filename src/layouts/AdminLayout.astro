@@ -1,0 +1,85 @@
+---
+import '@/styles/global.css';
+import { getSafeSupabaseServerClient } from '../lib/supabaseServer';
+
+interface Props {
+  title: string;
+  description?: string;
+  showHeader?: boolean;
+}
+
+const {
+  title,
+  description = 'Panel interno del Club Hello World',
+  showHeader = true,
+} = Astro.props;
+
+// --- SERVER-SIDE SECURITY GUARD ---
+// La validación de permisos ahora se realiza de forma centralizada y segura
+// en `src/middleware.ts`. Esto previene el error 'ResponseSentError' en SSR.
+let userEmail = Astro.locals.userEmail || '';
+
+if (!userEmail) {
+  const safeSupabase = getSafeSupabaseServerClient(Astro.cookies);
+  const { data: { session } } = await safeSupabase.auth.getSession();
+  userEmail = session?.user?.email || '';
+}
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content={description}>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#6225e6">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <title>{title}</title>
+</head>
+<body class="admin-body" id="admin-body">
+  {showHeader && (
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <a href="/admin" class="admin-brand" style="display: flex; align-items: center; gap: 0.8rem; text-decoration: none;">
+          <div style="background: #fff; padding: 4px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0 #000;">
+            <img src="/img/logo.png" alt="Club Hello World Logo" style="height: 30px; object-fit: contain;">
+          </div>
+          <span class="admin-brand-text" style="color: #fff; text-transform: uppercase;">
+            <strong style="font-size: 1.1rem; letter-spacing: 1px;">Mesa Directiva</strong>
+          </span>
+        </a>
+        <div class="admin-header-right">
+          <span id="admin-user-email" class="admin-user-email">{userEmail}</span>
+          <button id="admin-logout-btn" class="admin-logout-btn" type="button">
+            <i class="bi bi-box-arrow-right"></i> Salir
+          </button>
+        </div>
+      </div>
+    </header>
+  )}
+
+  <main class="admin-main" aria-label="Panel de administración">
+    <slot />
+  </main>
+
+  {showHeader && (
+    <script>
+      import { supabase } from '@lib/supabase';
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const logoutBtn = document.getElementById('admin-logout-btn') as HTMLButtonElement | null;
+        logoutBtn?.addEventListener('click', async () => {
+          logoutBtn.disabled = true;
+          await supabase.auth.signOut();
+          window.location.href = '/admin/login';
+        });
+      });
+    </script>
+  )}
+</body>
+</html>
