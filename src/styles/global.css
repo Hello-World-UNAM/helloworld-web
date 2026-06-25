@@ -5977,13 +5977,30 @@ header {
 
 .admin-day-form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
+}
+
+.admin-day-form-row-meet {
+  grid-template-columns: 150px 1fr;
 }
 
 .admin-day-form-field {
   display: flex;
   flex-direction: column;
+}
+
+.admin-day-form-field .admin-select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 30px 11px 14px;
+  font-size: 0.95rem;
+  border: 2px solid #ddd;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.admin-day-form-field .admin-select:focus {
+  border-color: #6225e6;
+  box-shadow: 4px 4px 0 rgba(98,37,230,0.2);
 }
 
 .admin-slots-preview {
@@ -6007,6 +6024,9 @@ header {
 @media (max-width: 600px) {
   .admin-day-form-row {
     grid-template-columns: 1fr 1fr;
+  }
+  .admin-day-form-row-meet {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -6509,6 +6529,45 @@ header {
   margin: -6px 0 14px;
   line-height: 1.5;
 }
+
+.admin-booking-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #eff6ff;
+  border: 3px solid #1d4ed8;
+  padding: 14px 18px;
+  margin-bottom: 4px;
+}
+.admin-booking-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #1e3a8a;
+  line-height: 1.4;
+}
+.admin-booking-banner-text i {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.admin-booking-banner-counts {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.admin-booking-count {
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 12px;
+  border: 2px solid currentColor;
+}
+.admin-booking-count-done    { color: #065f46; background: #d1fae5; }
+.admin-booking-count-pending { color: #92400e; background: #fef3c7; }
 
 .admin-agenda-no-interview {
   background: #fefbf3;
