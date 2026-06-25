@@ -89,7 +89,7 @@ async function loadRanking() {
 
   if (error || !members || members.length === 0) {
     podiumContainer.style.display = 'flex';
-    podiumContainer.innerHTML = '<p style="text-align:center; width:100%; color:var(--color-text-muted);">Aún no hay puntos registrados en esta temporada.</p>';
+    podiumContainer.innerHTML = '<p style="text-align:center; width:100%; color:var(--color-text-muted); font-weight: 600; font-size: 1.1rem; padding: 2rem 0;">No hay puntos registrados en esta temporada.</p>';
     return;
   }
 
@@ -221,4 +221,3 @@ function setupShowMore() {
 }
 
 document.addEventListener('DOMContentLoaded', loadRanking);
-</script>

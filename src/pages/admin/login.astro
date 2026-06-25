@@ -30,14 +30,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 <script>
   import { supabase } from '@lib/supabase';
 
-  document.addEventListener('DOMContentLoaded', async () => {
-    // Si ya hay sesión y estamos en login, redirigir al panel.
-    // La validación de seguridad (whitelist) ocurre dentro de AdminLayout y en /admin/index
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      window.location.replace('/admin');
-      return;
-    }
+  document.addEventListener('DOMContentLoaded', () => {
 
     const btn = document.getElementById('google-login-btn') as HTMLButtonElement;
     const feedback = document.getElementById('admin-login-feedback') as HTMLElement;
@@ -58,7 +51,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/admin',
+          redirectTo: window.location.origin + '/api/auth/callback?next=/admin',
         }
       });
 

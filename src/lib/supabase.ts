@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from './database.types';
 
 const url = import.meta.env.PUBLIC_SUPABASE_URL;
@@ -10,11 +10,4 @@ if (!url || !anonKey) {
   );
 }
 
-export const supabase: SupabaseClient<Database> = createClient<Database>(url, anonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
-  },
-});
+export const supabase = createBrowserClient<Database>(url, anonKey);

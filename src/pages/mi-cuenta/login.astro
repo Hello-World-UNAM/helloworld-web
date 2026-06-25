@@ -37,7 +37,7 @@ import MiCuentaLayout from '@layouts/MiCuentaLayout.astro';
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/mi-cuenta',
+        redirectTo: window.location.origin + '/api/auth/callback?next=/mi-cuenta',
       }
     });
 
@@ -52,11 +52,5 @@ import MiCuentaLayout from '@layouts/MiCuentaLayout.astro';
     }
   });
 
-  // Check if already logged in
-  document.addEventListener('DOMContentLoaded', async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      window.location.replace('/mi-cuenta');
-    }
-  });
+
 </script>

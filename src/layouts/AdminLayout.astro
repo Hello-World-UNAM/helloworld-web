@@ -1,5 +1,6 @@
 ---
 import '@/styles/global.css';
+import { getSafeSupabaseServerClient } from '../lib/supabaseServer';
 
 interface Props {
   title: string;
@@ -12,6 +13,17 @@ const {
   description = 'Panel interno del Club Hello World',
   showHeader = true,
 } = Astro.props;
+
+// --- SERVER-SIDE SECURITY GUARD ---
+// La validación de permisos ahora se realiza de forma centralizada y segura
+// en `src/middleware.ts`. Esto previene el error 'ResponseSentError' en SSR.
+let userEmail = Astro.locals.userEmail || '';
+
+if (!userEmail) {
+  const safeSupabase = getSafeSupabaseServerClient(Astro.cookies);
+  const { data: { session } } = await safeSupabase.auth.getSession();
+  userEmail = session?.user?.email || '';
+}
 ---
 
 <!DOCTYPE html>
@@ -29,7 +41,7 @@ const {
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <title>{title}</title>
 </head>
-<body class="admin-body" id="admin-body" style={showHeader ? "display: none;" : ""}>
+<body class="admin-body" id="admin-body">
   {showHeader && (
     <header class="admin-header">
       <div class="admin-header-inner">
@@ -42,7 +54,7 @@ const {
           </span>
         </a>
         <div class="admin-header-right">
-          <span id="admin-user-email" class="admin-user-email"></span>
+          <span id="admin-user-email" class="admin-user-email">{userEmail}</span>
           <button id="admin-logout-btn" class="admin-logout-btn" type="button">
             <i class="bi bi-box-arrow-right"></i> Salir
           </button>
@@ -54,46 +66,20 @@ const {
   <main class="admin-main" aria-label="Panel de administración">
     <slot />
   </main>
+
+  {showHeader && (
+    <script>
+      import { supabase } from '@lib/supabase';
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const logoutBtn = document.getElementById('admin-logout-btn') as HTMLButtonElement | null;
+        logoutBtn?.addEventListener('click', async () => {
+          logoutBtn.disabled = true;
+          await supabase.auth.signOut();
+          window.location.href = '/admin/login';
+        });
+      });
+    </script>
+  )}
 </body>
 </html>
-
-{showHeader && (
-  <script>
-    import { supabase } from '@lib/supabase';
-
-    document.addEventListener('DOMContentLoaded', async () => {
-      const emailEl = document.getElementById('admin-user-email');
-      const logoutBtn = document.getElementById('admin-logout-btn') as HTMLButtonElement | null;
-
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        window.location.replace('/admin/login');
-        return;
-      }
-
-      // Check if user is actually in directiva
-      if (session.user?.email) {
-        const { data: isAllowed, error } = await supabase.rpc('is_email_in_directiva', { p_email: session.user.email });
-        if (error || !isAllowed) {
-          await supabase.auth.signOut();
-          window.location.replace('/admin/login?error=unauthorized');
-          return;
-        }
-        
-        if (emailEl) {
-          emailEl.textContent = session.user.email;
-        }
-
-        // Mostrar la interfaz si todo está correcto
-        document.body.style.display = 'block';
-      }
-
-      logoutBtn?.addEventListener('click', async () => {
-        logoutBtn.disabled = true;
-        await supabase.auth.signOut();
-        window.location.href = '/admin/login';
-      });
-    });
-  </script>
-)}
