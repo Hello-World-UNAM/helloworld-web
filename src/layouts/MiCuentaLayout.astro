@@ -1,0 +1,94 @@
+---
+import '@/styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  showHeader?: boolean;
+}
+
+const {
+  title,
+  description = 'Portal de Miembros | Club Hello World',
+  showHeader = true,
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content={description}>
+  <meta name="theme-color" content="#1a1a2e">
+  <link rel="icon" href="/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <title>{title}</title>
+</head>
+<body class="member-body" style="background: var(--color-bg); color: var(--color-text);">
+  {showHeader && (
+    <header class="member-header" style="background: var(--color-surface); padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--color-border); flex-wrap: wrap; gap: 1rem;">
+      <a href="/mi-cuenta" class="member-brand" style="display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: black;">
+        <img src="/img/logo.png" alt="Club Hello World Logo" style="height: 35px; object-fit: contain;">
+        <span style="font-weight: 800; font-size: 1.2rem; letter-spacing: -0.02em;">Miembros</span>
+      </a>
+      <div class="member-header-right" style="display: flex; align-items: center; gap: 1rem;">
+        <span id="member-user-email" class="hide-on-mobile" style="font-size: 0.9rem; font-weight: 500;"></span>
+        <button id="member-logout-btn" class="hw-btn hw-btn-secondary" type="button" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+          <i class="bi bi-box-arrow-right"></i> Salir
+        </button>
+      </div>
+    </header>
+  )}
+
+  <style is:global>
+    :root {
+      --color-bg: #f9f3ff;
+      --color-surface: #ffffff;
+      --color-border: #000000;
+      --color-text: #000000;
+      --color-text-muted: #444444;
+      --gradient-primary: linear-gradient(90deg, #6225e6, #a78bfa);
+    }
+    @media (max-width: 600px) {
+      .hide-on-mobile {
+        display: none !important;
+      }
+    }
+  </style>
+
+  <main class="member-main" style="max-width: 800px; margin: 0 auto; padding: 2rem 1rem;">
+    <slot />
+  </main>
+</body>
+</html>
+
+{showHeader && (
+  <script>
+    import { supabase } from '@lib/supabase';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const emailEl = document.getElementById('member-user-email');
+      const logoutBtn = document.getElementById('member-logout-btn') as HTMLButtonElement | null;
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.replace('/mi-cuenta/login');
+        return;
+      }
+
+      if (emailEl && session?.user?.email) {
+        emailEl.textContent = session.user.email;
+      }
+
+      logoutBtn?.addEventListener('click', async () => {
+        logoutBtn.disabled = true;
+        await supabase.auth.signOut();
+        window.location.href = '/mi-cuenta/login';
+      });
+    });
+  </script>
+)}

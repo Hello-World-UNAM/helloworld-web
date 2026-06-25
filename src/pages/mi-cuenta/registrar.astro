@@ -1,0 +1,433 @@
+---
+import MiCuentaLayout from '@layouts/MiCuentaLayout.astro';
+---
+
+<MiCuentaLayout title="Registrar Puntos | Leaderboard">
+  
+  <div style="max-width: 650px; margin: 0 auto; font-family: 'DM Sans', sans-serif;">
+    <a href="/mi-cuenta" style="color: #6225e6; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 2rem; border-bottom: 2px solid transparent; transition: border-color 0.2s;">
+      <i class="bi bi-arrow-left"></i> Volver a mi perfil
+    </a>
+
+    <div style="background: #fff; padding: 2.5rem; border: 2px solid #000; box-shadow: 4px 4px 0 #6225e6; border-radius: 8px;">
+      <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; letter-spacing: -0.5px; display: flex; align-items: center; gap: 0.8rem;">
+        <i class="bi bi-cloud-arrow-up-fill" style="color: #6225e6;"></i> Registrar Evidencia
+      </h1>
+      <p style="color: #555; font-size: 1rem; font-weight: 500; margin-bottom: 2rem;">Sube la evidencia de tu logro para sumar puntos. Las solicitudes serán revisadas por la directiva.</p>
+
+      <form id="registrar-form" style="display: flex; flex-direction: column; gap: 1.8rem;">
+        
+        <!-- Select Acción -->
+        <div>
+          <label for="config_id" style="display: block; margin-bottom: 0.5rem; font-weight: 700;">Tipo de Acción o Logro <span style="color: #ef4444;">*</span></label>
+          <select id="config_id" name="config_id" required style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; background: #fafafa; color: #000; font-size: 1rem; font-weight: 500; cursor: pointer; border-radius: 6px; appearance: auto; transition: border-color 0.2s;">
+            <option value="" disabled selected>Selecciona una opción...</option>
+            <!-- Options populated by JS -->
+          </select>
+        </div>
+
+        <!-- Dynamic Fields Container -->
+        <div id="dynamic-fields" style="display: none; background: #fdfdfd; padding: 1.5rem; border: 2px dashed #ddd; border-radius: 8px;">
+          
+          <div id="field-horas" style="display: none;">
+            <label for="horas" style="display: block; margin-bottom: 0.5rem; font-weight: 700;">Horas comprobables <span style="color: #ef4444;">*</span></label>
+            <input type="number" id="horas" name="horas" min="1" max="1000" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; background: #fafafa; color: #000; font-size: 1rem; font-weight: 500; border-radius: 6px;">
+            <small style="color: #666; margin-top: 0.5rem; display: block;">Se otorgarán <span id="pts-per-hour" style="color: #6225e6; font-weight: 800;">X</span> puntos por hora.</small>
+          </div>
+
+          <div id="field-externo" style="display: none; margin-top: 1rem;">
+            <label style="display: flex; align-items: flex-start; gap: 1rem; cursor: pointer;">
+              <input type="checkbox" id="es_externo" name="es_externo" style="width: 20px; height: 20px; accent-color: #6225e6; flex-shrink: 0; margin-top: 2px;">
+              <div>
+                <span style="font-weight: 700; font-size: 0.95rem;">¿Fue un evento externo a la facultad?</span>
+                <span style="display: block; color: #666; font-size: 0.85rem; margin-top: 0.2rem;">Te dará un multiplicador de puntos (<span id="pts-mult" style="font-weight: 800; color: #6225e6;">x1</span>)</span>
+              </div>
+            </label>
+          </div>
+          
+        </div>
+
+        <!-- Evidencia Upload or Link -->
+        <div>
+          <label style="display: block; margin-bottom: 0.5rem; font-weight: 700;">Evidencia (Foto, PDF o Enlace) <span style="color: #ef4444;">*</span></label>
+          
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; background: #eee; padding: 0.4rem; border-radius: 8px;">
+            <button type="button" id="tab-file" style="flex: 1; padding: 0.6rem; border: none; background: #fff; border-radius: 6px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s; color: #6225e6;">Archivo Local</button>
+            <button type="button" id="tab-link" style="flex: 1; padding: 0.6rem; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #666; transition: all 0.2s;">Enlace Web</button>
+          </div>
+
+          <!-- Tab: Archivo Local -->
+          <div id="section-file">
+            <div style="position: relative; overflow: hidden; width: 100%;">
+              <div style="width: 100%; padding: 0.8rem; border: 2px dashed #bbb; background: #fafafa; color: #555; font-weight: 500; border-radius: 6px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; transition: all 0.2s;" id="custom-file-wrapper">
+                <i class="bi bi-cloud-arrow-up" style="font-size: 1.5rem; color: #6225e6;"></i>
+                <span id="file-name-display" style="word-break: break-all;">Toca para seleccionar un archivo</span>
+              </div>
+              <input type="file" id="evidencia" name="evidencia" accept="image/*, application/pdf, .heic, .heif" required style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+            </div>
+            <small style="color: #888; font-size: 0.85rem; margin-top: 0.5rem; display: block;"><i class="bi bi-info-circle-fill"></i> Tamaño máximo permitido: 5MB.</small>
+          </div>
+
+          <!-- Tab: Enlace Web -->
+          <div id="section-link" style="display: none;">
+            <input type="url" id="enlace_url" name="enlace_url" placeholder="https://..." style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; background: #fafafa; color: #000; font-size: 1rem; font-weight: 500; border-radius: 6px; outline: none;">
+            <small style="color: #6225e6; font-size: 0.85rem; margin-top: 0.5rem; display: block; font-weight: 600; line-height: 1.4;"><i class="bi bi-exclamation-triangle-fill"></i> ¡Ojo! Si usas Google Drive o Notion, asegúrate de que el enlace tenga permisos de 'Cualquier persona con el enlace puede ver'.</small>
+          </div>
+        </div>
+
+        <!-- Info Card -->
+        <div style="background: #f1ecff; border: 2px solid #e9e2ff; padding: 1.2rem; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; margin-top: 0.5rem;">
+          <p style="margin: 0; font-size: 1rem; font-weight: 700; color: #333;">Puntos solicitados:</p>
+          <p style="margin: 0; font-size: 1.8rem; font-weight: 900; line-height: 1; color: #6225e6;"><span id="calculo-puntos">0</span> <span style="font-size: 0.9rem; color: #666;">pts</span></p>
+        </div>
+
+        <button type="submit" id="submit-btn" class="hw-btn hw-btn-primary" style="margin-top: 1rem; padding: 1rem; font-size: 1.1rem; width: 100%; text-align: center; border-width: 2px; box-shadow: 3px 3px 0 #000 !important; border-radius: 6px;">
+          <i class="bi bi-send-fill"></i> Enviar Evidencia
+        </button>
+        <p id="submit-error" style="color: #dc2626; background: #fef2f2; border: 1.5px solid #fecaca; padding: 1rem; font-weight: 600; font-size: 0.9rem; display: none; text-align: center; border-radius: 6px;"></p>
+
+      </form>
+    </div>
+  </div>
+
+</MiCuentaLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  let configData: any[] = [];
+  let currentConfig: any = null;
+  let memberId: string | null = null;
+
+  // Client-side image compression using Canvas (Resilient for mobile)
+  async function compressImage(file: File): Promise<Blob> {
+    if (!file.type.startsWith('image/')) return file; // Ignore PDFs
+    if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) return file; // Let browser/OS handle HEIC as raw or auto-converted
+
+    return new Promise((resolve) => {
+      // Fallback timer just in case mobile canvas freezes
+      const fallbackTimer = setTimeout(() => {
+        resolve(file);
+      }, 5000); // 5s max to compress
+
+      try {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Max dimensions reduced for lower RAM usage on mobile
+          const MAX = 1000; 
+          if (width > height) {
+            if (width > MAX) { height *= MAX / width; width = MAX; }
+          } else {
+            if (height > MAX) { width *= MAX / height; height = MAX; }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            clearTimeout(fallbackTimer);
+            return resolve(file);
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            clearTimeout(fallbackTimer);
+            if (blob) resolve(blob);
+            else resolve(file);
+          }, 'image/jpeg', 0.8);
+        };
+        
+        img.onerror = () => {
+          clearTimeout(fallbackTimer);
+          resolve(file);
+        };
+        img.src = url;
+      } catch (err) {
+        clearTimeout(fallbackTimer);
+        resolve(file); // If anything fails, upload original
+      }
+    });
+  }
+
+  function updatePointsPreview() {
+    const ptsEl = document.getElementById('calculo-puntos');
+    if (!currentConfig || !ptsEl) return;
+
+    let pts = currentConfig.puntos_base;
+
+    if (currentConfig.requiere_horas) {
+      const hInput = document.getElementById('horas') as HTMLInputElement;
+      const h = parseInt(hInput.value) || 0;
+      pts = h * pts; // base is per hour
+    }
+
+    if (currentConfig.permite_evento_externo) {
+      const check = document.getElementById('es_externo') as HTMLInputElement;
+      if (check.checked) {
+        pts = Math.round(pts * parseFloat(currentConfig.multiplicador_externo));
+      }
+    }
+
+    ptsEl.textContent = pts.toString();
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || !session.user?.email) return window.location.replace('/mi-cuenta/login');
+
+    const email = session.user.email;
+    const { data: member } = await supabase.from('miembros_activos').select('id').eq('correo', email).maybeSingle();
+    if (!member) return window.location.replace('/mi-cuenta');
+    memberId = member.id;
+
+    // Load configs
+    const { data: configs } = await supabase.from('leaderboard_config').select('*').order('orden', { ascending: true });
+    if (configs) {
+      configData = configs;
+      const select = document.getElementById('config_id') as HTMLSelectElement;
+      
+      // Group by categoria
+      const groups = new Map<string, any[]>();
+      configs.forEach(c => {
+        if (!groups.has(c.categoria)) groups.set(c.categoria, []);
+        groups.get(c.categoria)!.push(c);
+      });
+
+      groups.forEach((items, cat) => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = cat;
+        items.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = item.accion;
+          optgroup.appendChild(opt);
+        });
+        select.appendChild(optgroup);
+      });
+    }
+
+    // Handle select change
+    const select = document.getElementById('config_id') as HTMLSelectElement;
+    select.addEventListener('change', (e) => {
+      const val = (e.target as HTMLSelectElement).value;
+      currentConfig = configData.find(c => c.id === val);
+      
+      const dynContainer = document.getElementById('dynamic-fields')!;
+      const fHoras = document.getElementById('field-horas')!;
+      const fExt = document.getElementById('field-externo')!;
+      
+      // Reset inputs
+      (document.getElementById('horas') as HTMLInputElement).value = '';
+      (document.getElementById('es_externo') as HTMLInputElement).checked = false;
+
+      let showDyn = false;
+      
+      if (currentConfig?.requiere_horas) {
+        fHoras.style.display = 'block';
+        document.getElementById('horas')?.setAttribute('required', 'true');
+        document.getElementById('pts-per-hour')!.textContent = currentConfig.puntos_base;
+        showDyn = true;
+      } else {
+        fHoras.style.display = 'none';
+        document.getElementById('horas')?.removeAttribute('required');
+      }
+
+      if (currentConfig?.permite_evento_externo) {
+        fExt.style.display = 'block';
+        document.getElementById('pts-mult')!.textContent = `x${currentConfig.multiplicador_externo}`;
+        showDyn = true;
+      } else {
+        fExt.style.display = 'none';
+      }
+
+      dynContainer.style.display = showDyn ? 'block' : 'none';
+      updatePointsPreview();
+    });
+
+    document.getElementById('horas')?.addEventListener('input', updatePointsPreview);
+    document.getElementById('es_externo')?.addEventListener('change', updatePointsPreview);
+
+    // File & Link Tabs Logic
+    let isLinkMode = false;
+    const tabFile = document.getElementById('tab-file')!;
+    const tabLink = document.getElementById('tab-link')!;
+    const secFile = document.getElementById('section-file')!;
+    const secLink = document.getElementById('section-link')!;
+    const inputEvidencia = document.getElementById('evidencia') as HTMLInputElement;
+    const inputUrl = document.getElementById('enlace_url') as HTMLInputElement;
+    const fileDisplay = document.getElementById('file-name-display');
+    const fileWrapper = document.getElementById('custom-file-wrapper');
+
+    tabFile.addEventListener('click', () => {
+      isLinkMode = false;
+      tabFile.style.background = '#fff';
+      tabFile.style.color = '#6225e6';
+      tabFile.style.fontWeight = '700';
+      tabFile.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+      
+      tabLink.style.background = 'transparent';
+      tabLink.style.color = '#666';
+      tabLink.style.fontWeight = '500';
+      tabLink.style.boxShadow = 'none';
+
+      secFile.style.display = 'block';
+      secLink.style.display = 'none';
+      
+      inputEvidencia.required = true;
+      inputUrl.required = false;
+      inputUrl.value = '';
+    });
+
+    tabLink.addEventListener('click', () => {
+      isLinkMode = true;
+      tabLink.style.background = '#fff';
+      tabLink.style.color = '#6225e6';
+      tabLink.style.fontWeight = '700';
+      tabLink.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+      
+      tabFile.style.background = 'transparent';
+      tabFile.style.color = '#666';
+      tabFile.style.fontWeight = '500';
+      tabFile.style.boxShadow = 'none';
+
+      secLink.style.display = 'block';
+      secFile.style.display = 'none';
+      
+      inputUrl.required = true;
+      inputEvidencia.required = false;
+      inputEvidencia.value = '';
+      if(fileDisplay && fileWrapper) {
+        fileDisplay.textContent = 'Toca para seleccionar un archivo';
+        fileDisplay.style.color = '#555';
+        fileDisplay.style.fontWeight = '500';
+        fileWrapper.style.borderColor = '#bbb';
+        fileWrapper.style.backgroundColor = '#fafafa';
+      }
+    });
+    
+    inputEvidencia?.addEventListener('change', (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file && fileDisplay && fileWrapper) {
+        fileDisplay.textContent = file.name;
+        fileDisplay.style.color = '#6225e6';
+        fileDisplay.style.fontWeight = '700';
+        fileWrapper.style.borderColor = '#6225e6';
+        fileWrapper.style.backgroundColor = '#f1ecff';
+      } else if (fileDisplay && fileWrapper) {
+        fileDisplay.textContent = 'Toca para seleccionar un archivo';
+        fileDisplay.style.color = '#555';
+        fileDisplay.style.fontWeight = '500';
+        fileWrapper.style.borderColor = '#bbb';
+        fileWrapper.style.backgroundColor = '#fafafa';
+      }
+    });
+
+    // Form Submit
+    const form = document.getElementById('registrar-form') as HTMLFormElement;
+    const btn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const errorMsg = document.getElementById('submit-error')!;
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentConfig || !memberId) return;
+
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Subiendo...';
+      errorMsg.style.display = 'none';
+
+      try {
+        let finalUrl = '';
+
+        if (isLinkMode) {
+          const urlVal = inputUrl.value.trim();
+          if (!urlVal) throw new Error("Introduce un enlace válido");
+          try { new URL(urlVal); } catch(e) { throw new Error("El formato del enlace no es válido. Asegúrate de incluir https://"); }
+          finalUrl = urlVal;
+        } else {
+          const fileInput = document.getElementById('evidencia') as HTMLInputElement;
+          const file = fileInput.files?.[0];
+          if (!file) throw new Error("Selecciona un archivo");
+
+          // Validate max size (5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            throw new Error("El archivo supera el límite de 5MB. Por favor, sube un archivo más ligero.");
+          }
+
+          // Compress if image
+          const compressedBlob = await compressImage(file);
+          
+          // Upload to Storage
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${memberId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadErr } = await supabase.storage
+            .from('evidencias')
+            .upload(fileName, compressedBlob, {
+              contentType: file.type || 'application/octet-stream',
+              upsert: false
+            });
+
+          if (uploadErr) {
+            console.error(uploadErr);
+            throw new Error("No se pudo subir el archivo. Intenta de nuevo.");
+          }
+
+          const { data: urlData } = supabase.storage.from('evidencias').getPublicUrl(fileName);
+          finalUrl = urlData.publicUrl;
+        }
+
+        // Get calculated points
+        const ptsEl = document.getElementById('calculo-puntos')!;
+        const pts = parseInt(ptsEl.textContent || '0');
+
+        const horas = currentConfig.requiere_horas ? parseInt((document.getElementById('horas') as HTMLInputElement).value) : null;
+        const esExterno = currentConfig.permite_evento_externo ? (document.getElementById('es_externo') as HTMLInputElement).checked : false;
+
+        // Fetch active period to associate record
+        const { data: activePeriod } = await supabase.from('periodos').select('id').eq('es_activo', true).maybeSingle();
+        const activePeriodId = activePeriod?.id || '2026-2';
+
+        // Insert into DB
+        const { error: dbErr } = await supabase.from('puntos_registros').insert({
+          miembro_id: memberId,
+          config_id: currentConfig.id,
+          periodo_id: activePeriodId,
+          horas_reportadas: horas,
+          es_evento_externo: esExterno,
+          url_evidencia: finalUrl,
+          puntos_solicitados: pts,
+          estado_aprobacion: 'pending'
+        });
+
+        if (dbErr) throw new Error("No se pudo guardar el registro en la base de datos.");
+
+        // Success!
+        window.location.replace('/mi-cuenta?success=1');
+
+      } catch (err: any) {
+        // Parse network errors for mobile
+        let errorText = err.message || "Ocurrió un error inesperado.";
+        const rawMessage = errorText.toLowerCase();
+        
+        if (rawMessage.includes('fetch') || rawMessage.includes('network') || rawMessage.includes('internet')) {
+          errorText = "La conexión a internet es inestable o muy lenta. Revisa tu red celular o Wi-Fi e intenta de nuevo.";
+        } else if (rawMessage.includes('timeout')) {
+          errorText = "La subida tomó demasiado tiempo. Intenta subir desde otra red de Wi-Fi.";
+        }
+
+        errorMsg.textContent = errorText;
+        errorMsg.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send-fill"></i> Enviar Evidencia';
+      }
+    });
+  });
+</script>
