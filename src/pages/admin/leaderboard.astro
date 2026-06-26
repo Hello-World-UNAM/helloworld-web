@@ -26,9 +26,12 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   </style>
 
   <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <div>
-      <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-award"></i> Revisión de Puntos</h1>
-      <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
+    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <div>
+        <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-award"></i> Revisión de Puntos</h1>
+        <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
+      </div>
+      <button id="open-manual-btn" style="background: #10b981; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-plus-circle-fill"></i> Puntos Manuales</button>
     </div>
     <div class="filters-wrapper">
       <div class="search-wrapper">
@@ -71,6 +74,38 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       <i class="bi bi-check-circle" style="font-size: 3rem; color: #22c55e;"></i>
       <h2 style="margin-top: 1rem;">¡Todo al día!</h2>
       <p style="color: var(--color-text-muted);">No hay evidencias pendientes por revisar.</p>
+    </div>
+  </div>
+
+  <!-- Modal Puntos Manuales -->
+  <div id="manual-points-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: #fff; width: 100%; max-width: 500px; padding: 2rem; border-radius: 12px; border: 3px solid #000; box-shadow: 8px 8px 0 #6225e6; position: relative;">
+      <button id="close-manual-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #000;"><i class="bi bi-x-lg"></i></button>
+      
+      <h2 style="font-size: 1.5rem; font-weight: 900; margin-top: 0; margin-bottom: 1.5rem;"><i class="bi bi-plus-circle-fill" style="color: #6225e6;"></i> Asignar Puntos Manuales</h2>
+      
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Miembro</label>
+          <select id="manual-miembro-selector" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+            <option value="">Selecciona un miembro...</option>
+          </select>
+        </div>
+        
+        <div>
+          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Cantidad de Puntos</label>
+          <input type="number" id="manual-puntos" placeholder="Ej: 500" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+        </div>
+
+        <div>
+          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Justificación / Notas (Auditoría)</label>
+          <input type="text" id="manual-notas" placeholder="Ej: Premio hackathon, compensación..." style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+        </div>
+
+        <button id="submit-manual-btn" style="margin-top: 1rem; width: 100%; padding: 1rem; background: #6225e6; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 1rem;">
+          Guardar Puntos Manuales
+        </button>
+      </div>
     </div>
   </div>
 
@@ -237,17 +272,23 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
       let actionButtons = '';
       if (row.estado_aprobacion === 'pending') {
-        actionButtons = `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <button class="approve-btn" data-id="${row.id}" data-base-pts="${row.puntos_solicitados}" data-sponsor-allowed="${config.permite_sponsor_alto_valor}" style="background: #6225e6; color: #fff; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; cursor: pointer; transition: transform 0.1s;">
+        actionButtons += `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem;">
+            <button class="approve-btn" data-id="${row.id}" data-base-pts="${row.puntos_solicitados}" data-sponsor-allowed="${config?.permite_sponsor_alto_valor}" style="background: #6225e6; color: #fff; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; cursor: pointer; transition: transform 0.1s;">
               <i class="bi bi-check-lg"></i> Aprobar
             </button>
-            <button class="reject-btn" data-id="${row.id}" data-email="${miembro.correo}" data-nombre="${miembro.nombre}" data-accion="${config.accion}" data-pts="${row.puntos_solicitados}" style="background: #fff; color: #ef4444; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #ef4444; border-radius: 6px; box-shadow: 3px 3px 0 rgba(239,68,68,0.2); cursor: pointer;">
+            <button class="reject-btn" data-id="${row.id}" data-email="${miembro.correo}" data-nombre="${miembro.nombre}" data-accion="${config?.accion}" data-pts="${row.puntos_solicitados}" style="background: #fff; color: #ef4444; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #ef4444; border-radius: 6px; box-shadow: 3px 3px 0 rgba(239,68,68,0.2); cursor: pointer;">
               <i class="bi bi-x-lg"></i> Rechazar
             </button>
           </div>
         `;
       }
+
+      actionButtons += `
+        <button class="delete-btn" data-id="${row.id}" style="width: 100%; background: #fee2e2; color: #b91c1c; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed #f87171; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
+          <i class="bi bi-trash3-fill"></i> Eliminar Registro
+        </button>
+      `;
 
       // Media Handling
       const isImage = row.url_evidencia && row.url_evidencia.match(/\.(jpeg|jpg|gif|png|webp|heic|heif)(\?.*)?$/i) != null;
@@ -289,7 +330,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <div class="card-registro-content">
           <div class="card-registro-left">
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
-              <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #000; letter-spacing: -0.5px;">${config.accion}</h2>
+              <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #000; letter-spacing: -0.5px;">${config ? config.accion : 'Asignación Manual'}</h2>
               ${statusHTML}
               ${dynamicInfo}
             </div>
@@ -369,6 +410,33 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         await processAction('reject', id, 0, notas, target, email, nombre, accionName, ptsSolicitados);
       });
     });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const id = target.getAttribute('data-id')!;
+        
+        const razon = prompt('Vas a ELIMINAR este registro de la base de datos (queda guardado en auditoría).\\nPor favor, escribe el motivo o tu nombre:');
+        if (!razon) return; // Cancelado
+        
+        target.disabled = true;
+        target.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Eliminando...';
+
+        const { error } = await supabase.rpc('delete_puntos_registro', {
+          p_registro_id: id,
+          p_admin_email: sessionEmail,
+          p_reason: razon
+        });
+
+        if (error) {
+          alert(`Error al eliminar: ${error.message}`);
+          target.disabled = false;
+          target.innerHTML = '<i class="bi bi-trash3-fill"></i> Eliminar Registro';
+        } else {
+          await loadPending();
+        }
+      });
+    });
   }
 
   async function processAction(action: 'approve' | 'reject', id: string, pts: number, notas: string, btnElement: HTMLButtonElement, email?: string, nombre?: string, accionName?: string, ptsSolicitados?: number) {
@@ -416,6 +484,57 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (session?.user?.email) {
       sessionEmail = session.user.email;
       await loadPeriods();
+      setupManualModal();
     }
   });
+
+  async function setupManualModal() {
+    const btn = document.getElementById('open-manual-btn');
+    const modal = document.getElementById('manual-points-modal');
+    const closeBtn = document.getElementById('close-manual-modal');
+    const select = document.getElementById('manual-miembro-selector') as HTMLSelectElement;
+    const submitBtn = document.getElementById('submit-manual-btn') as HTMLButtonElement;
+
+    // Load members
+    const { data: miembros } = await supabase.from('miembros_activos').select('id, nombre, numero_cuenta').order('nombre');
+    if (miembros) {
+      select.innerHTML = '<option value="">Selecciona un miembro...</option>' + miembros.map(m => `<option value="${m.id}">${m.nombre} (${m.numero_cuenta})</option>`).join('');
+    }
+
+    btn?.addEventListener('click', () => { modal!.style.display = 'flex'; });
+    closeBtn?.addEventListener('click', () => { modal!.style.display = 'none'; });
+
+    submitBtn?.addEventListener('click', async () => {
+      const miembroId = select.value;
+      const puntos = parseInt((document.getElementById('manual-puntos') as HTMLInputElement).value);
+      const notas = (document.getElementById('manual-notas') as HTMLInputElement).value;
+
+      if (!miembroId || isNaN(puntos) || !notas) {
+        alert('Por favor completa todos los campos requeridos y asegúrate de agregar una nota para la auditoría.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Guardando... <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>';
+
+      const { error } = await supabase.rpc('insert_manual_puntos', {
+        p_miembro_id: miembroId,
+        p_puntos: puntos,
+        p_admin_email: sessionEmail,
+        p_notas: notas,
+        p_periodo_id: selectedPeriodId
+      });
+
+      if (error) {
+        alert('Error asignando puntos: ' + error.message);
+      } else {
+        alert('Puntos asignados exitosamente.');
+        modal!.style.display = 'none';
+        await loadPending();
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Guardar Puntos Manuales';
+    });
+  }
 </script>
