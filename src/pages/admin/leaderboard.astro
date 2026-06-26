@@ -180,7 +180,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     let query = supabase
       .from('puntos_registros')
       .select(`
-        id, created_at, horas_reportadas, es_evento_externo, url_evidencia, puntos_solicitados, estado_aprobacion, notas_admin,
+        id, created_at, horas_reportadas, es_evento_externo, url_evidencia, puntos_solicitados, estado_aprobacion, notas_admin, reviewed_by,
         miembros_activos!inner(nombre, correo, numero_cuenta),
         leaderboard_config(accion, permite_sponsor_alto_valor, multiplicador_externo)
       `)
@@ -269,6 +269,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <div style="margin-top: 1.5rem; background: #fdfdfd; padding: 1rem; border-left: 4px solid #6225e6; border-radius: 0 4px 4px 0; border-top: 1px solid #ddd; border-right: 1px solid #ddd; border-bottom: 1px solid #ddd;">
             <p style="font-size: 0.8rem; font-weight: 800; color: #6225e6; margin-bottom: 0.3rem; text-transform: uppercase;">Nota de Auditoría</p>
             <p style="color: #333; font-size: 0.95rem; margin: 0; font-style: italic;">"${row.notas_admin}"</p>
+            ${row.reviewed_by ? `<p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666; font-weight: 600;"><i class="bi bi-person-fill"></i> Por: ${row.reviewed_by}</p>` : ''}
           </div>
         `;
       }
