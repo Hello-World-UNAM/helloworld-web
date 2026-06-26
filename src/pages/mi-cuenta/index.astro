@@ -57,11 +57,11 @@ if (session?.user?.email) {
   </style>
 
   {!isAuthorized ? (
-    <div id="unauthorized-state" style="text-align: center; padding: 4rem 0; background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; max-width: 600px; margin: 2rem auto;">
-      <i class="bi bi-shield-lock" style="font-size: 3rem; color: #ef4444;"></i>
-      <h2 style="margin-top: 1rem; color: #ef4444;">Acceso Denegado</h2>
-      <p style="margin-top: 0.5rem; color: #333;">Tu correo institucional no está registrado en la base de datos de miembros del club.</p>
-      <button id="re-login-btn" class="hw-btn hw-btn-secondary" style="margin-top: 1.5rem;">Intentar con otra cuenta</button>
+    <div id="unauthorized-state" style="text-align: center; padding: 3rem 1.5rem; background: #fff; border: 4px solid #000; border-radius: 12px; max-width: 500px; margin: 3rem auto; box-shadow: 8px 8px 0 #ef4444; width: calc(100% - 2rem); box-sizing: border-box;">
+      <i class="bi bi-shield-lock-fill" style="font-size: 3.5rem; color: #ef4444;"></i>
+      <h2 style="margin-top: 1rem; color: #000; font-weight: 900; font-size: 1.8rem; text-transform: uppercase;">Acceso Denegado</h2>
+      <p style="margin-top: 1rem; color: #444; font-weight: 500; font-size: 1.1rem; line-height: 1.5;">Tu correo institucional no está registrado en la base de datos de miembros del club.</p>
+      <button id="re-login-btn" class="hw-btn" style="margin-top: 2rem; width: 100%; background: #ef4444; color: #fff; font-size: 1rem; padding: 1rem; border-radius: 8px;">Intentar con otra cuenta</button>
     </div>
   ) : (
     <>
