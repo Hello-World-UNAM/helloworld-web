@@ -51,6 +51,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <option value="pending" selected>Pendientes</option>
           <option value="approved">Aprobados</option>
           <option value="rejected">Rechazados</option>
+          <option value="deleted">Eliminados</option>
           <option value="all">Todos</option>
         </select>
       </div>
@@ -236,6 +237,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         statusHTML = `<span style="background: rgba(34, 197, 94, 0.15); color: #16a34a; padding: 0.3rem 0.6rem; border: 1.5px solid #16a34a; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-check-circle"></i> Aprobado</span>`;
       } else if (row.estado_aprobacion === 'rejected') {
         statusHTML = `<span style="background: rgba(239, 68, 68, 0.1); color: #dc2626; padding: 0.3rem 0.6rem; border: 1.5px solid #dc2626; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-x-circle"></i> Rechazado</span>`;
+      } else if (row.estado_aprobacion === 'deleted') {
+        statusHTML = `<span style="background: rgba(0, 0, 0, 0.1); color: #404040; padding: 0.3rem 0.6rem; border: 1.5px solid #404040; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-trash3-fill"></i> Eliminado</span>`;
       } else {
         statusHTML = `<span style="background: rgba(234, 179, 8, 0.15); color: #ca8a04; padding: 0.3rem 0.6rem; border: 1.5px solid #ca8a04; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-clock-history"></i> Pendiente</span>`;
       }
@@ -285,8 +288,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       }
 
       actionButtons += `
-        <button class="delete-btn" data-id="${row.id}" style="width: 100%; background: #fee2e2; color: #b91c1c; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed #f87171; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
-          <i class="bi bi-trash3-fill"></i> Eliminar Registro
+        <button class="delete-btn" data-id="${row.id}" ${row.estado_aprobacion === 'deleted' ? 'disabled' : ''} style="width: 100%; background: ${row.estado_aprobacion === 'deleted' ? '#f3f4f6' : '#fee2e2'}; color: ${row.estado_aprobacion === 'deleted' ? '#9ca3af' : '#b91c1c'}; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed ${row.estado_aprobacion === 'deleted' ? '#d1d5db' : '#f87171'}; border-radius: 6px; ${row.estado_aprobacion === 'deleted' ? 'cursor: not-allowed;' : 'cursor: pointer; transition: background 0.2s;'}">
+          <i class="bi bi-trash3-fill"></i> ${row.estado_aprobacion === 'deleted' ? 'Ya Eliminado' : 'Eliminar Registro'}
         </button>
       `;
 
