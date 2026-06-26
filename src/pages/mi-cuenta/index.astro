@@ -26,9 +26,23 @@ if (session?.user?.email) {
       gap: 2rem;
       align-items: start;
     }
+    .upload-card {
+      position: sticky;
+      top: 2rem;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+    }
+    .upload-card p {
+      flex-grow: 1;
+    }
     @media (max-width: 800px) {
       .member-dashboard-grid {
         grid-template-columns: 1fr;
+      }
+      .upload-card {
+        position: static !important;
+        min-height: auto;
       }
     }
     .history-card summary::-webkit-details-marker {
@@ -74,7 +88,7 @@ if (session?.user?.email) {
         <div class="member-dashboard-grid">
       
       <!-- Upload Card -->
-      <div style="background: #f1ecff; padding: 1.8rem; border: 2px solid #000; box-shadow: 4px 4px 0 #000; position: sticky; top: 2rem; border-radius: 8px;">
+      <div class="upload-card" style="background: #f1ecff; padding: 1.8rem; border: 2px solid #000; box-shadow: 4px 4px 0 #000; border-radius: 8px;">
         <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.8rem;"><i class="bi bi-cloud-arrow-up-fill" style="color: #6225e6;"></i> Registrar Puntos</h2>
         <p style="font-weight: 400; font-size: 0.95rem; margin-bottom: 1.5rem; color: #333; line-height: 1.5;">Sube evidencia de tus eventos, charlas o proyectos para sumar puntos al Leaderboard.</p>
         <a href="/mi-cuenta/registrar" class="hw-btn hw-btn-primary" style="display: block; text-align: center; width: 100%; border-width: 2px; box-shadow: 3px 3px 0 #000 !important; font-size: 0.95rem; padding: 10px 20px; border-radius: 6px;">Subir Evidencia →</a>
@@ -226,7 +240,7 @@ if (session?.user?.email) {
 
       if (!histErr && history && history.length > 0) {
         if (historyList) {
-          historyList.innerHTML = history.map(row => {
+          const renderHistoryItem = (row: any) => {
             const accion = (row.leaderboard_config as any)?.accion || 'Acción desconocida';
             let statusBadge = '';
             let pointsDisplay = `${row.puntos_solicitados} pts solicitados`;
@@ -296,38 +310,64 @@ if (session?.user?.email) {
                 </div>
               </details>
             `;
-          }).join('');
+          };
 
-          // Attach delete listeners
-          document.querySelectorAll('.delete-record-btn').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const id = btn.getAttribute('data-id');
-              
-              if (confirm('¿Estás seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer.')) {
-                btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Eliminando...';
-                btn.setAttribute('disabled', 'true');
+          const attachDeleteListeners = () => {
+            document.querySelectorAll('.delete-record-btn').forEach(btn => {
+              // Clone the button to remove old event listeners
+              const newBtn = btn.cloneNode(true) as HTMLButtonElement;
+              btn.parentNode?.replaceChild(newBtn, btn);
+
+              newBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = newBtn.getAttribute('data-id');
                 
-                // Extra security: ensure we only delete if it belongs to this member AND is still pending or rejected
-                const { error } = await supabase
-                  .from('puntos_registros')
-                  .delete()
-                  .eq('id', id)
-                  .eq('miembro_id', member!.id)
-                  .in('estado_aprobacion', ['pending', 'rejected']);
+                if (confirm('¿Estás seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer.')) {
+                  newBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Eliminando...';
+                  newBtn.setAttribute('disabled', 'true');
                   
-                if (error) {
-                  alert('Ocurrió un error al intentar eliminar la solicitud. Por favor intenta de nuevo.');
-                  btn.innerHTML = '<i class="bi bi-trash-fill"></i> Eliminar Solicitud';
-                  btn.removeAttribute('disabled');
-                } else {
-                  loadDashboardData(); // Refresh history list and points
+                  // Extra security: ensure we only delete if it belongs to this member AND is still pending or rejected
+                  const { error } = await supabase
+                    .from('puntos_registros')
+                    .delete()
+                    .eq('id', id)
+                    .eq('miembro_id', member!.id)
+                    .in('estado_aprobacion', ['pending', 'rejected']);
+                    
+                  if (error) {
+                    alert('Ocurrió un error al intentar eliminar la solicitud. Por favor intenta de nuevo.');
+                    newBtn.innerHTML = '<i class="bi bi-trash-fill"></i> Eliminar Solicitud';
+                    newBtn.removeAttribute('disabled');
+                  } else {
+                    loadDashboardData(); // Refresh history list and points
+                  }
                 }
-              }
+              });
             });
-          });
+          };
 
+          let visibleCount = 5;
+          const updateHistoryView = () => {
+            const visibleItems = history.slice(0, visibleCount);
+            historyList.innerHTML = visibleItems.map(renderHistoryItem).join('');
+            
+            if (history.length > visibleCount) {
+              const moreBtnContainer = document.createElement('div');
+              moreBtnContainer.style.textAlign = 'center';
+              moreBtnContainer.style.marginTop = '1rem';
+              moreBtnContainer.innerHTML = `<button class="hw-btn hw-btn-secondary" style="font-size: 0.9rem; padding: 0.6rem 1.2rem;"><i class="bi bi-chevron-down"></i> Ver más registros</button>`;
+              historyList.appendChild(moreBtnContainer);
+
+              moreBtnContainer.querySelector('button')?.addEventListener('click', () => {
+                visibleCount += 5;
+                updateHistoryView();
+              });
+            }
+            attachDeleteListeners();
+          };
+
+          updateHistoryView();
         }
       } else {
         if (emptyMsg) {
