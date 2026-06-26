@@ -166,6 +166,15 @@ if (session?.user?.email) {
     const dashboardState = document.getElementById('dashboard-state');
     const reLoginBtn = document.getElementById('re-login-btn');
 
+    if (reLoginBtn) {
+      reLoginBtn.addEventListener('click', async () => {
+        reLoginBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Redirigiendo...';
+        reLoginBtn.setAttribute('disabled', 'true');
+        await supabase.auth.signOut();
+        window.location.href = '/mi-cuenta/login';
+      });
+    }
+
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session || !session.user?.email) {
