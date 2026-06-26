@@ -352,17 +352,42 @@ if (session?.user?.email) {
             const visibleItems = history.slice(0, visibleCount);
             historyList.innerHTML = visibleItems.map(renderHistoryItem).join('');
             
-            if (history.length > visibleCount) {
-              const moreBtnContainer = document.createElement('div');
-              moreBtnContainer.style.textAlign = 'center';
-              moreBtnContainer.style.marginTop = '1rem';
-              moreBtnContainer.innerHTML = `<button class="hw-btn hw-btn-secondary" style="font-size: 0.9rem; padding: 0.6rem 1.2rem;"><i class="bi bi-chevron-down"></i> Ver más registros</button>`;
-              historyList.appendChild(moreBtnContainer);
+            const btnContainer = document.createElement('div');
+            btnContainer.style.textAlign = 'center';
+            btnContainer.style.marginTop = '1rem';
+            btnContainer.style.display = 'flex';
+            btnContainer.style.gap = '1rem';
+            btnContainer.style.justifyContent = 'center';
 
-              moreBtnContainer.querySelector('button')?.addEventListener('click', () => {
-                visibleCount += 5;
-                updateHistoryView();
-              });
+            let showBtns = false;
+
+            if (history.length > visibleCount) {
+              btnContainer.innerHTML += `<button class="hw-btn hw-btn-secondary" id="btn-ver-mas" style="font-size: 0.9rem; padding: 0.6rem 1.2rem;"><i class="bi bi-chevron-down"></i> Ver más</button>`;
+              showBtns = true;
+            }
+            if (visibleCount > 5) {
+              btnContainer.innerHTML += `<button class="hw-btn hw-btn-secondary" id="btn-ver-menos" style="font-size: 0.9rem; padding: 0.6rem 1.2rem;"><i class="bi bi-chevron-up"></i> Ver menos</button>`;
+              showBtns = true;
+            }
+
+            if (showBtns) {
+              historyList.appendChild(btnContainer);
+
+              const btnMas = btnContainer.querySelector('#btn-ver-mas');
+              if (btnMas) {
+                btnMas.addEventListener('click', () => {
+                  visibleCount += 5;
+                  updateHistoryView();
+                });
+              }
+
+              const btnMenos = btnContainer.querySelector('#btn-ver-menos');
+              if (btnMenos) {
+                btnMenos.addEventListener('click', () => {
+                  visibleCount = Math.max(5, visibleCount - 5);
+                  updateHistoryView();
+                });
+              }
             }
             attachDeleteListeners();
           };
