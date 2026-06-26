@@ -82,11 +82,20 @@ if (!userEmail) {
 
       document.addEventListener('DOMContentLoaded', () => {
         const logoutBtn = document.getElementById('member-logout-btn') as HTMLButtonElement | null;
-        logoutBtn?.addEventListener('click', async () => {
-          logoutBtn.disabled = true;
+        
+        const doLogout = async () => {
+          if (logoutBtn) logoutBtn.disabled = true;
           await supabase.auth.signOut();
           window.location.href = '/mi-cuenta/login';
-        });
+        };
+
+        logoutBtn?.addEventListener('click', doLogout);
+
+        // Intercept back gesture/button in the main dashboard to sign out
+        if (window.location.pathname === '/mi-cuenta' || window.location.pathname === '/mi-cuenta/') {
+          window.history.pushState({ noBack: true }, '');
+          window.addEventListener('popstate', doLogout);
+        }
       });
     </script>
   )}
