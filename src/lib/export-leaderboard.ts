@@ -179,7 +179,7 @@ export async function exportLeaderboardToExcel(
   // Row 5: instrucción para jefatura
   ws.mergeCells('A5:E5');
   const noteCell = ws.getCell('A5');
-  noteCell.value = 'Nota: las celdas amarillas al final de cada miembro son para que Jefatura asigne las horas de formación complementaria.';
+  noteCell.value = '❯ Nota: las celdas amarillas al final de cada miembro son para asignación de las horas de formación complementaria.';
   noteCell.font = { name: 'Arial', size: 9, color: { argb: COLORS.gray } };
   noteCell.alignment = { vertical: 'middle', horizontal: 'center' };
   ws.getRow(5).height = 18;
