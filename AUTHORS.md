@@ -19,7 +19,7 @@ Demo original: <https://clubhelloworld.online/index.html>
 - **Jesús Sebastián Vázquez Zarco** · [@itsebasvz](https://github.com/itsebasvz)
   — migración a Astro SSR, integración con Supabase/Resend/Vercel, panel de administración y portal de miembros.
 - **Enrique Emiliano Cano García** · [@kno4](https://github.com/kno4)
-  — contribuciones a la migración a Astro.
+  — flujo de selección, mejoras al ranking (animaciones, filtrado, integración con Google Sheets) y migración a Astro.
 
 Historial completo: <https://github.com/Hello-World-UNAM/helloworld-web/graphs/contributors>
 
