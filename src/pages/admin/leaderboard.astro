@@ -32,6 +32,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
       </div>
       <button id="open-manual-btn" style="background: #10b981; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-plus-circle-fill"></i> Puntos Manuales</button>
+      <button id="export-excel-btn" title="Descarga un Excel con las evidencias aprobadas del período seleccionado, agrupadas por miembro y ordenadas de mayor a menor puntaje." style="background: #6225e6; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-file-earmark-excel-fill"></i> Exportar Excel</button>
     </div>
     <div class="filters-wrapper">
       <div class="search-wrapper">
@@ -117,9 +118,16 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   let sessionEmail = '';
   let selectedPeriodId = '';
+  let selectedPeriodName = '';
   let selectedStatus = 'pending';
   let searchQuery = '';
   let sortOrder = 'desc';
+  let periodsCache: any[] = [];
+
+  function updateSelectedPeriodName() {
+    const p = periodsCache.find(x => x.id === selectedPeriodId);
+    selectedPeriodName = p?.nombre || '';
+  }
 
   async function loadPeriods() {
     const selector = document.getElementById('period-selector') as HTMLSelectElement;
@@ -132,15 +140,19 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     if (error || !periodos) return;
 
-    selector.innerHTML = periodos.map(p => 
+    periodsCache = periodos;
+
+    selector.innerHTML = periodos.map(p =>
       `<option value="${p.id}" ${p.es_activo ? 'selected' : ''}>${p.nombre} ${p.es_activo ? '(Activo)' : ''}</option>`
     ).join('');
 
     selectedPeriodId = selector.value;
     selectedStatus = statusSelector.value;
+    updateSelectedPeriodName();
 
     selector.addEventListener('change', (e) => {
       selectedPeriodId = (e.target as HTMLSelectElement).value;
+      updateSelectedPeriodName();
       loadPending();
     });
 
@@ -489,8 +501,36 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       sessionEmail = session.user.email;
       await loadPeriods();
       setupManualModal();
+      setupExportButton();
     }
   });
+
+  function setupExportButton() {
+    const btn = document.getElementById('export-excel-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const originalHTML = btn.innerHTML;
+
+    btn.addEventListener('click', async () => {
+      if (!selectedPeriodId) {
+        alert('Selecciona un período primero.');
+        return;
+      }
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Generando...';
+      try {
+        const { exportLeaderboardToExcel } = await import('@lib/export-leaderboard');
+        await exportLeaderboardToExcel(supabase, selectedPeriodId, selectedPeriodName || 'Periodo');
+      } catch (e: any) {
+        alert(e?.message || 'Error generando el Excel.');
+        console.error(e);
+      } finally {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.innerHTML = originalHTML;
+      }
+    });
+  }
 
   async function setupManualModal() {
     const btn = document.getElementById('open-manual-btn');

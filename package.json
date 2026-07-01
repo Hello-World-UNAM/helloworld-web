@@ -19,6 +19,7 @@
     "astro": "^5.7.10",
     "browser-image-compression": "^2.0.2",
     "csv-parse": "^7.0.0",
+    "exceljs": "^4.4.0",
     "resend": "^6.14.0"
   }
 }
