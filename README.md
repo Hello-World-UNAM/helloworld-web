@@ -71,6 +71,10 @@ npm run dev             # http://localhost:4321
 - [`DESIGN.md`](DESIGN.md) — sistema de diseño Neo-Brutalist.
 - [`CLAUDE.md`](CLAUDE.md) — guía para agentes de IA.
 
+## Origen
+
+Nació como **proyecto ganador del 1er Hackaton Interno del Club Hello World**: un sitio estático en HTML, CSS y JavaScript que fijó la identidad visual y las páginas del sitio público. La aplicación actual — Astro SSR, panel de administración, portal de miembros, flujo de selección y toda la integración con Supabase, Resend y Vercel — es el resultado del desarrollo continuo posterior de la mesa directiva sobre esa base.
+
 ## Licencia
 
 MIT · [LICENSE](LICENSE)
