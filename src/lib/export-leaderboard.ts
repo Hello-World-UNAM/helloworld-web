@@ -128,7 +128,7 @@ export async function exportLeaderboardToExcel(
 
   // Column widths (5 columnas: #, Categoría, Tipo, Duración, Evidencia)
   ws.columns = [
-    { width: 6 },   // A
+    { width: 10 },  // A — sirve también como caja del logo en el encabezado
     { width: 42 },  // B
     { width: 18 },  // C
     { width: 20 },  // D
@@ -136,9 +136,19 @@ export async function exportLeaderboardToExcel(
   ];
 
   // ─── ENCABEZADO ────────────────────────────────────────────────
-  // Row 1-3: banner morado con logo + título
-  ws.mergeCells('A1:E3');
-  const titleCell = ws.getCell('A1');
+  // Row 1-3: caja blanca para logo (A) + banner morado con título (B:E)
+  ws.mergeCells('A1:A3');
+  const logoBox = ws.getCell('A1');
+  logoBox.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: COLORS.white } };
+  logoBox.border = {
+    top: { style: 'medium', color: { argb: COLORS.black } },
+    bottom: { style: 'medium', color: { argb: COLORS.black } },
+    left: { style: 'medium', color: { argb: COLORS.black } },
+    right: { style: 'medium', color: { argb: COLORS.black } },
+  };
+
+  ws.mergeCells('B1:E3');
+  const titleCell = ws.getCell('B1');
   titleCell.value = `HELLO WORLD — LEADERBOARD ${periodoNombre.toUpperCase()}`;
   titleCell.font = { name: 'Arial', size: 18, bold: true, color: { argb: COLORS.white } };
   titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -147,13 +157,13 @@ export async function exportLeaderboardToExcel(
   ws.getRow(2).height = 30;
   ws.getRow(3).height = 30;
 
-  // Logo embebido
+  // Logo embebido, centrado en la caja blanca de A1:A3
   const logoBuf = await fetchLogo();
   if (logoBuf) {
     const imgId = workbook.addImage({ buffer: logoBuf, extension: 'png' });
     ws.addImage(imgId, {
-      tl: { col: 0.15, row: 0.2 },
-      ext: { width: 70, height: 70 },
+      tl: { col: 0.15, row: 0.15 },
+      ext: { width: 65, height: 65 },
     });
   }
 
