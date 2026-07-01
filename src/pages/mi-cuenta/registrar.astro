@@ -183,6 +183,18 @@ import MiCuentaLayout from '@layouts/MiCuentaLayout.astro';
     if (!member) return window.location.replace('/mi-cuenta');
     memberId = member.id;
 
+    // Guard: si el período activo tiene los formularios cerrados, redirige al dashboard.
+    // El trigger en la DB también bloquea el insert como defensa en profundidad.
+    const { data: activePeriodo } = await supabase
+      .from('periodos')
+      .select('formularios_cerrados')
+      .eq('es_activo', true)
+      .maybeSingle();
+    if (activePeriodo?.formularios_cerrados) {
+      window.location.replace('/mi-cuenta');
+      return;
+    }
+
     // Load configs
     const { data: configs } = await supabase.from('leaderboard_config').select('*').order('orden', { ascending: true });
     if (configs) {

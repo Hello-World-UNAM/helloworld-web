@@ -99,12 +99,8 @@ if (session?.user?.email) {
         <!-- Actions & History -->
         <div class="member-dashboard-grid">
       
-      <!-- Upload Card -->
-      <div class="upload-card" style="background: #f1ecff; padding: 1.8rem; border: 2px solid #000; box-shadow: 4px 4px 0 #000; border-radius: 8px;">
-        <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.8rem;"><i class="bi bi-cloud-arrow-up-fill" style="color: #6225e6;"></i> Registrar Puntos</h2>
-        <p style="font-weight: 400; font-size: 0.95rem; margin-bottom: 1.5rem; color: #333; line-height: 1.5;">Sube evidencia de tus eventos, charlas o proyectos para sumar puntos al Leaderboard.</p>
-        <a href="/mi-cuenta/registrar" class="hw-btn hw-btn-primary" style="display: block; text-align: center; width: 100%; border-width: 2px; box-shadow: 3px 3px 0 #000 !important; font-size: 0.95rem; padding: 10px 20px; border-radius: 6px;">Subir Evidencia →</a>
-      </div>
+      <!-- Upload Card (dinámica según estado del período) -->
+      <div id="upload-card-slot"></div>
 
       <!-- History List -->
       <div>
@@ -260,8 +256,12 @@ if (session?.user?.email) {
       });
     }
 
-    // Fetch periods
-    const { data: periodosList } = await supabase.from('periodos').select('id, nombre, es_activo').order('created_at', { ascending: false });
+    // Fetch periods (incluye estado de formularios)
+    const { data: periodosList } = await supabase.from('periodos').select('id, nombre, es_activo, formularios_cerrados').order('created_at', { ascending: false });
+
+    // Estado del período activo → renderiza tarjeta de subida o mensaje de cierre
+    const activePeriod = periodosList?.find(p => p.es_activo);
+    updateUploadCard(!!activePeriod?.formularios_cerrados);
     const periodSelector = document.getElementById('member-period-selector') as HTMLSelectElement;
     
     let selectedPeriodId = '';
@@ -281,6 +281,35 @@ if (session?.user?.email) {
       });
     }
 
+    function updateUploadCard(cerrado: boolean) {
+      const slot = document.getElementById('upload-card-slot');
+      if (!slot) return;
+
+      if (cerrado) {
+        slot.innerHTML = `
+          <div class="upload-card" style="background: #f9f3ff; padding: 1.8rem; border: 2px solid #000; box-shadow: 4px 4px 0 #6225e6; border-radius: 8px;">
+            <h2 style="font-size: 1.2rem; font-weight: 800; margin-bottom: 0.8rem; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">
+              <i class="bi bi-mortarboard-fill"></i> Semestre cerrado
+            </h2>
+            <p style="font-weight: 500; font-size: 0.95rem; margin-bottom: 0; color: #333; line-height: 1.6;">
+              ¡Hiciste un gran trabajo este semestre! El periodo de registro de evidencias cerró oficialmente. Todo lo que enviaste será entregado a la Jefatura de la Facultad para la asignación de tus horas de formación complementaria.
+            </p>
+            <p style="font-weight: 700; font-size: 0.95rem; margin-top: 1rem; margin-bottom: 0; color: #6225e6;">
+              <i class="bi bi-stars"></i> Gracias por tu esfuerzo y compromiso.
+            </p>
+          </div>
+        `;
+      } else {
+        slot.innerHTML = `
+          <div class="upload-card" style="background: #f1ecff; padding: 1.8rem; border: 2px solid #000; box-shadow: 4px 4px 0 #000; border-radius: 8px;">
+            <h2 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 0.8rem;"><i class="bi bi-cloud-arrow-up-fill" style="color: #6225e6;"></i> Registrar Puntos</h2>
+            <p style="font-weight: 400; font-size: 0.95rem; margin-bottom: 1.5rem; color: #333; line-height: 1.5;">Sube evidencia de tus eventos, charlas o proyectos para sumar puntos al Leaderboard.</p>
+            <a href="/mi-cuenta/registrar" class="hw-btn hw-btn-primary" style="display: block; text-align: center; width: 100%; border-width: 2px; box-shadow: 3px 3px 0 #000 !important; font-size: 0.95rem; padding: 10px 20px; border-radius: 6px;">Subir Evidencia →</a>
+          </div>
+        `;
+      }
+    }
+
     async function loadDashboardData() {
       if (!selectedPeriodId) return;
 
@@ -292,12 +321,13 @@ if (session?.user?.email) {
       if (historyList) historyList.innerHTML = '';
       if (emptyMsg) emptyMsg.style.display = 'none';
 
-      // Fetch history for selected period
+      // Fetch history for selected period (los soft-deleted no se muestran al miembro)
       const { data: history, error: histErr } = await supabase
         .from('puntos_registros')
         .select('id, puntos_solicitados, puntos_aprobados, estado_aprobacion, created_at, url_evidencia, horas_reportadas, es_evento_externo, notas_admin, leaderboard_config(accion)')
         .eq('miembro_id', member!.id)
         .eq('periodo_id', selectedPeriodId)
+        .neq('estado_aprobacion', 'deleted')
         .order('created_at', { ascending: false });
 
       let semesterPoints = 0;
@@ -314,7 +344,10 @@ if (session?.user?.email) {
       if (!histErr && history && history.length > 0) {
         if (historyList) {
           const renderHistoryItem = (row: any) => {
-            const accion = (row.leaderboard_config as any)?.accion || 'Acción desconocida';
+            const isManual = !(row.leaderboard_config as any);
+            const manualIsAdd = row.puntos_solicitados >= 0;
+            const accion = (row.leaderboard_config as any)?.accion
+              || (isManual ? (manualIsAdd ? 'Ajuste manual (suma)' : 'Ajuste manual (resta)') : 'Acción desconocida');
             let statusBadge = '';
             let pointsDisplay = `${row.puntos_solicitados} pts solicitados`;
 
