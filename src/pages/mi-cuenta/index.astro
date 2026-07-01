@@ -324,7 +324,7 @@ if (session?.user?.email) {
       // Fetch history for selected period (incluye anulados para trazabilidad)
       const { data: history, error: histErr } = await supabase
         .from('puntos_registros')
-        .select('id, puntos_solicitados, puntos_aprobados, estado_aprobacion, created_at, url_evidencia, horas_reportadas, es_evento_externo, notas_admin, reviewed_by, leaderboard_config(accion)')
+        .select('id, puntos_solicitados, puntos_aprobados, estado_aprobacion, created_at, url_evidencia, horas_reportadas, es_evento_externo, notas_admin, leaderboard_config(accion)')
         .eq('miembro_id', member!.id)
         .eq('periodo_id', selectedPeriodId)
         .order('created_at', { ascending: false });
@@ -342,6 +342,13 @@ if (session?.user?.email) {
 
       if (!histErr && history && history.length > 0) {
         if (historyList) {
+          // Limpia emails de admin de las notas históricas.
+          // Elimina " por email@dominio" dentro de brackets y normaliza
+          // "[REVOCADO ...]" (formato viejo) a "[ANULADO ...]".
+          const sanitizeNota = (s: string) => s
+            .replace(/\s+por\s+[^\s\]]+@[^\s\]]+/gi, '')
+            .replace(/\[REVOCADO/gi, '[ANULADO');
+
           const renderHistoryItem = (row: any) => {
             const isManual = !(row.leaderboard_config as any);
             const manualIsAdd = row.puntos_solicitados >= 0;
@@ -409,7 +416,7 @@ if (session?.user?.email) {
                     ${row.url_evidencia ? `<div><strong><i class="bi bi-link-45deg"></i> Evidencia:</strong> <a href="${row.url_evidencia}" target="_blank" style="color: #6225e6; text-decoration: none; font-weight: 600;">Abrir archivo completo</a></div>` : `<div><strong><i class="bi bi-link-45deg"></i> Evidencia:</strong> N/A</div>`}
                     ${row.horas_reportadas ? `<div><strong><i class="bi bi-stopwatch"></i> Horas Reportadas:</strong> ${row.horas_reportadas}h</div>` : ''}
                     <div><strong><i class="bi bi-building"></i> Evento Externo:</strong> ${row.es_evento_externo ? 'Sí' : 'No'}</div>
-                    ${row.notas_admin ? `<div style="grid-column: 1 / -1; background: #fff8e6; padding: 0.8rem 1rem; border-left: 4px solid #eab308; border-radius: 4px; margin-top: 0.5rem;"><strong style="color: #a16207;"><i class="bi bi-chat-left-text"></i> Nota del Admin:</strong> <span style="color: #854d0e;">${row.notas_admin}</span></div>` : ''}
+                    ${row.notas_admin ? `<div style="grid-column: 1 / -1; background: #fff8e6; padding: 0.8rem 1rem; border-left: 4px solid #eab308; border-radius: 4px; margin-top: 0.5rem;"><strong style="color: #a16207;"><i class="bi bi-chat-left-text"></i> Nota:</strong> <span style="color: #854d0e; white-space: pre-line;">${sanitizeNota(row.notas_admin)}</span></div>` : ''}
                     
                     ${row.estado_aprobacion === 'pending' || row.estado_aprobacion === 'rejected' ? `
                       <div style="grid-column: 1 / -1; margin-top: 1rem; padding-top: 1.5rem; border-top: 2px dashed #eee;">
