@@ -321,13 +321,12 @@ if (session?.user?.email) {
       if (historyList) historyList.innerHTML = '';
       if (emptyMsg) emptyMsg.style.display = 'none';
 
-      // Fetch history for selected period (los soft-deleted no se muestran al miembro)
+      // Fetch history for selected period (incluye anulados para trazabilidad)
       const { data: history, error: histErr } = await supabase
         .from('puntos_registros')
-        .select('id, puntos_solicitados, puntos_aprobados, estado_aprobacion, created_at, url_evidencia, horas_reportadas, es_evento_externo, notas_admin, leaderboard_config(accion)')
+        .select('id, puntos_solicitados, puntos_aprobados, estado_aprobacion, created_at, url_evidencia, horas_reportadas, es_evento_externo, notas_admin, reviewed_by, leaderboard_config(accion)')
         .eq('miembro_id', member!.id)
         .eq('periodo_id', selectedPeriodId)
-        .neq('estado_aprobacion', 'deleted')
         .order('created_at', { ascending: false });
 
       let semesterPoints = 0;
@@ -348,15 +347,23 @@ if (session?.user?.email) {
             const manualIsAdd = row.puntos_solicitados >= 0;
             const accion = (row.leaderboard_config as any)?.accion
               || (isManual ? (manualIsAdd ? 'Ajuste manual (suma)' : 'Ajuste manual (resta)') : 'Acción desconocida');
+
+            const fmtPts = (n: number) => `${n > 0 ? '+' : ''}${n} pts`;
             let statusBadge = '';
             let pointsDisplay = `${row.puntos_solicitados} pts solicitados`;
 
             if (row.estado_aprobacion === 'approved') {
-              statusBadge = `<span style="background: rgba(98, 37, 230, 0.15); color: #6225e6; padding: 0.2rem 0.6rem; border: 1.5px solid #6225e6; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border-radius: 4px;">Aprobado</span>`;
-              pointsDisplay = `<span style="color: #6225e6; font-weight: 800; font-size: 1.1rem;">+${row.puntos_aprobados} pts</span>`;
+              const val = row.puntos_aprobados ?? 0;
+              const isSuma = val >= 0;
+              const color = isManual && !isSuma ? '#dc2626' : '#6225e6';
+              statusBadge = `<span style="background: rgba(98, 37, 230, 0.15); color: ${color}; padding: 0.2rem 0.6rem; border: 1.5px solid ${color}; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border-radius: 4px;">${isManual && !isSuma ? 'Ajuste aplicado' : 'Aprobado'}</span>`;
+              pointsDisplay = `<span style="color: ${color}; font-weight: 800; font-size: 1.1rem;">${fmtPts(val)}</span>`;
             } else if (row.estado_aprobacion === 'rejected') {
               statusBadge = `<span style="background: rgba(239, 68, 68, 0.1); color: #dc2626; padding: 0.2rem 0.6rem; border: 1.5px solid #dc2626; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border-radius: 4px;">Rechazado</span>`;
               pointsDisplay = `<span style="text-decoration: line-through; color: #888; font-weight: 500;">${row.puntos_solicitados} pts</span>`;
+            } else if (row.estado_aprobacion === 'deleted') {
+              statusBadge = `<span style="background: rgba(107, 114, 128, 0.15); color: #4b5563; padding: 0.2rem 0.6rem; border: 1.5px solid #6b7280; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-arrow-counterclockwise"></i> Anulado</span>`;
+              pointsDisplay = `<span style="text-decoration: line-through; color: #888; font-weight: 500;">${fmtPts(row.puntos_solicitados)}</span>`;
             } else {
               statusBadge = `<span style="background: rgba(234, 179, 8, 0.15); color: #ca8a04; padding: 0.2rem 0.6rem; border: 1.5px solid #ca8a04; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; border-radius: 4px;">Pendiente</span>`;
             }
