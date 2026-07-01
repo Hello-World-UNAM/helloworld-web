@@ -5,6 +5,13 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 <AdminLayout title="Revisión Leaderboard | Admin">
   <style is:global>
     .filters-wrapper { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; width: 100%; }
+
+    .config-menu-item:hover { background: #f9f3ff; }
+    .config-menu-item:active { background: #efe6ff; }
+    #config-menu-btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000; }
+    @media (max-width: 640px) {
+      #config-menu { right: auto; left: 0; min-width: 260px; }
+    }
     .filter-group { display: flex; gap: 0.5rem; align-items: center; }
     .search-wrapper { flex: 1; min-width: 250px; position: relative; }
     
@@ -31,10 +38,40 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-award"></i> Revisión de Puntos</h1>
         <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
       </div>
-      <button id="toggle-cerrado-btn" title="Cerrar o reabrir los formularios del período seleccionado para el registro de evidencias." style="background: #fff; color: #000; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-lock-fill"></i> <span id="toggle-cerrado-label">Cerrar formularios</span></button>
-      <button id="open-add-btn" data-mode="suma" title="Sumar puntos manuales al balance de un miembro (con motivo y auditoría)." style="background: #10b981; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-plus-circle-fill"></i> Sumar Puntos</button>
-      <button id="open-subtract-btn" data-mode="resta" title="Restar puntos manuales del balance de un miembro (con motivo y auditoría)." style="background: #ef4444; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-dash-circle-fill"></i> Restar Puntos</button>
-      <button id="export-excel-btn" title="Descarga un Excel con las evidencias aprobadas del período seleccionado, agrupadas por miembro y ordenadas de mayor a menor puntaje." style="background: #6225e6; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-file-earmark-excel-fill"></i> Exportar Excel</button>
+
+      <!-- Menú Configuración (colapsa todas las acciones) -->
+      <div id="config-menu-wrapper" style="position: relative;">
+        <button id="config-menu-btn" aria-haspopup="menu" aria-expanded="false" style="background: #6225e6; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+          <i class="bi bi-gear-fill"></i> Configuración <i class="bi bi-chevron-down" style="font-size: 0.75rem;"></i>
+        </button>
+
+        <div id="config-menu" role="menu" style="display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 280px; background: #fff; border: 2px solid #000; border-radius: 8px; box-shadow: 6px 6px 0 #6225e6; z-index: 500; padding: 0.4rem;">
+          <!-- Ajustes manuales -->
+          <p style="margin: 0.6rem 0.8rem 0.3rem; font-size: 0.7rem; font-weight: 800; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">Ajustes manuales</p>
+          <button id="open-add-btn" role="menuitem" data-mode="suma" class="config-menu-item" style="width: 100%; text-align: left; background: transparent; color: #065f46; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
+            <i class="bi bi-plus-circle-fill" style="color: #10b981; font-size: 1.1rem;"></i> Sumar puntos manuales
+          </button>
+          <button id="open-subtract-btn" role="menuitem" data-mode="resta" class="config-menu-item" style="width: 100%; text-align: left; background: transparent; color: #991b1b; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
+            <i class="bi bi-dash-circle-fill" style="color: #ef4444; font-size: 1.1rem;"></i> Restar puntos manuales
+          </button>
+
+          <hr style="margin: 0.4rem 0.3rem; border: none; border-top: 1px dashed #ddd;">
+
+          <!-- Registro del semestre -->
+          <p style="margin: 0.6rem 0.8rem 0.3rem; font-size: 0.7rem; font-weight: 800; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">Registro del semestre</p>
+          <button id="toggle-cerrado-btn" role="menuitem" class="config-menu-item" title="Cerrar o reabrir los formularios del período seleccionado para el registro de evidencias." style="width: 100%; text-align: left; background: transparent; color: #000; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
+            <i class="bi bi-lock-fill" style="color: #000; font-size: 1.1rem;" id="toggle-cerrado-icon"></i> <span id="toggle-cerrado-label">Cerrar formularios</span>
+          </button>
+
+          <hr style="margin: 0.4rem 0.3rem; border: none; border-top: 1px dashed #ddd;">
+
+          <!-- Reportes -->
+          <p style="margin: 0.6rem 0.8rem 0.3rem; font-size: 0.7rem; font-weight: 800; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">Reportes</p>
+          <button id="export-excel-btn" role="menuitem" class="config-menu-item" title="Descarga un Excel con las evidencias aprobadas del período seleccionado, agrupadas por miembro y ordenadas de mayor a menor puntaje." style="width: 100%; text-align: left; background: transparent; color: #000; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
+            <i class="bi bi-file-earmark-excel-fill" style="color: #6225e6; font-size: 1.1rem;"></i> Exportar Excel para Jefatura
+          </button>
+        </div>
+      </div>
     </div>
     <div class="filters-wrapper">
       <div class="search-wrapper">
@@ -189,19 +226,19 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   }
 
   function updateToggleButton() {
-    const btn = document.getElementById('toggle-cerrado-btn') as HTMLButtonElement | null;
     const label = document.getElementById('toggle-cerrado-label');
-    if (!btn || !label) return;
+    const icon = document.getElementById('toggle-cerrado-icon');
+    if (!label || !icon) return;
     const p = periodsCache.find(x => x.id === selectedPeriodId);
     const cerrado = !!p?.formularios_cerrados;
     if (cerrado) {
-      btn.style.background = '#fef08a';
-      btn.style.color = '#854d0e';
-      btn.innerHTML = `<i class="bi bi-unlock-fill"></i> <span id="toggle-cerrado-label">Reabrir formularios</span>`;
+      icon.className = 'bi bi-unlock-fill';
+      icon.style.color = '#ca8a04';
+      label.textContent = 'Reabrir formularios';
     } else {
-      btn.style.background = '#fff';
-      btn.style.color = '#000';
-      btn.innerHTML = `<i class="bi bi-lock-fill"></i> <span id="toggle-cerrado-label">Cerrar formularios</span>`;
+      icon.className = 'bi bi-lock-fill';
+      icon.style.color = '#000';
+      label.textContent = 'Cerrar formularios';
     }
   }
 
@@ -609,8 +646,48 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       setupRevokeModal();
       setupExportButton();
       setupToggleCerradoButton();
+      setupConfigMenu();
     }
   });
+
+  function setupConfigMenu() {
+    const btn = document.getElementById('config-menu-btn') as HTMLButtonElement | null;
+    const menu = document.getElementById('config-menu');
+    const wrapper = document.getElementById('config-menu-wrapper');
+    if (!btn || !menu || !wrapper) return;
+
+    function open() {
+      if (!menu || !btn) return;
+      menu.style.display = 'block';
+      btn.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+      if (!menu || !btn) return;
+      menu.style.display = 'none';
+      btn.setAttribute('aria-expanded', 'false');
+    }
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = menu.style.display === 'block';
+      isOpen ? close() : open();
+    });
+
+    // Cierra al hacer click fuera del menú
+    document.addEventListener('click', (e) => {
+      if (!wrapper.contains(e.target as Node)) close();
+    });
+
+    // Cierra con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close();
+    });
+
+    // Cierra cuando se selecciona un item
+    menu.querySelectorAll('.config-menu-item').forEach(item => {
+      item.addEventListener('click', () => close());
+    });
+  }
 
   function setupToggleCerradoButton() {
     const btn = document.getElementById('toggle-cerrado-btn') as HTMLButtonElement | null;
