@@ -31,7 +31,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-award"></i> Revisión de Puntos</h1>
         <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
       </div>
-      <button id="open-manual-btn" style="background: #10b981; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-plus-circle-fill"></i> Puntos Manuales</button>
+      <button id="open-add-btn" data-mode="suma" title="Sumar puntos manuales al balance de un miembro (con motivo y auditoría)." style="background: #10b981; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-plus-circle-fill"></i> Sumar Puntos</button>
+      <button id="open-subtract-btn" data-mode="resta" title="Restar puntos manuales del balance de un miembro (con motivo y auditoría)." style="background: #ef4444; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-dash-circle-fill"></i> Restar Puntos</button>
       <button id="export-excel-btn" title="Descarga un Excel con las evidencias aprobadas del período seleccionado, agrupadas por miembro y ordenadas de mayor a menor puntaje." style="background: #6225e6; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 2px 2px 0 #000; font-size: 0.9rem; transition: transform 0.1s;"><i class="bi bi-file-earmark-excel-fill"></i> Exportar Excel</button>
     </div>
     <div class="filters-wrapper">
@@ -79,33 +80,89 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     </div>
   </div>
 
-  <!-- Modal Puntos Manuales -->
-  <div id="manual-points-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: #fff; width: 100%; max-width: 500px; padding: 2rem; border-radius: 12px; border: 3px solid #000; box-shadow: 8px 8px 0 #6225e6; position: relative;">
-      <button id="close-manual-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #000;"><i class="bi bi-x-lg"></i></button>
-      
-      <h2 style="font-size: 1.5rem; font-weight: 900; margin-top: 0; margin-bottom: 1.5rem;"><i class="bi bi-plus-circle-fill" style="color: #6225e6;"></i> Asignar Puntos Manuales</h2>
-      
-      <div style="display: flex; flex-direction: column; gap: 1rem;">
+  <!-- Modal Ajustes Manuales (2 pasos) -->
+  <div id="manual-points-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 1rem;">
+    <div style="background: #fff; width: 100%; max-width: 540px; padding: 2rem; border-radius: 12px; border: 3px solid #000; box-shadow: 8px 8px 0 #6225e6; position: relative; max-height: 90vh; overflow-y: auto;">
+      <button id="close-manual-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #000;" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+
+      <!-- Header dinámico según modo -->
+      <div id="manual-header" style="margin-bottom: 1.5rem; padding: 1rem 1.2rem; border: 3px solid #000; border-radius: 8px;">
+        <h2 id="manual-title" style="font-size: 1.4rem; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Sumar Puntos Manuales</h2>
+        <p id="manual-subtitle" style="margin: 0.3rem 0 0; font-size: 0.85rem; font-weight: 600; opacity: 0.9;">Se sumarán al balance del miembro seleccionado.</p>
+      </div>
+
+      <!-- PASO 1: captura -->
+      <div id="manual-step-1" style="display: flex; flex-direction: column; gap: 1rem;">
         <div>
           <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Miembro</label>
           <select id="manual-miembro-selector" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
             <option value="">Selecciona un miembro...</option>
           </select>
         </div>
-        
+
         <div>
-          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Cantidad de Puntos</label>
-          <input type="number" id="manual-puntos" placeholder="Ej: 500" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Cantidad de puntos <span style="color: #666; font-weight: 500;">(entero positivo)</span></label>
+          <input type="number" id="manual-puntos" min="1" step="1" placeholder="Ej: 500" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
         </div>
 
         <div>
-          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Justificación / Notas (Auditoría)</label>
-          <input type="text" id="manual-notas" placeholder="Ej: Premio hackathon, compensación..." style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Motivo <span style="color: #666; font-weight: 500;">(mínimo 15 caracteres — auditoría)</span></label>
+          <textarea id="manual-notas" placeholder="Ej: Ganó 1er lugar hackathon UNAM 2026" rows="3" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 500; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
+          <p id="manual-notas-hint" style="margin: 0.3rem 0 0; font-size: 0.75rem; color: #888;">0 / 15 caracteres mínimos</p>
         </div>
 
-        <button id="submit-manual-btn" style="margin-top: 1rem; width: 100%; padding: 1rem; background: #6225e6; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 1rem;">
-          Guardar Puntos Manuales
+        <button id="continue-manual-btn" style="margin-top: 0.5rem; width: 100%; padding: 1rem; background: #000; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #6225e6; font-size: 1rem;">
+          Continuar <i class="bi bi-arrow-right"></i>
+        </button>
+      </div>
+
+      <!-- PASO 2: confirmación -->
+      <div id="manual-step-2" style="display: none; flex-direction: column; gap: 1rem;">
+        <div id="confirm-warning" style="padding: 1rem 1.2rem; border-radius: 8px; border: 2px solid; font-size: 0.9rem;">
+          <p style="margin: 0 0 0.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar operación</p>
+          <p id="confirm-summary" style="margin: 0; font-weight: 600;"></p>
+        </div>
+
+        <div style="background: #f9f3ff; padding: 1rem 1.2rem; border-radius: 8px; border: 2px solid #6225e6;">
+          <p style="margin: 0 0 0.6rem; font-size: 0.75rem; font-weight: 800; color: #6225e6; text-transform: uppercase;">Motivo</p>
+          <p id="confirm-motivo" style="margin: 0 0 1rem; font-style: italic; color: #333; font-size: 0.95rem;"></p>
+
+          <p style="margin: 0 0 0.3rem; font-size: 0.75rem; font-weight: 800; color: #6225e6; text-transform: uppercase;">Registrado por</p>
+          <p id="confirm-admin" style="margin: 0 0 0.6rem; font-size: 0.85rem; color: #333;"></p>
+
+          <p style="margin: 0 0 0.3rem; font-size: 0.75rem; font-weight: 800; color: #6225e6; text-transform: uppercase;">Fecha</p>
+          <p id="confirm-fecha" style="margin: 0; font-size: 0.85rem; color: #333;"></p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 0.5rem;">
+          <button id="back-manual-btn" style="padding: 0.9rem; background: #fff; color: #000; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-size: 0.9rem;">
+            <i class="bi bi-arrow-left"></i> Volver
+          </button>
+          <button id="confirm-manual-btn" style="padding: 0.9rem; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 0.9rem;">
+            Confirmar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Revocar Ajuste Manual -->
+  <div id="revoke-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1001; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 1rem;">
+    <div style="background: #fff; width: 100%; max-width: 500px; padding: 2rem; border-radius: 12px; border: 3px solid #000; box-shadow: 8px 8px 0 #ef4444; position: relative;">
+      <button id="close-revoke-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #000;" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+      <h2 style="font-size: 1.3rem; font-weight: 900; margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase; color: #b91c1c;"><i class="bi bi-arrow-counterclockwise"></i> Anular ajuste manual</h2>
+      <p id="revoke-summary" style="margin: 0 0 1.2rem; font-size: 0.9rem; color: #444;"></p>
+
+      <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Motivo de la anulación <span style="color: #666; font-weight: 500;">(mínimo 15 caracteres)</span></label>
+      <textarea id="revoke-motivo" placeholder="Ej: Se comprobó que no cumplió los requisitos del premio." rows="3" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 500; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
+      <p id="revoke-motivo-hint" style="margin: 0.3rem 0 1rem; font-size: 0.75rem; color: #888;">0 / 15 caracteres mínimos</p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+        <button id="cancel-revoke-btn" style="padding: 0.9rem; background: #fff; color: #000; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-size: 0.9rem;">
+          Cancelar
+        </button>
+        <button id="confirm-revoke-btn" style="padding: 0.9rem; background: #ef4444; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 0.9rem;">
+          Anular
         </button>
       </div>
     </div>
@@ -237,11 +294,21 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       
       const miembro = row.miembros_activos as any;
       const config = row.leaderboard_config as any;
+      const isManual = !config;
+      const manualSigned = row.puntos_solicitados;
+      const manualIsAdd = manualSigned >= 0;
       const date = new Date(row.created_at).toLocaleString('es-MX');
 
       let dynamicInfo = '';
       if (row.horas_reportadas) dynamicInfo += `<span style="background: #f3e8ff; color: #6b21a8; font-size: 0.75rem; border: 1.5px solid #d8b4fe; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">${row.horas_reportadas} hrs reportadas</span>`;
-      if (row.es_evento_externo) dynamicInfo += `<span style="background: #fef08a; color: #854d0e; font-size: 0.75rem; border: 1.5px solid #fde047; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">Evento Externo (x${config.multiplicador_externo})</span>`;
+      if (row.es_evento_externo && config) dynamicInfo += `<span style="background: #fef08a; color: #854d0e; font-size: 0.75rem; border: 1.5px solid #fde047; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">Evento Externo (x${config.multiplicador_externo})</span>`;
+      if (isManual) {
+        const badgeColor = manualIsAdd ? '#10b981' : '#ef4444';
+        const badgeBg = manualIsAdd ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)';
+        const badgeIcon = manualIsAdd ? 'bi-plus-circle-fill' : 'bi-dash-circle-fill';
+        const badgeLabel = manualIsAdd ? 'MANUAL · SUMA' : 'MANUAL · RESTA';
+        dynamicInfo += `<span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.75rem; border: 1.5px solid ${badgeColor}; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 800; text-transform: uppercase;"><i class="bi ${badgeIcon}"></i> ${badgeLabel}</span>`;
+      }
 
       // Status Badge
       let statusHTML = '';
@@ -257,7 +324,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
       // Sponsor logic for admin (only if pending)
       let adminSponsorHTML = '';
-      if (config.permite_sponsor_alto_valor && row.estado_aprobacion === 'pending') {
+      if (config && config.permite_sponsor_alto_valor && row.estado_aprobacion === 'pending') {
         adminSponsorHTML = `
           <div style="margin-top: 1.5rem; background: #fffbeb; padding: 1rem 1.2rem; border: 2px solid #fde047; border-radius: 6px;">
             <label style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; margin: 0;">
@@ -300,11 +367,19 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         `;
       }
 
-      actionButtons += `
-        <button class="delete-btn" data-id="${row.id}" ${row.estado_aprobacion === 'deleted' ? 'disabled' : ''} style="width: 100%; background: ${row.estado_aprobacion === 'deleted' ? '#f3f4f6' : '#fee2e2'}; color: ${row.estado_aprobacion === 'deleted' ? '#9ca3af' : '#b91c1c'}; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed ${row.estado_aprobacion === 'deleted' ? '#d1d5db' : '#f87171'}; border-radius: 6px; ${row.estado_aprobacion === 'deleted' ? 'cursor: not-allowed;' : 'cursor: pointer; transition: background 0.2s;'}">
-          <i class="bi bi-trash3-fill"></i> ${row.estado_aprobacion === 'deleted' ? 'Ya Eliminado' : 'Eliminar Registro'}
-        </button>
-      `;
+      if (isManual && row.estado_aprobacion === 'approved') {
+        actionButtons += `
+          <button class="revoke-btn" data-id="${row.id}" data-cantidad="${manualSigned}" data-nombre="${miembro.nombre.replace(/"/g, '&quot;')}" data-motivo="${(row.notas_admin || '').replace(/"/g, '&quot;')}" style="width: 100%; background: #fef2f2; color: #b91c1c; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed #f87171; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
+            <i class="bi bi-arrow-counterclockwise"></i> Anular Ajuste
+          </button>
+        `;
+      } else {
+        actionButtons += `
+          <button class="delete-btn" data-id="${row.id}" ${row.estado_aprobacion === 'deleted' ? 'disabled' : ''} style="width: 100%; background: ${row.estado_aprobacion === 'deleted' ? '#f3f4f6' : '#fee2e2'}; color: ${row.estado_aprobacion === 'deleted' ? '#9ca3af' : '#b91c1c'}; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed ${row.estado_aprobacion === 'deleted' ? '#d1d5db' : '#f87171'}; border-radius: 6px; ${row.estado_aprobacion === 'deleted' ? 'cursor: not-allowed;' : 'cursor: pointer; transition: background 0.2s;'}">
+            <i class="bi bi-trash3-fill"></i> ${row.estado_aprobacion === 'deleted' ? 'Ya Eliminado' : 'Eliminar Registro'}
+          </button>
+        `;
+      }
 
       // Media Handling
       const isImage = row.url_evidencia && row.url_evidencia.match(/\.(jpeg|jpg|gif|png|webp|heic|heif)(\?.*)?$/i) != null;
@@ -346,7 +421,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <div class="card-registro-content">
           <div class="card-registro-left">
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
-              <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #000; letter-spacing: -0.5px;">${config ? config.accion : 'Asignación Manual'}</h2>
+              <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #000; letter-spacing: -0.5px;">${config ? config.accion : (manualIsAdd ? 'Ajuste manual (suma)' : 'Ajuste manual (resta)')}</h2>
               ${statusHTML}
               ${dynamicInfo}
             </div>
@@ -362,9 +437,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <div class="card-registro-right">
             ${evidenciaMediaHTML}
             
-            <div style="background: #f1ecff; border: 2px solid #000; border-radius: 8px; padding: 1.2rem; text-align: center; box-shadow: 3px 3px 0 #6225e6; margin-bottom: 0.5rem;">
-              <p style="font-size: 0.8rem; font-weight: 800; color: #6225e6; text-transform: uppercase; margin-bottom: 0.3rem; letter-spacing: 1px;">Puntos Solicitados</p>
-              <p style="font-size: 3.2rem; font-weight: 900; color: #000; line-height: 1; margin: 0;" id="puntos_${row.id}">${row.puntos_solicitados}</p>
+            <div style="background: ${isManual ? (manualIsAdd ? '#ecfdf5' : '#fef2f2') : '#f1ecff'}; border: 2px solid #000; border-radius: 8px; padding: 1.2rem; text-align: center; box-shadow: 3px 3px 0 ${isManual ? (manualIsAdd ? '#10b981' : '#ef4444') : '#6225e6'}; margin-bottom: 0.5rem;">
+              <p style="font-size: 0.8rem; font-weight: 800; color: ${isManual ? (manualIsAdd ? '#065f46' : '#991b1b') : '#6225e6'}; text-transform: uppercase; margin-bottom: 0.3rem; letter-spacing: 1px;">${isManual ? 'Ajuste de balance' : 'Puntos Solicitados'}</p>
+              <p style="font-size: 3.2rem; font-weight: 900; color: ${isManual ? (manualIsAdd ? '#10b981' : '#ef4444') : '#000'}; line-height: 1; margin: 0;" id="puntos_${row.id}">${isManual && manualIsAdd ? '+' : ''}${row.puntos_solicitados}</p>
             </div>
 
             ${actionButtons}
@@ -377,7 +452,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     // Attach event listeners to Sponsor checkbox to update visual points
     filteredRecords.forEach(row => {
       const config = row.leaderboard_config as any;
-      if (config.permite_sponsor_alto_valor) {
+      if (config && config.permite_sponsor_alto_valor) {
         const check = document.getElementById(`sponsor_${row.id}`) as HTMLInputElement;
         const ptsEl = document.getElementById(`puntos_${row.id}`)!;
         check?.addEventListener('change', () => {
@@ -424,6 +499,17 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           return;
         }
         await processAction('reject', id, 0, notas, target, email, nombre, accionName, ptsSolicitados);
+      });
+    });
+
+    document.querySelectorAll('.revoke-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLButtonElement;
+        const id = target.getAttribute('data-id')!;
+        const cantidad = parseInt(target.getAttribute('data-cantidad') || '0');
+        const nombre = target.getAttribute('data-nombre') || '';
+        const motivoOriginal = target.getAttribute('data-motivo') || '(sin motivo registrado)';
+        (window as any).__openRevoke?.(id, cantidad, nombre, motivoOriginal);
       });
     });
 
@@ -501,6 +587,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       sessionEmail = session.user.email;
       await loadPeriods();
       setupManualModal();
+      setupRevokeModal();
       setupExportButton();
     }
   });
@@ -532,53 +619,211 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     });
   }
 
-  async function setupManualModal() {
-    const btn = document.getElementById('open-manual-btn');
-    const modal = document.getElementById('manual-points-modal');
-    const closeBtn = document.getElementById('close-manual-modal');
-    const select = document.getElementById('manual-miembro-selector') as HTMLSelectElement;
-    const submitBtn = document.getElementById('submit-manual-btn') as HTMLButtonElement;
+  const MIN_MOTIVO_LEN = 15;
 
-    // Load members
-    const { data: miembros } = await supabase.from('miembros_activos').select('id, nombre, numero_cuenta').order('nombre');
+  async function setupManualModal() {
+    const addBtn = document.getElementById('open-add-btn') as HTMLButtonElement | null;
+    const subBtn = document.getElementById('open-subtract-btn') as HTMLButtonElement | null;
+    const modal = document.getElementById('manual-points-modal')!;
+    const closeBtn = document.getElementById('close-manual-modal');
+    const step1 = document.getElementById('manual-step-1')!;
+    const step2 = document.getElementById('manual-step-2')!;
+    const header = document.getElementById('manual-header')!;
+    const titleEl = document.getElementById('manual-title')!;
+    const subtitleEl = document.getElementById('manual-subtitle')!;
+    const select = document.getElementById('manual-miembro-selector') as HTMLSelectElement;
+    const puntosInput = document.getElementById('manual-puntos') as HTMLInputElement;
+    const notasInput = document.getElementById('manual-notas') as HTMLTextAreaElement;
+    const notasHint = document.getElementById('manual-notas-hint')!;
+    const continueBtn = document.getElementById('continue-manual-btn') as HTMLButtonElement;
+    const backBtn = document.getElementById('back-manual-btn') as HTMLButtonElement;
+    const confirmBtn = document.getElementById('confirm-manual-btn') as HTMLButtonElement;
+    const confirmWarning = document.getElementById('confirm-warning')!;
+    const confirmSummary = document.getElementById('confirm-summary')!;
+    const confirmMotivo = document.getElementById('confirm-motivo')!;
+    const confirmAdmin = document.getElementById('confirm-admin')!;
+    const confirmFecha = document.getElementById('confirm-fecha')!;
+
+    let currentMode: 'suma' | 'resta' = 'suma';
+    let miembrosMap: Record<string, { nombre: string; numero_cuenta: string }> = {};
+
+    const { data: miembros } = await supabase
+      .from('miembros_activos')
+      .select('id, nombre, numero_cuenta')
+      .order('nombre');
     if (miembros) {
-      select.innerHTML = '<option value="">Selecciona un miembro...</option>' + miembros.map(m => `<option value="${m.id}">${m.nombre} (${m.numero_cuenta})</option>`).join('');
+      select.innerHTML = '<option value="">Selecciona un miembro...</option>' +
+        miembros.map(m => `<option value="${m.id}">${m.nombre}${m.numero_cuenta ? ' (' + m.numero_cuenta + ')' : ''}</option>`).join('');
+      miembros.forEach(m => { miembrosMap[m.id] = { nombre: m.nombre, numero_cuenta: m.numero_cuenta || '—' }; });
     }
 
-    btn?.addEventListener('click', () => { modal!.style.display = 'flex'; });
-    closeBtn?.addEventListener('click', () => { modal!.style.display = 'none'; });
+    function applyModeStyles() {
+      const isSuma = currentMode === 'suma';
+      const color = isSuma ? '#10b981' : '#ef4444';
+      const icon = isSuma ? 'bi-plus-circle-fill' : 'bi-dash-circle-fill';
+      const verbUpper = isSuma ? 'Sumar' : 'Restar';
+      const verbLower = isSuma ? 'sumarán' : 'restarán';
+      const prep = isSuma ? 'al' : 'del';
 
-    submitBtn?.addEventListener('click', async () => {
+      header.style.background = isSuma ? '#ecfdf5' : '#fef2f2';
+      header.style.borderColor = color;
+      titleEl.innerHTML = `<i class="bi ${icon}" style="color: ${color};"></i> ${verbUpper.toUpperCase()} PUNTOS MANUALES`;
+      subtitleEl.textContent = `Los puntos se ${verbLower} ${prep} balance del miembro seleccionado.`;
+
+      confirmWarning.style.background = isSuma ? '#ecfdf5' : '#fef2f2';
+      confirmWarning.style.borderColor = color;
+      confirmWarning.style.color = isSuma ? '#065f46' : '#991b1b';
+
+      confirmBtn.style.background = color;
+    }
+
+    function resetForm() {
+      goToStep(1);
+      select.value = '';
+      puntosInput.value = '';
+      notasInput.value = '';
+      updateHint();
+    }
+
+    function goToStep(n: 1 | 2) {
+      step1.style.display = n === 1 ? 'flex' : 'none';
+      step2.style.display = n === 2 ? 'flex' : 'none';
+    }
+
+    function updateHint() {
+      const len = notasInput.value.trim().length;
+      notasHint.textContent = `${len} / ${MIN_MOTIVO_LEN} caracteres mínimos`;
+      notasHint.style.color = len >= MIN_MOTIVO_LEN ? '#10b981' : '#888';
+    }
+
+    function openModal(mode: 'suma' | 'resta') {
+      currentMode = mode;
+      applyModeStyles();
+      resetForm();
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      modal.style.display = 'none';
+    }
+
+    addBtn?.addEventListener('click', () => openModal('suma'));
+    subBtn?.addEventListener('click', () => openModal('resta'));
+    closeBtn?.addEventListener('click', closeModal);
+    notasInput.addEventListener('input', updateHint);
+
+    continueBtn.addEventListener('click', () => {
       const miembroId = select.value;
-      const puntos = parseInt((document.getElementById('manual-puntos') as HTMLInputElement).value);
-      const notas = (document.getElementById('manual-notas') as HTMLInputElement).value;
+      const cantidad = parseInt(puntosInput.value);
+      const motivo = notasInput.value.trim();
 
-      if (!miembroId || isNaN(puntos) || !notas) {
-        alert('Por favor completa todos los campos requeridos y asegúrate de agregar una nota para la auditoría.');
+      if (!miembroId) { alert('Selecciona un miembro.'); return; }
+      if (isNaN(cantidad) || cantidad <= 0) { alert('La cantidad debe ser un entero positivo.'); return; }
+      if (motivo.length < MIN_MOTIVO_LEN) {
+        alert(`El motivo debe tener al menos ${MIN_MOTIVO_LEN} caracteres para auditoría.`);
         return;
       }
 
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = 'Guardando... <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>';
+      const m = miembrosMap[miembroId];
+      const verb = currentMode === 'suma' ? 'SUMAR' : 'RESTAR';
+      confirmSummary.innerHTML = `Vas a <strong>${verb} ${cantidad} puntos</strong> ${currentMode === 'suma' ? 'a' : 'de'} <strong>${m.nombre}</strong> (cuenta ${m.numero_cuenta}).`;
+      confirmMotivo.textContent = `"${motivo}"`;
+      confirmAdmin.textContent = sessionEmail;
+      confirmFecha.textContent = new Date().toLocaleString('es-MX');
+      goToStep(2);
+    });
 
-      const { error } = await supabase.rpc('insert_manual_puntos', {
+    backBtn.addEventListener('click', () => goToStep(1));
+
+    confirmBtn.addEventListener('click', async () => {
+      const miembroId = select.value;
+      const cantidad = parseInt(puntosInput.value);
+      const motivo = notasInput.value.trim();
+
+      confirmBtn.disabled = true;
+      backBtn.disabled = true;
+      const originalHTML = confirmBtn.innerHTML;
+      confirmBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Guardando...';
+
+      const { error } = await supabase.rpc('insert_ajuste_manual', {
         p_miembro_id: miembroId,
-        p_puntos: puntos,
+        p_tipo: currentMode,
+        p_cantidad: cantidad,
         p_admin_email: sessionEmail,
-        p_notas: notas,
-        p_periodo_id: selectedPeriodId
+        p_motivo: motivo,
       });
 
       if (error) {
-        alert('Error asignando puntos: ' + error.message);
-      } else {
-        alert('Puntos asignados exitosamente.');
-        modal!.style.display = 'none';
-        await loadPending();
+        alert('Error aplicando el ajuste: ' + error.message);
+        confirmBtn.disabled = false;
+        backBtn.disabled = false;
+        confirmBtn.innerHTML = originalHTML;
+        return;
       }
 
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Guardar Puntos Manuales';
+      closeModal();
+      await loadPending();
+    });
+  }
+
+  function setupRevokeModal() {
+    const modal = document.getElementById('revoke-modal')!;
+    const closeBtn = document.getElementById('close-revoke-modal');
+    const cancelBtn = document.getElementById('cancel-revoke-btn');
+    const confirmBtn = document.getElementById('confirm-revoke-btn') as HTMLButtonElement;
+    const motivoInput = document.getElementById('revoke-motivo') as HTMLTextAreaElement;
+    const motivoHint = document.getElementById('revoke-motivo-hint')!;
+    const summary = document.getElementById('revoke-summary')!;
+
+    let currentRegistroId = '';
+
+    function updateHint() {
+      const len = motivoInput.value.trim().length;
+      motivoHint.textContent = `${len} / ${MIN_MOTIVO_LEN} caracteres mínimos`;
+      motivoHint.style.color = len >= MIN_MOTIVO_LEN ? '#10b981' : '#888';
+    }
+
+    function close() { modal.style.display = 'none'; }
+
+    (window as any).__openRevoke = (id: string, cantidad: number, nombre: string, motivoOriginal: string) => {
+      currentRegistroId = id;
+      const signo = cantidad >= 0 ? '+' : '';
+      summary.innerHTML = `Vas a anular el ajuste manual <strong>${signo}${cantidad} pts</strong> de <strong>${nombre}</strong>.<br><span style="color:#666;font-size:0.85rem;">Motivo original: "${motivoOriginal}"</span>`;
+      motivoInput.value = '';
+      updateHint();
+      modal.style.display = 'flex';
+    };
+
+    motivoInput.addEventListener('input', updateHint);
+    closeBtn?.addEventListener('click', close);
+    cancelBtn?.addEventListener('click', close);
+
+    confirmBtn.addEventListener('click', async () => {
+      const motivo = motivoInput.value.trim();
+      if (motivo.length < MIN_MOTIVO_LEN) {
+        alert(`El motivo de la anulación debe tener al menos ${MIN_MOTIVO_LEN} caracteres.`);
+        return;
+      }
+
+      confirmBtn.disabled = true;
+      const originalHTML = confirmBtn.innerHTML;
+      confirmBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i>';
+
+      const { error } = await supabase.rpc('revocar_ajuste_manual', {
+        p_registro_id: currentRegistroId,
+        p_admin_email: sessionEmail,
+        p_motivo_revocacion: motivo,
+      });
+
+      if (error) {
+        alert('Error anulando el ajuste: ' + error.message);
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = originalHTML;
+        return;
+      }
+
+      close();
+      await loadPending();
     });
   }
 </script>
