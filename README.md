@@ -73,7 +73,9 @@ npm run dev             # http://localhost:4321
 
 ## Origen
 
-Nació como **proyecto ganador del 1er Hackaton Interno del Club Hello World**: un sitio estático en HTML, CSS y JavaScript que fijó la identidad visual y las páginas del sitio público. La aplicación actual — Astro SSR, panel de administración, portal de miembros, flujo de selección y toda la integración con Supabase, Resend y Vercel — es el resultado del desarrollo continuo posterior de la mesa directiva sobre esa base.
+Nació como **proyecto ganador del 1er Hackaton Interno del Club Hello World**, obra del equipo del hackaton que cimentó su identidad visual y las páginas del sitio público en HTML, CSS y JavaScript vanilla. Sobre esa base se ha construido la aplicación actual — Astro SSR, panel de administración, portal de miembros, flujo de selección y toda la integración con Supabase, Resend y Vercel.
+
+El crédito de cada persona vive en el [historial de commits](https://github.com/Hello-World-UNAM/helloworld-web/graphs/contributors) y, cuando existan reconocimientos específicos, en [`AUTHORS.md`](AUTHORS.md).
 
 ## Licencia
 
