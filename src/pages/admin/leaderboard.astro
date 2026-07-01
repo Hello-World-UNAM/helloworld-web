@@ -703,7 +703,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         ? 'Los miembros volverán a poder subir evidencias en este período.'
         : 'Los miembros ya no podrán subir nuevas evidencias en este período. Los admins seguirán pudiendo revisar, aprobar y ajustar los registros existentes.';
 
-      if (!confirm(`¿${accion} los formularios de "${selectedPeriodName}"?\n\n${detalle}`)) return;
+      const reversible = 'Puedes deshacer esta acción en cualquier momento desde este mismo menú.';
+
+      if (!confirm(`¿${accion} los formularios de "${selectedPeriodName}"?\n\n${detalle}\n\n${reversible}`)) return;
 
       const original = btn.innerHTML;
       btn.disabled = true;
