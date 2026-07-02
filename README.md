@@ -73,9 +73,19 @@ npm run dev             # http://localhost:4321
 
 ## Origen
 
-Proyecto ganador del **1er Hackaton Interno del Club Hello World**, obra del equipo formado por **Ian Alejandro Lugo Flores**, **Julian Collado Hall**, **Obet Pérez Hernández** y **Víctor Federico Caldera Arellano**, que cimentó la identidad visual y las páginas del sitio público en HTML, CSS y JavaScript vanilla ([demo original](https://clubhelloworld.online/index.html) · [repo](https://github.com/Jules10Ch/ClubHelloWorld)).
+> **1er Hackaton Interno del Club Hello World**
+> 10 de marzo de 2026 · FES Aragón, UNAM
 
-Sobre esa base se ha construido la aplicación actual — Astro SSR, panel de administración, portal de miembros, flujo de selección e integración con Supabase, Resend y Vercel. Ver [`AUTHORS.md`](AUTHORS.md) y el [grafo de contribuidores](https://github.com/Hello-World-UNAM/helloworld-web/graphs/contributors) para el detalle.
+Proyecto ganador que cimentó la identidad visual y las páginas del sitio público en HTML, CSS y JavaScript vanilla. Equipo original:
+
+- **Ian Alejandro Lugo Flores**
+- **Julian Collado Hall**
+- **Obet Pérez Hernández**
+- **Víctor Federico Caldera Arellano**
+
+<sub>[Demo original](https://clubhelloworld.online/index.html) · [Repo original](https://github.com/Jules10Ch/ClubHelloWorld)</sub>
+
+Sobre esa base se construyó la aplicación actual — Astro SSR, panel de administración, portal de miembros, flujo de selección e integración con Supabase, Resend y Vercel. Detalles en [`AUTHORS.md`](AUTHORS.md) y el [grafo de contribuidores](https://github.com/Hello-World-UNAM/helloworld-web/graphs/contributors).
 
 ## Licencia
 
