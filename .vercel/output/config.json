@@ -1,0 +1,119 @@
+{
+	"version": 3,
+	"routes": [
+		{
+			"handle": "filesystem"
+		},
+		{
+			"src": "^/_astro/(.*)$",
+			"headers": {
+				"cache-control": "public, max-age=31536000, immutable"
+			},
+			"continue": true
+		},
+		{
+			"src": "^/_server-islands/([^/]+?)/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/_image/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/auth/callback/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/entrevistas/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/leaderboard/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/login/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/miembros/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/periodos/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/seleccion-config/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/solicitudes/detalle/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/solicitudes/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/admin/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/auth/callback/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/cron/daily-digest/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/api/send-rejection/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/contacto/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/mi-cuenta/login/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/mi-cuenta/registrar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/mi-cuenta/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/nuestro-club/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/oferta/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/ranking/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/seleccion/agendar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/seleccion/aplicar/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/seleccion/?$",
+			"dest": "_render"
+		},
+		{
+			"src": "^/$",
+			"dest": "_render"
+		}
+	]
+}

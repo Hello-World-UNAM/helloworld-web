@@ -69,10 +69,8 @@ Three flavors — pick the right one:
 `src/data/*.json` is imported directly into pages at build time:
 - `club.json` — institutional info
 - `events.json` — hackathons, courses, events catalog
-- `ranking.json` — leaderboard (`{ participants: [{ name, pts }] }`)
-- `seleccion.json` — application/selection content
 
-Dynamic state (solicitudes, interviews, periods, members) lives in Supabase, not JSON.
+Dynamic state (solicitudes, interviews, periods, members, ranking) lives in Supabase, not JSON. `/ranking` queries the `ranking_por_periodo` view directly.
 
 ### Design system
 

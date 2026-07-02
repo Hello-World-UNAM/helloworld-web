@@ -1,0 +1,68 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Acceso · Panel Hello World" showHeader={false}>
+  <section class="admin-login">
+    <div class="admin-login-card">
+      <div class="admin-login-eyebrow">
+        <i class="bi bi-shield-lock-fill"></i> Acceso restringido
+      </div>
+      <h1>Panel interno</h1>
+      <p class="admin-login-sub">
+        Acceso exclusivo para miembros de la mesa directiva. Inicia sesión con tu cuenta institucional.
+      </p>
+
+      <div id="admin-login-feedback" class="admin-login-feedback" style="display:none;"></div>
+
+      <button id="google-login-btn" class="hw-btn hw-btn-primary" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1.5rem; background: #fff; color: #000;">
+        <i class="bi bi-google"></i> Continuar con Google
+      </button>
+
+      <p class="admin-login-tip" style="margin-top: 1.5rem;">
+        <i class="bi bi-info-circle"></i>
+        Si no cuentas con los permisos necesarios, el acceso será denegado.
+      </p>
+    </div>
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  document.addEventListener('DOMContentLoaded', () => {
+
+    const btn = document.getElementById('google-login-btn') as HTMLButtonElement;
+    const feedback = document.getElementById('admin-login-feedback') as HTMLElement;
+
+    // Check for error URL parameter (e.g., if AdminLayout rejected them)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error') === 'unauthorized') {
+      feedback.style.display = 'block';
+      feedback.className = `admin-login-feedback admin-login-feedback-error`;
+      feedback.innerHTML = 'Acceso denegado: Tu correo no pertenece a la mesa directiva.';
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Conectando...';
+      feedback.style.display = 'none';
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/api/auth/callback?next=/admin',
+        }
+      });
+
+      if (error) {
+        console.error(error);
+        feedback.style.display = 'block';
+        feedback.className = `admin-login-feedback admin-login-feedback-error`;
+        feedback.innerHTML = 'Hubo un error al conectar con Google. Intenta de nuevo.';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-google"></i> Continuar con Google';
+      }
+    });
+  });
+</script>

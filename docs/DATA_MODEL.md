@@ -22,9 +22,18 @@ Todo el estado dinámico vive en Postgres (schema `public`). RLS habilitada en t
 
 `ranking_por_periodo` — `SECURITY DEFINER` intencional. Expone solo `nombre + puntos` al role `anon` sin abrir `miembros_activos` ni `puntos_registros`. Auditar cualquier cambio en columnas seleccionadas.
 
+## Storage
+
+Dos buckets en Supabase Storage:
+
+| Bucket | Uso |
+|---|---|
+| `evidencias` | Imágenes y PDFs subidos por los miembros al registrar puntos. |
+| `cvs` | CVs de aspirantes al club durante el proceso de selección. Se sirven via signed URL desde el panel admin. |
+
 ## RPCs clave
 
-Todas con `SECURITY DEFINER`, `search_path = public, private` fijo y guard `private.is_directiva()` cuando aplica.
+Todas las RPCs **administrativas** usan `SECURITY DEFINER`, `search_path = public, private` fijo y guard `private.is_directiva()` interno. Las RPCs públicas del flujo de selección (`book_interview`, `cancel_interview`, `get_booking_state`) también son `SECURITY DEFINER` pero validan un token único en vez del rol; deben ser callable por `anon` para funcionar sin login.
 
 ### Puntos y ajustes
 

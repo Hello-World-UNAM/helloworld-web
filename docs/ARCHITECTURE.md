@@ -75,10 +75,10 @@ Contenido estático en `src/data/*.json`, importado directo en pages al build ti
 
 - `club.json` — información institucional.
 - `events.json` — catálogo de eventos, hackatones y cursos.
-- `ranking.json` — ranking histórico (legado).
-- `seleccion.json` — contenido del proceso de selección.
 
 Estado dinámico (solicitudes, entrevistas, miembros, puntos, semestres) vive en Supabase.
+
+Los archivos de miembros (evidencias e imágenes, CVs de aspirantes) viven en **Supabase Storage** — buckets `evidencias` y `cvs`.
 
 ## Rutas de la aplicación
 
@@ -88,7 +88,7 @@ Estado dinámico (solicitudes, entrevistas, miembros, puntos, semestres) vive en
 | | `/oferta` | — | Catálogo de eventos y hackatones |
 | | `/ranking` | — | Leaderboard público (view `ranking_por_periodo`) |
 | | `/nuestro-club` | — | Misión, visión, mesa directiva |
-| | `/contacto` | — | Formulario público (Formspree + reCAPTCHA) |
+| | `/contacto` | — | Formulario público (Formspree) |
 | Selección | `/seleccion` | — | Estado de la convocatoria |
 | | `/seleccion/aplicar` | — | Formulario de aplicación |
 | | `/seleccion/agendar?t=…` | Token | Agendamiento self-service |

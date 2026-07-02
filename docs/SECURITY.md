@@ -12,11 +12,17 @@ Habilitada en todas las tablas del schema `public`. Policies restringen `SELECT`
 
 ## RPCs blindadas
 
-Todas las RPCs `SECURITY DEFINER` tienen:
+RPCs **administrativas** (aprobar, rechazar, eliminar, ajustes manuales, cerrar semestre, sync directiva):
 
 - `search_path = public, private` fijo → previene search_path hijacking.
-- Guarda interna `private.is_directiva()` en toda función admin.
+- Guarda interna `private.is_directiva()` en la función.
 - `REVOKE EXECUTE FROM anon` + `GRANT EXECUTE TO authenticated, service_role`.
+
+RPCs **públicas** del flujo de selección (`book_interview`, `cancel_interview`, `get_booking_state`, `is_email_in_directiva`):
+
+- `SECURITY DEFINER` intencional para exponer solo el subset necesario.
+- Callable por `anon` porque el flujo no requiere login.
+- La autorización se resuelve por token único (`interview_booking_tokens`) o por match de email.
 
 ## Trigger de defensa en profundidad
 
@@ -35,7 +41,7 @@ Todas las RPCs `SECURITY DEFINER` tienen:
 
 ## Formularios públicos
 
-Formspree + Google reCAPTCHA v3 en `/contacto` — anti-spam sin fricción visible.
+`/contacto` envía a **Formspree**, que hace filtrado antispam del lado del proveedor. CSP en `vercel.json` restringe `form-action` a `formspree.io`.
 
 ## Auditoría
 
@@ -49,4 +55,8 @@ Cada acción destructiva o de ajuste queda registrada en `audit_logs` con `admin
 
 ## Reportar vulnerabilidades
 
-Abre un issue privado o contacta a la mesa directiva.
+Usa el reporte privado de vulnerabilidades de GitHub — nunca abras un issue público con detalles:
+
+> <https://github.com/Hello-World-UNAM/helloworld-web/security/advisories/new>
+
+Si la feature no está habilitada, contacta a la mesa directiva por otro canal privado y ella activará el reporte.

@@ -1,0 +1,72 @@
+---
+import Layout from '@layouts/Layout.astro';
+import eventsData from '@data/events.json';
+
+const { hackathones, cursos, eventos } = eventsData;
+
+const sections = [
+  { title: "Hackathones", items: hackathones },
+  { title: "Cursos", items: cursos },
+  { title: "Eventos", items: eventos },
+];
+---
+
+<Layout title="Oferta | Club Hello World" activeNav="oferta">
+  <section class="events-section">
+    <h1 class="events-title">Próximos Eventos</h1>
+
+    {sections.map((section) => (
+      <div class="carousel-block">
+        <h3 class="events-subtitle">{section.title}</h3>
+        <div class="carousel-wrapper">
+          <button class="carousel-btn prev" aria-label="Anterior">&#8592;</button>
+          <div class="cards-grid">
+            {section.items.map((item) => (
+              <div class="card" style={`--accent:${item.accent}`} data-url={item.url}>
+                <div class="card-tag">{item.tag}</div>
+                <div class="card-title">{item.title}</div>
+                <div class="card-date">{item.date}</div>
+                <div class="card-desc">{item.description}</div>
+                <div class="card-arrow">Abrir ↗️</div>
+              </div>
+            ))}
+          </div>
+          <button class="carousel-btn next" aria-label="Siguiente">&#8594;</button>
+        </div>
+      </div>
+    ))}
+  </section>
+</Layout>
+
+<script>
+// Carruseles de eventos
+document.addEventListener('DOMContentLoaded', function () {
+  // Botones "anterior"
+  document.querySelectorAll('.carousel-btn.prev').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const grid = this.parentElement.querySelector('.cards-grid');
+      const card = grid.querySelector('.card');
+      grid.scrollBy({ left: -(card.offsetWidth + 28), behavior: 'smooth' });
+    });
+  });
+
+  // Botones "siguiente"
+  document.querySelectorAll('.carousel-btn.next').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const grid = this.parentElement.querySelector('.cards-grid');
+      const card = grid.querySelector('.card');
+      grid.scrollBy({ left: card.offsetWidth + 28, behavior: 'smooth' });
+    });
+  });
+
+  // Click en tarjeta: abre el link
+  document.querySelectorAll('.card[data-url]').forEach(function (card) {
+    card.addEventListener('click', function () {
+      const url = this.dataset.url;
+      if (url && url !== '#') {
+        window.open(url, '_blank');
+      }
+    });
+  });
+});
+</script>

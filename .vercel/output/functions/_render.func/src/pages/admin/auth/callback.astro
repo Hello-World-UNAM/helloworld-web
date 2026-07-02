@@ -1,0 +1,71 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Verificando acceso…" showHeader={false}>
+  <section class="admin-callback">
+    <div class="admin-callback-card">
+      <div id="callback-loading">
+        <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+        <h1>Verificando tu acceso…</h1>
+        <p>Un segundo.</p>
+      </div>
+      <div id="callback-error" style="display:none;">
+        <i class="bi bi-shield-exclamation admin-callback-error-icon"></i>
+        <h1>Acceso no autorizado</h1>
+        <p id="callback-error-msg">Este correo no está registrado en la directiva del club.</p>
+        <a href="/admin/login" class="hw-btn hw-btn-secondary">Volver</a>
+      </div>
+    </div>
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  function showError(msg: string) {
+    const loading = document.getElementById('callback-loading');
+    const error = document.getElementById('callback-error');
+    const errorMsg = document.getElementById('callback-error-msg');
+    if (loading) loading.style.display = 'none';
+    if (error) error.style.display = 'block';
+    if (errorMsg) errorMsg.textContent = msg;
+  }
+
+  (async () => {
+    // detectSessionInUrl=true en el cliente parsea el fragment automáticamente
+    // y guarda la sesión. Esperamos un momento y verificamos.
+    await new Promise(r => setTimeout(r, 300));
+
+    const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+    if (sessErr || !session?.user?.email) {
+      showError('El link expiró o no es válido. Solicita uno nuevo.');
+      return;
+    }
+
+    // Verificar que el email esté en la tabla directiva
+    const email = session.user.email.toLowerCase();
+    const { data: directiva, error: dirErr } = await supabase
+      .from('directiva')
+      .select('email, role')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (dirErr) {
+      console.error('directiva check error', dirErr);
+      await supabase.auth.signOut();
+      showError('No pudimos verificar tu acceso. Intenta de nuevo.');
+      return;
+    }
+
+    if (!directiva) {
+      // Email no autorizado: cerramos sesión y mostramos error.
+      await supabase.auth.signOut();
+      showError('Este correo no está autorizado para el panel. Habla con la directiva.');
+      return;
+    }
+
+    // Todo bien: el index hace el routing inteligente
+    window.location.replace('/admin');
+  })();
+</script>

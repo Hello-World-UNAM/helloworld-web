@@ -18,7 +18,8 @@
 
 ## Estilo
 
-- Sin CSS Modules, sin Tailwind. Todo en `src/styles/global.css` alineado a [`DESIGN.md`](../DESIGN.md).
+- Sin CSS Modules, sin Tailwind. Los estilos base viven en [`src/styles/global.css`](../src/styles/global.css) alineados a [`DESIGN.md`](../DESIGN.md).
+- El panel de administración (`src/pages/admin/*`) usa estilos inline por velocidad de iteración; migrarlos a `global.css` está en el roadmap.
 - TypeScript `strict`. Sin `any` cuando el tipo es derivable.
 - Componentes en `.astro`, lógica cliente en `<script>` con `import.meta.env` para vars públicas.
 
