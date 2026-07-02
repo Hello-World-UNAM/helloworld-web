@@ -1,1 +1,0 @@
-import{s as n}from"./supabase.ByhH4n-l.js";document.addEventListener("DOMContentLoaded",()=>{const t=document.getElementById("admin-logout-btn");t?.addEventListener("click",async()=>{t.disabled=!0,await n.auth.signOut(),window.location.href="/admin/login"})});
