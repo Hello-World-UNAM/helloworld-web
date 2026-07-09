@@ -6,16 +6,18 @@ interface Props {
   title: string;
   description?: string;
   showHeader?: boolean;
+  activeNav?: string;
 }
 
 const {
   title,
   description = 'Panel interno del Club Hello World',
   showHeader = true,
+  activeNav = '',
 } = Astro.props;
 
 // --- SERVER-SIDE SECURITY GUARD ---
-// La validación de permisos ahora se realiza de forma centralizada y segura
+// La validación de permisos se realiza de forma centralizada y segura
 // en `src/middleware.ts`. Esto previene el error 'ResponseSentError' en SSR.
 let userEmail = Astro.locals.userEmail || '';
 
@@ -24,6 +26,16 @@ if (!userEmail) {
   const { data: { session } } = await safeSupabase.auth.getSession();
   userEmail = session?.user?.email || '';
 }
+
+const NAV_ITEMS = [
+  { id: 'inicio',      href: '/admin',                  icon: 'bi-grid-fill',          label: 'Inicio' },
+  { id: 'leaderboard', href: '/admin/leaderboard',      icon: 'bi-award-fill',         label: 'Puntos' },
+  { id: 'periodos',    href: '/admin/periodos',         icon: 'bi-calendar-range',     label: 'Periodos' },
+  { id: 'miembros',    href: '/admin/miembros',         icon: 'bi-people-fill',        label: 'Miembros' },
+  { id: 'solicitudes', href: '/admin/solicitudes?view=1', icon: 'bi-person-lines-fill', label: 'Solicitudes' },
+  { id: 'entrevistas', href: '/admin/entrevistas',      icon: 'bi-calendar-week',      label: 'Entrevistas' },
+  { id: 'config',      href: '/admin/seleccion-config', icon: 'bi-gear-fill',          label: 'Temporada' },
+];
 ---
 
 <!DOCTYPE html>
@@ -43,24 +55,42 @@ if (!userEmail) {
 </head>
 <body class="admin-body" id="admin-body">
   {showHeader && (
-    <header class="admin-header">
-      <div class="admin-header-inner">
-        <a href="/admin" class="admin-brand" style="display: flex; align-items: center; gap: 0.8rem; text-decoration: none;">
-          <div style="background: #fff; padding: 4px; border: 2px solid #000; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0 #000;">
-            <img src="/img/logo.png" alt="Club Hello World Logo" style="height: 30px; object-fit: contain;">
+    <div class="admin-top">
+      <header class="admin-header">
+        <div class="admin-header-inner">
+          <a href="/admin" class="admin-brand">
+            <span class="admin-brand-logobox">
+              <img src="/img/logo.png" alt="Club Hello World">
+            </span>
+            <span class="admin-brand-text">
+              <strong>Mesa Directiva</strong>
+              <small>Club Hello World</small>
+            </span>
+          </a>
+          <div class="admin-header-right">
+            <span id="admin-user-email" class="admin-user-email">
+              <i class="bi bi-person-fill"></i> {userEmail}
+            </span>
+            <button id="admin-logout-btn" class="admin-logout-btn" type="button" aria-label="Cerrar sesión">
+              <i class="bi bi-box-arrow-right"></i><span class="admin-logout-label">Salir</span>
+            </button>
           </div>
-          <span class="admin-brand-text" style="color: #fff; text-transform: uppercase;">
-            <strong style="font-size: 1.1rem; letter-spacing: 1px;">Mesa Directiva</strong>
-          </span>
-        </a>
-        <div class="admin-header-right">
-          <span id="admin-user-email" class="admin-user-email">{userEmail}</span>
-          <button id="admin-logout-btn" class="admin-logout-btn" type="button">
-            <i class="bi bi-box-arrow-right"></i> Salir
-          </button>
         </div>
-      </div>
-    </header>
+      </header>
+      <nav class="admin-nav" aria-label="Módulos del panel">
+        <div class="admin-nav-inner">
+          {NAV_ITEMS.map((item) => (
+            <a
+              href={item.href}
+              class:list={['admin-nav-link', { 'admin-nav-link-active': activeNav === item.id }]}
+              aria-current={activeNav === item.id ? 'page' : undefined}
+            >
+              <i class={`bi ${item.icon}`}></i> {item.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+    </div>
   )}
 
   <main class="admin-main" aria-label="Panel de administración">
@@ -78,6 +108,10 @@ if (!userEmail) {
           await supabase.auth.signOut();
           window.location.href = '/admin/login';
         });
+
+        // Centra el link activo del nav en pantallas angostas
+        const activeLink = document.querySelector<HTMLElement>('.admin-nav-link-active');
+        activeLink?.scrollIntoView({ block: 'nearest', inline: 'center' });
       });
     </script>
   )}

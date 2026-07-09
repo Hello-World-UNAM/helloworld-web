@@ -1,50 +1,93 @@
 ---
 import AdminLayout from '@layouts/AdminLayout.astro';
+
+const MODULES = [
+  {
+    href: '/admin/leaderboard',
+    icon: 'bi-award-fill',
+    title: 'Revisión de puntos',
+    desc: 'Audita las evidencias del leaderboard, aprueba o rechaza puntos y aplica ajustes manuales.',
+    cta: 'Gestionar evidencias',
+    alt: false,
+  },
+  {
+    href: '/admin/solicitudes?view=1',
+    icon: 'bi-person-lines-fill',
+    title: 'Solicitudes',
+    desc: 'Revisa las aplicaciones de aspirantes de la temporada activa y consulta el histórico.',
+    cta: 'Ver solicitudes',
+    alt: true,
+  },
+  {
+    href: '/admin/miembros',
+    icon: 'bi-people-fill',
+    title: 'Miembros',
+    desc: 'Directorio del club: da de alta nuevos miembros, edita su información o gestiona roles.',
+    cta: 'Abrir directorio',
+    alt: false,
+  },
+  {
+    href: '/admin/entrevistas',
+    icon: 'bi-calendar-week',
+    title: 'Entrevistas',
+    desc: 'Agenda del proceso de selección: monitorea el agendado, evalúa candidatos y envía resultados.',
+    cta: 'Ver agenda',
+    alt: true,
+  },
+  {
+    href: '/admin/periodos',
+    icon: 'bi-calendar-range',
+    title: 'Periodos',
+    desc: 'Crea semestres nuevos y define cuál es el periodo activo para el registro de evidencias.',
+    cta: 'Administrar semestres',
+    alt: false,
+  },
+  {
+    href: '/admin/seleccion-config',
+    icon: 'bi-gear-fill',
+    title: 'Temporada',
+    desc: 'Abre o cierra el ciclo de selección, configura fechas límite y días de entrevista.',
+    cta: 'Configurar selección',
+    alt: true,
+  },
+];
 ---
 
-<AdminLayout title="Panel Principal · Hello World">
-  <div style="max-width: 900px; margin: 0 auto; padding: 2rem 1rem;">
-    <div style="margin-bottom: 3rem;">
-      <h1 style="font-size: 2.5rem; font-weight: 900; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: -1px;">Panel de Administración</h1>
-      <p style="color: #555; font-size: 1.1rem; font-weight: 500;">Selecciona el módulo que deseas gestionar.</p>
-    </div>
+<AdminLayout title="Panel Principal · Hello World" activeNav="inicio">
+  <div class="admin-dash-hero">
+    <span class="admin-dash-badge">✦ Mesa Directiva</span>
+    <h1>Panel de <span>administración</span></h1>
+    <p class="admin-dash-sub">Todo el club en un solo lugar: puntos, selección, miembros y periodos.</p>
+  </div>
 
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-      
-      <!-- Leaderboard Card -->
-      <div style="background: #fff; padding: 2.5rem; border: 4px solid #000; box-shadow: 8px 8px 0 #6225e6; display: flex; flex-direction: column; height: 100%;">
-        <div style="margin-bottom: auto;">
-          <h2 style="font-size: 1.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 1rem;"><i class="bi bi-trophy-fill" style="color: #6225e6;"></i> Leaderboard</h2>
-          <p style="color: #444; font-size: 1rem; font-weight: 500; line-height: 1.5; margin-bottom: 2rem;">Revisa las evidencias subidas por los miembros activos, aprueba o rechaza puntos y mantén el ranking actualizado.</p>
-        </div>
-        <div style="display: flex; gap: 1rem; flex-direction: column;">
-          <a href="/admin/leaderboard" class="hw-btn hw-btn-primary" style="text-align: center; display: block; width: 100%;">Gestionar Evidencias</a>
-          <a href="/admin/periodos" class="hw-btn hw-btn-secondary" style="text-align: center; display: block; width: 100%;">Administrar Semestres</a>
-        </div>
-      </div>
+  <div class="admin-dash-stats" id="dash-stats">
+    <a href="/admin/leaderboard" class="admin-dash-stat">
+      <span class="admin-dash-stat-num" id="stat-evidencias">—</span>
+      <span class="admin-dash-stat-label">Evidencias por revisar</span>
+    </a>
+    <a href="/admin/solicitudes?view=1" class="admin-dash-stat">
+      <span class="admin-dash-stat-num" id="stat-solicitudes">—</span>
+      <span class="admin-dash-stat-label">Solicitudes pendientes</span>
+    </a>
+    <a href="/admin/miembros" class="admin-dash-stat">
+      <span class="admin-dash-stat-num" id="stat-miembros">—</span>
+      <span class="admin-dash-stat-label">Miembros activos</span>
+    </a>
+    <a href="/admin/periodos" class="admin-dash-stat">
+      <span class="admin-dash-stat-num" id="stat-periodo" style="font-size: 1.35rem; padding-top: 0.35rem;">—</span>
+      <span class="admin-dash-stat-label">Periodo activo</span>
+    </a>
+  </div>
 
-      <!-- Selección Card -->
-      <div style="background: #fff; padding: 2.5rem; border: 4px solid #000; box-shadow: 8px 8px 0 #000; display: flex; flex-direction: column; height: 100%;">
-        <div style="margin-bottom: auto;">
-          <h2 style="font-size: 1.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 1rem;"><i class="bi bi-person-lines-fill"></i> Selecciones</h2>
-          <p style="color: #444; font-size: 1rem; font-weight: 500; line-height: 1.5; margin-bottom: 2rem;">Abre o cierra convocatorias, revisa solicitudes de aspirantes y gestiona el proceso de reclutamiento.</p>
-        </div>
-        <div style="display: flex; gap: 1rem; flex-direction: column;">
-          <a href="/admin/solicitudes" class="hw-btn hw-btn-secondary" style="text-align: center; display: block; width: 100%;">Ver Solicitudes</a>
-          <a href="/admin/seleccion-config" class="hw-btn hw-btn-primary" style="text-align: center; display: block; width: 100%; background: #000; color: #fff;">Configurar Temporada</a>
-        </div>
-      </div>
-
-      <!-- Miembros Card -->
-      <div style="background: #fff; padding: 2.5rem; border: 4px solid #000; box-shadow: 8px 8px 0 #6225e6; display: flex; flex-direction: column; height: 100%;">
-        <div style="margin-bottom: auto;">
-          <h2 style="font-size: 1.8rem; font-weight: 900; text-transform: uppercase; margin-bottom: 1rem;"><i class="bi bi-people-fill" style="color: #6225e6;"></i> Miembros</h2>
-          <p style="color: #444; font-size: 1rem; font-weight: 500; line-height: 1.5; margin-bottom: 2rem;">Gestiona el directorio de miembros del club. Añade nuevos miembros, actualiza su información o elimínalos.</p>
-        </div>
-        <a href="/admin/miembros" class="hw-btn hw-btn-primary" style="text-align: center; display: block; width: 100%;">Directorio de Miembros →</a>
-      </div>
-
-    </div>
+  <div class="admin-dash-grid">
+    {MODULES.map((m) => (
+      <a href={m.href} class:list={['admin-module-card', { 'admin-module-card-alt': m.alt }]}>
+        <span class="admin-module-icon"><i class={`bi ${m.icon}`}></i></span>
+        <h2 class="admin-module-title">{m.title}</h2>
+        <p class="admin-module-desc">{m.desc}</p>
+        <span class="admin-module-cta">{m.cta} <i class="bi bi-arrow-right"></i></span>
+      </a>
+    ))}
   </div>
 </AdminLayout>
 
@@ -55,6 +98,28 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       window.location.replace('/admin/login');
+      return;
     }
+
+    const set = (id: string, value: string, alert = false) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value;
+      if (alert) el.classList.add('is-alert');
+    };
+
+    const [evidencias, solicitudes, miembros, periodo] = await Promise.all([
+      supabase.from('puntos_registros').select('id').eq('estado_aprobacion', 'pending'),
+      supabase.from('solicitudes').select('id, status').eq('status', 'pending'),
+      supabase.from('miembros_activos').select('id'),
+      supabase.from('periodos').select('nombre').eq('es_activo', true),
+    ]);
+
+    const nEvidencias = evidencias.data?.length ?? 0;
+    const nSolicitudes = solicitudes.data?.length ?? 0;
+    set('stat-evidencias', String(nEvidencias), nEvidencias > 0);
+    set('stat-solicitudes', String(nSolicitudes), nSolicitudes > 0);
+    set('stat-miembros', String(miembros.data?.length ?? 0));
+    set('stat-periodo', periodo.data?.[0]?.nombre?.replace(/^Semestre\s+/i, '') || '—');
   });
 </script>
