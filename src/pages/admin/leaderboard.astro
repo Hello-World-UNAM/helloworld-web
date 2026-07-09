@@ -2,181 +2,163 @@
 import AdminLayout from '@layouts/AdminLayout.astro';
 ---
 
-<AdminLayout title="Revisión Leaderboard | Admin">
+<AdminLayout title="Revisión Leaderboard | Admin" activeNav="leaderboard">
   <style is:global>
-    .filters-wrapper { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; width: 100%; }
-
-    .config-menu-item:hover { background: #f9f3ff; }
-    .config-menu-item:active { background: #efe6ff; }
-    #config-menu-btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 #000; }
-    @media (max-width: 640px) {
-      #config-menu { right: auto; left: 0; min-width: 260px; }
-    }
-    .filter-group { display: flex; gap: 0.5rem; align-items: center; }
-    .search-wrapper { flex: 1; min-width: 250px; position: relative; }
-    
     .card-registro-content { display: flex; justify-content: space-between; align-items: flex-start; gap: 2rem; flex-wrap: wrap; }
     .card-registro-left { flex: 1; min-width: 300px; }
     .card-registro-right { width: 320px; display: flex; flex-direction: column; gap: 0.8rem; }
-    
+
     @media (max-width: 768px) {
-      .filters-wrapper { flex-direction: column; align-items: stretch; }
-      .filter-group { flex-direction: column; align-items: flex-start; width: 100%; gap: 0.3rem; }
-      .filter-group select { width: 100%; }
-      .search-wrapper { min-width: 100%; width: 100%; }
-      
-      .card-registro { padding: 1.2rem !important; gap: 1rem !important; }
-      .card-registro-left { min-width: 100%; margin-bottom: 1.5rem; }
+      .card-registro-left { min-width: 100%; }
       .card-registro-right { width: 100%; }
-      .card-registro-content { gap: 1.5rem; }
+      .card-registro-content { gap: 1.2rem; }
     }
   </style>
 
-  <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-      <div>
-        <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-award"></i> Revisión de Puntos</h1>
-        <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
-      </div>
-
-      <!-- Menú Configuración (colapsa todas las acciones) -->
-      <div id="config-menu-wrapper" style="position: relative;">
-        <button id="config-menu-btn" aria-haspopup="menu" aria-expanded="false" style="background: #6225e6; color: #fff; padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 0.5rem;">
-          <i class="bi bi-gear-fill"></i> Configuración <i class="bi bi-chevron-down" style="font-size: 0.75rem;"></i>
+  <div class="admin-page-head">
+    <div>
+      <h1 class="admin-page-title">
+        <span class="admin-title-icon"><i class="bi bi-award-fill"></i></span>
+        Revisión de puntos
+      </h1>
+      <p class="admin-page-subtitle">Audita y aprueba las evidencias subidas por los miembros.</p>
+    </div>
+    <div class="admin-page-actions">
+      <div id="config-menu-wrapper" class="admin-menu-wrapper">
+        <button id="config-menu-btn" class="admin-btn admin-btn-purple" aria-haspopup="menu" aria-expanded="false">
+          <i class="bi bi-gear-fill"></i> Configuración <i class="bi bi-chevron-down" style="font-size: 0.7rem;"></i>
         </button>
 
-        <div id="config-menu" role="menu" style="display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 280px; background: #fff; border: 2px solid #000; border-radius: 8px; box-shadow: 6px 6px 0 #6225e6; z-index: 500; padding: 0.4rem;">
-          <!-- Ajustes manuales -->
-          <p style="margin: 0.6rem 0.8rem 0.3rem; font-size: 0.7rem; font-weight: 800; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">Ajustes manuales</p>
-          <button id="open-add-btn" role="menuitem" data-mode="suma" class="config-menu-item" style="width: 100%; text-align: left; background: transparent; color: #065f46; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
-            <i class="bi bi-plus-circle-fill" style="color: #10b981; font-size: 1.1rem;"></i> Sumar puntos manuales
+        <div id="config-menu" class="admin-menu" role="menu">
+          <p class="admin-menu-heading">Ajustes manuales</p>
+          <button id="open-add-btn" role="menuitem" data-mode="suma" class="config-menu-item admin-menu-item admin-menu-item-success">
+            <i class="bi bi-plus-circle-fill"></i> Sumar puntos manuales
           </button>
-          <button id="open-subtract-btn" role="menuitem" data-mode="resta" class="config-menu-item" style="width: 100%; text-align: left; background: transparent; color: #991b1b; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
-            <i class="bi bi-dash-circle-fill" style="color: #ef4444; font-size: 1.1rem;"></i> Restar puntos manuales
-          </button>
-
-          <hr style="margin: 0.4rem 0.3rem; border: none; border-top: 1px dashed #ddd;">
-
-          <!-- Registro del semestre -->
-          <p style="margin: 0.6rem 0.8rem 0.3rem; font-size: 0.7rem; font-weight: 800; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">Registro del semestre</p>
-          <button id="toggle-cerrado-btn" role="menuitem" class="config-menu-item" title="Cerrar o reabrir los formularios del período seleccionado para el registro de evidencias." style="width: 100%; text-align: left; background: transparent; color: #000; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
-            <i class="bi bi-lock-fill" style="color: #000; font-size: 1.1rem;" id="toggle-cerrado-icon"></i> <span id="toggle-cerrado-label">Cerrar formularios</span>
+          <button id="open-subtract-btn" role="menuitem" data-mode="resta" class="config-menu-item admin-menu-item admin-menu-item-danger">
+            <i class="bi bi-dash-circle-fill"></i> Restar puntos manuales
           </button>
 
-          <hr style="margin: 0.4rem 0.3rem; border: none; border-top: 1px dashed #ddd;">
+          <hr class="admin-menu-divider">
 
-          <!-- Reportes -->
-          <p style="margin: 0.6rem 0.8rem 0.3rem; font-size: 0.7rem; font-weight: 800; color: #6225e6; text-transform: uppercase; letter-spacing: 0.5px;">Reportes</p>
-          <button id="export-excel-btn" role="menuitem" class="config-menu-item" title="Descarga un Excel con las evidencias aprobadas del período seleccionado, agrupadas por miembro y ordenadas de mayor a menor puntaje." style="width: 100%; text-align: left; background: transparent; color: #000; padding: 0.7rem 0.8rem; border: none; border-radius: 6px; font-weight: 700; font-family: inherit; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 0.7rem;">
-            <i class="bi bi-file-earmark-excel-fill" style="color: #6225e6; font-size: 1.1rem;"></i> Exportar Excel para Jefatura
+          <p class="admin-menu-heading">Registro del semestre</p>
+          <button id="toggle-cerrado-btn" role="menuitem" class="config-menu-item admin-menu-item" title="Cerrar o reabrir los formularios del período seleccionado para el registro de evidencias.">
+            <i class="bi bi-lock-fill" id="toggle-cerrado-icon"></i> <span id="toggle-cerrado-label">Cerrar formularios</span>
+          </button>
+
+          <hr class="admin-menu-divider">
+
+          <p class="admin-menu-heading">Reportes</p>
+          <button id="export-excel-btn" role="menuitem" class="config-menu-item admin-menu-item" title="Descarga un Excel con las evidencias aprobadas del período seleccionado, agrupadas por miembro y ordenadas de mayor a menor puntaje.">
+            <i class="bi bi-file-earmark-excel-fill"></i> Exportar Excel para Jefatura
           </button>
         </div>
       </div>
     </div>
-    <div class="filters-wrapper">
-      <div class="search-wrapper">
-        <i class="bi bi-search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #555; font-weight: bold;"></i>
-        <input type="text" id="search-input" placeholder="Buscar por nombre, cuenta o correo..." style="width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem; border: 2px solid #000; border-radius: 6px; font-weight: 500; font-family: inherit; font-size: 0.95rem; box-shadow: 2px 2px 0 rgba(0,0,0,0.1);">
-      </div>
-      <div class="filter-group">
-        <label style="font-weight: 700; color: #555; font-size: 0.95rem;">Ordenar:</label>
-        <select id="sort-selector" style="padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; background: #fff; font-weight: 800; font-family: inherit; font-size: 0.95rem; cursor: pointer; box-shadow: 2px 2px 0 #000;">
-          <option value="desc" selected>Más recientes</option>
-          <option value="asc">Más antiguos</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label style="font-weight: 700; color: #555; font-size: 0.95rem;">Estado:</label>
-        <select id="status-selector" style="padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; background: #fff; font-weight: 800; font-family: inherit; font-size: 0.95rem; cursor: pointer; box-shadow: 2px 2px 0 #000;">
-          <option value="pending" selected>Pendientes</option>
-          <option value="approved">Aprobados</option>
-          <option value="rejected">Rechazados</option>
-          <option value="deleted">Eliminados</option>
-          <option value="all">Todos</option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label style="font-weight: 700; color: #555; font-size: 0.95rem;">Semestre:</label>
-        <select id="period-selector" style="padding: 0.6rem 1.2rem; border: 2px solid #000; border-radius: 6px; background: #fff; font-weight: 800; font-family: inherit; font-size: 0.95rem; cursor: pointer; box-shadow: 2px 2px 0 #000;">
-          <option value="">Cargando...</option>
-        </select>
-      </div>
+  </div>
+
+  <div class="admin-toolbar">
+    <div class="admin-search-wrap">
+      <i class="bi bi-search admin-search-icon"></i>
+      <input type="text" id="search-input" class="admin-search" placeholder="Buscar por nombre, cuenta o correo..." autocomplete="off">
+    </div>
+    <div class="admin-toolbar-field">
+      <label class="admin-field-label" for="sort-selector">Ordenar</label>
+      <select id="sort-selector" class="admin-select">
+        <option value="desc" selected>Más recientes</option>
+        <option value="asc">Más antiguos</option>
+      </select>
+    </div>
+    <div class="admin-toolbar-field">
+      <label class="admin-field-label" for="status-selector">Estado</label>
+      <select id="status-selector" class="admin-select">
+        <option value="pending" selected>Pendientes</option>
+        <option value="approved">Aprobados</option>
+        <option value="rejected">Rechazados</option>
+        <option value="deleted">Eliminados</option>
+        <option value="all">Todos</option>
+      </select>
+    </div>
+    <div class="admin-toolbar-field">
+      <label class="admin-field-label" for="period-selector">Semestre</label>
+      <select id="period-selector" class="admin-select">
+        <option value="">Cargando...</option>
+      </select>
     </div>
   </div>
 
-  <div id="pending-list" style="display: grid; gap: 1.5rem;">
+  <div id="pending-list" style="display: grid; gap: 1.4rem;">
     <!-- Populated by JS -->
-    <div id="loading" style="text-align: center; padding: 3rem;">
-      <i class="bi bi-arrow-clockwise admin-redirect-spin" style="font-size: 2rem;"></i>
-      <p style="margin-top: 1rem; color: var(--color-text-muted);">Cargando solicitudes pendientes...</p>
+    <div id="loading" class="admin-redirect" style="min-height: 30vh;">
+      <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+      <p>Cargando solicitudes pendientes...</p>
     </div>
-    
-    <div id="empty-state" style="display: none; text-align: center; padding: 4rem; background: var(--color-surface); border-radius: 12px; border: 1px dashed var(--color-border);">
-      <i class="bi bi-check-circle" style="font-size: 3rem; color: #22c55e;"></i>
-      <h2 style="margin-top: 1rem;">¡Todo al día!</h2>
-      <p style="color: var(--color-text-muted);">No hay evidencias pendientes por revisar.</p>
+
+    <div id="empty-state" class="admin-empty admin-days-empty" style="display: none; padding: 4rem 1.5rem;">
+      <i class="bi bi-check-circle-fill" style="font-size: 2.6rem; color: #6225e6; display: block; margin-bottom: 0.8rem;"></i>
+      <h2 style="margin: 0 0 0.4rem; font-weight: 900; text-transform: uppercase; font-size: 1.2rem; color: #000; font-style: normal;">¡Todo al día!</h2>
+      <p style="margin: 0;">No hay evidencias pendientes por revisar.</p>
     </div>
   </div>
 
   <!-- Modal Ajustes Manuales (2 pasos) -->
-  <div id="manual-points-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 1rem;">
-    <div style="background: #fff; width: 100%; max-width: 540px; padding: 2rem; border-radius: 12px; border: 3px solid #000; box-shadow: 8px 8px 0 #6225e6; position: relative; max-height: 90vh; overflow-y: auto;">
-      <button id="close-manual-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #000;" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+  <div id="manual-points-modal" class="admin-modal">
+    <div class="admin-modal-card">
+      <button id="close-manual-modal" class="admin-modal-close" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
 
       <!-- Header dinámico según modo -->
-      <div id="manual-header" style="margin-bottom: 1.5rem; padding: 1rem 1.2rem; border: 3px solid #000; border-radius: 8px;">
-        <h2 id="manual-title" style="font-size: 1.4rem; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">Sumar Puntos Manuales</h2>
-        <p id="manual-subtitle" style="margin: 0.3rem 0 0; font-size: 0.85rem; font-weight: 600; opacity: 0.9;">Se sumarán al balance del miembro seleccionado.</p>
+      <div id="manual-header" class="admin-modal-header">
+        <h2 id="manual-title" class="admin-modal-title">Sumar Puntos Manuales</h2>
+        <p id="manual-subtitle">Se sumarán al balance del miembro seleccionado.</p>
       </div>
 
       <!-- PASO 1: captura -->
-      <div id="manual-step-1" style="display: flex; flex-direction: column; gap: 1rem;">
-        <div>
-          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Miembro</label>
-          <select id="manual-miembro-selector" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+      <div id="manual-step-1" style="display: flex; flex-direction: column; gap: 1.1rem;">
+        <div class="admin-modal-field">
+          <label for="manual-miembro-selector">Miembro</label>
+          <select id="manual-miembro-selector" class="admin-select admin-select-block">
             <option value="">Selecciona un miembro...</option>
           </select>
         </div>
 
-        <div>
-          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Cantidad de puntos <span style="color: #666; font-weight: 500;">(entero positivo)</span></label>
-          <input type="number" id="manual-puntos" min="1" step="1" placeholder="Ej: 500" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 600; font-family: inherit;">
+        <div class="admin-modal-field">
+          <label for="manual-puntos">Cantidad de puntos <span>(entero positivo)</span></label>
+          <input type="number" id="manual-puntos" class="admin-text-input" min="1" step="1" placeholder="Ej: 500">
         </div>
 
-        <div>
-          <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Motivo <span style="color: #666; font-weight: 500;">(mínimo 15 caracteres — auditoría)</span></label>
-          <textarea id="manual-notas" placeholder="Ej: Ganó 1er lugar hackathon UNAM 2026" rows="3" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 500; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
-          <p id="manual-notas-hint" style="margin: 0.3rem 0 0; font-size: 0.75rem; color: #888;">0 / 15 caracteres mínimos</p>
+        <div class="admin-modal-field">
+          <label for="manual-notas">Motivo <span>(mínimo 15 caracteres — auditoría)</span></label>
+          <textarea id="manual-notas" class="admin-textarea" placeholder="Ej: Ganó 1er lugar hackathon UNAM 2026" rows="3" style="min-height: 80px;"></textarea>
+          <p id="manual-notas-hint" class="admin-modal-hint">0 / 15 caracteres mínimos</p>
         </div>
 
-        <button id="continue-manual-btn" style="margin-top: 0.5rem; width: 100%; padding: 1rem; background: #000; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #6225e6; font-size: 1rem;">
+        <button id="continue-manual-btn" class="admin-btn admin-btn-black" style="width: 100%; padding: 14px;">
           Continuar <i class="bi bi-arrow-right"></i>
         </button>
       </div>
 
       <!-- PASO 2: confirmación -->
-      <div id="manual-step-2" style="display: none; flex-direction: column; gap: 1rem;">
-        <div id="confirm-warning" style="padding: 1rem 1.2rem; border-radius: 8px; border: 2px solid; font-size: 0.9rem;">
+      <div id="manual-step-2" style="display: none; flex-direction: column; gap: 1.1rem;">
+        <div id="confirm-warning" style="padding: 14px 16px; border: 3px solid; font-size: 0.9rem;">
           <p style="margin: 0 0 0.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar operación</p>
           <p id="confirm-summary" style="margin: 0; font-weight: 600;"></p>
         </div>
 
-        <div style="background: #f9f3ff; padding: 1rem 1.2rem; border-radius: 8px; border: 2px solid #6225e6;">
-          <p style="margin: 0 0 0.6rem; font-size: 0.75rem; font-weight: 800; color: #6225e6; text-transform: uppercase;">Motivo</p>
-          <p id="confirm-motivo" style="margin: 0 0 1rem; font-style: italic; color: #333; font-size: 0.95rem;"></p>
+        <div class="admin-confirm-panel">
+          <p class="admin-confirm-panel-label">Motivo</p>
+          <p id="confirm-motivo" class="admin-confirm-panel-value" style="font-style: italic;"></p>
 
-          <p style="margin: 0 0 0.3rem; font-size: 0.75rem; font-weight: 800; color: #6225e6; text-transform: uppercase;">Registrado por</p>
-          <p id="confirm-admin" style="margin: 0 0 0.6rem; font-size: 0.85rem; color: #333;"></p>
+          <p class="admin-confirm-panel-label">Registrado por</p>
+          <p id="confirm-admin" class="admin-confirm-panel-value"></p>
 
-          <p style="margin: 0 0 0.3rem; font-size: 0.75rem; font-weight: 800; color: #6225e6; text-transform: uppercase;">Fecha</p>
-          <p id="confirm-fecha" style="margin: 0; font-size: 0.85rem; color: #333;"></p>
+          <p class="admin-confirm-panel-label">Fecha</p>
+          <p id="confirm-fecha" class="admin-confirm-panel-value"></p>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 0.5rem;">
-          <button id="back-manual-btn" style="padding: 0.9rem; background: #fff; color: #000; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-size: 0.9rem;">
+        <div class="admin-modal-btnrow">
+          <button id="back-manual-btn" class="admin-btn">
             <i class="bi bi-arrow-left"></i> Volver
           </button>
-          <button id="confirm-manual-btn" style="padding: 0.9rem; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 0.9rem;">
+          <button id="confirm-manual-btn" class="admin-btn" style="color: #fff;">
             Confirmar
           </button>
         </div>
@@ -185,21 +167,23 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   </div>
 
   <!-- Modal Revocar Ajuste Manual -->
-  <div id="revoke-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1001; align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 1rem;">
-    <div style="background: #fff; width: 100%; max-width: 500px; padding: 2rem; border-radius: 12px; border: 3px solid #000; box-shadow: 8px 8px 0 #ef4444; position: relative;">
-      <button id="close-revoke-modal" style="position: absolute; top: 1rem; right: 1rem; background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #000;" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
-      <h2 style="font-size: 1.3rem; font-weight: 900; margin-top: 0; margin-bottom: 0.5rem; text-transform: uppercase; color: #b91c1c;"><i class="bi bi-arrow-counterclockwise"></i> Anular ajuste manual</h2>
+  <div id="revoke-modal" class="admin-modal" style="z-index: 1001;">
+    <div class="admin-modal-card admin-modal-card-danger">
+      <button id="close-revoke-modal" class="admin-modal-close" aria-label="Cerrar"><i class="bi bi-x-lg"></i></button>
+      <h2 class="admin-modal-title" style="color: #b91c1c; margin-bottom: 0.5rem;"><i class="bi bi-arrow-counterclockwise"></i> Anular ajuste manual</h2>
       <p id="revoke-summary" style="margin: 0 0 1.2rem; font-size: 0.9rem; color: #444;"></p>
 
-      <label style="display: block; font-weight: 700; margin-bottom: 0.5rem; color: #333;">Motivo de la anulación <span style="color: #666; font-weight: 500;">(mínimo 15 caracteres)</span></label>
-      <textarea id="revoke-motivo" placeholder="Ej: Se comprobó que no cumplió los requisitos del premio." rows="3" style="width: 100%; padding: 0.8rem; border: 2px solid #000; border-radius: 6px; font-weight: 500; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
-      <p id="revoke-motivo-hint" style="margin: 0.3rem 0 1rem; font-size: 0.75rem; color: #888;">0 / 15 caracteres mínimos</p>
+      <div class="admin-modal-field">
+        <label for="revoke-motivo">Motivo de la anulación <span>(mínimo 15 caracteres)</span></label>
+        <textarea id="revoke-motivo" class="admin-textarea" placeholder="Ej: Se comprobó que no cumplió los requisitos del premio." rows="3" style="min-height: 80px;"></textarea>
+        <p id="revoke-motivo-hint" class="admin-modal-hint" style="margin-bottom: 1rem;">0 / 15 caracteres mínimos</p>
+      </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
-        <button id="cancel-revoke-btn" style="padding: 0.9rem; background: #fff; color: #000; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; font-size: 0.9rem;">
+      <div class="admin-modal-btnrow">
+        <button id="cancel-revoke-btn" class="admin-btn">
           Cancelar
         </button>
-        <button id="confirm-revoke-btn" style="padding: 0.9rem; background: #ef4444; color: #fff; border: 2px solid #000; border-radius: 6px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 3px 3px 0 #000; font-size: 0.9rem;">
+        <button id="confirm-revoke-btn" class="admin-btn admin-btn-danger-solid">
           Anular
         </button>
       </div>
@@ -237,7 +221,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       label.textContent = 'Reabrir formularios';
     } else {
       icon.className = 'bi bi-lock-fill';
-      icon.style.color = '#000';
+      icon.style.color = '';
       label.textContent = 'Cerrar formularios';
     }
   }
@@ -299,7 +283,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     // Reset view
     list.querySelectorAll('.card-registro').forEach(el => el.remove());
-    loading.style.display = 'block';
+    loading.style.display = 'flex';
     empty.style.display = 'none';
 
     let query = supabase
@@ -326,7 +310,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     }
 
     let filteredRecords = records || [];
-    
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       filteredRecords = filteredRecords.filter(row => {
@@ -346,8 +330,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     filteredRecords.forEach(row => {
       const card = document.createElement('div');
       card.className = 'card-registro';
-      card.style.cssText = 'background: #fff; border: 2px solid #000; border-radius: 12px; padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; box-shadow: 6px 6px 0 #6225e6; margin-bottom: 1rem; transition: transform 0.2s;';
-      
+
       const miembro = row.miembros_activos as any;
       const config = row.leaderboard_config as any;
       const isManual = !config;
@@ -356,36 +339,34 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       const date = new Date(row.created_at).toLocaleString('es-MX');
 
       let dynamicInfo = '';
-      if (row.horas_reportadas) dynamicInfo += `<span style="background: #f3e8ff; color: #6b21a8; font-size: 0.75rem; border: 1.5px solid #d8b4fe; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">${row.horas_reportadas} hrs reportadas</span>`;
-      if (row.es_evento_externo && config) dynamicInfo += `<span style="background: #fef08a; color: #854d0e; font-size: 0.75rem; border: 1.5px solid #fde047; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 700; text-transform: uppercase;">Evento Externo (x${config.multiplicador_externo})</span>`;
+      if (row.horas_reportadas) dynamicInfo += `<span class="admin-chip admin-chip-hours">${row.horas_reportadas} hrs reportadas</span>`;
+      if (row.es_evento_externo && config) dynamicInfo += `<span class="admin-chip admin-chip-ext">Evento Externo (x${config.multiplicador_externo})</span>`;
       if (isManual) {
-        const badgeColor = manualIsAdd ? '#10b981' : '#ef4444';
-        const badgeBg = manualIsAdd ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)';
         const badgeIcon = manualIsAdd ? 'bi-plus-circle-fill' : 'bi-dash-circle-fill';
         const badgeLabel = manualIsAdd ? 'MANUAL · SUMA' : 'MANUAL · RESTA';
-        dynamicInfo += `<span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 0.75rem; border: 1.5px solid ${badgeColor}; border-radius: 4px; padding: 0.3rem 0.6rem; font-weight: 800; text-transform: uppercase;"><i class="bi ${badgeIcon}"></i> ${badgeLabel}</span>`;
+        dynamicInfo += `<span class="admin-chip ${manualIsAdd ? 'admin-chip-add' : 'admin-chip-sub'}"><i class="bi ${badgeIcon}"></i> ${badgeLabel}</span>`;
       }
 
       // Status Badge
       let statusHTML = '';
       if (row.estado_aprobacion === 'approved') {
-        statusHTML = `<span style="background: rgba(34, 197, 94, 0.15); color: #16a34a; padding: 0.3rem 0.6rem; border: 1.5px solid #16a34a; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-check-circle"></i> Aprobado</span>`;
+        statusHTML = `<span class="admin-status admin-status-accepted"><i class="bi bi-check-circle"></i> Aprobado</span>`;
       } else if (row.estado_aprobacion === 'rejected') {
-        statusHTML = `<span style="background: rgba(239, 68, 68, 0.1); color: #dc2626; padding: 0.3rem 0.6rem; border: 1.5px solid #dc2626; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-x-circle"></i> Rechazado</span>`;
+        statusHTML = `<span class="admin-status admin-status-rejected"><i class="bi bi-x-circle"></i> Rechazado</span>`;
       } else if (row.estado_aprobacion === 'deleted') {
-        statusHTML = `<span style="background: rgba(0, 0, 0, 0.1); color: #404040; padding: 0.3rem 0.6rem; border: 1.5px solid #404040; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-trash3-fill"></i> Eliminado</span>`;
+        statusHTML = `<span class="admin-status admin-status-deleted"><i class="bi bi-trash3-fill"></i> Eliminado</span>`;
       } else {
-        statusHTML = `<span style="background: rgba(234, 179, 8, 0.15); color: #ca8a04; padding: 0.3rem 0.6rem; border: 1.5px solid #ca8a04; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; border-radius: 4px;"><i class="bi bi-clock-history"></i> Pendiente</span>`;
+        statusHTML = `<span class="admin-status admin-status-pending"><i class="bi bi-clock-history"></i> Pendiente</span>`;
       }
 
       // Sponsor logic for admin (only if pending)
       let adminSponsorHTML = '';
       if (config && config.permite_sponsor_alto_valor && row.estado_aprobacion === 'pending') {
         adminSponsorHTML = `
-          <div style="margin-top: 1.5rem; background: #fffbeb; padding: 1rem 1.2rem; border: 2px solid #fde047; border-radius: 6px;">
-            <label style="display: flex; align-items: center; gap: 0.8rem; cursor: pointer; margin: 0;">
-              <input type="checkbox" id="sponsor_${row.id}" style="width: 20px; height: 20px; accent-color: #ca8a04;">
-              <span style="font-weight: 700; color: #854d0e; font-size: 0.95rem;">Marcar como Patrocinio de Alto Valor (x1.5)</span>
+          <div class="admin-sponsor-block">
+            <label>
+              <input type="checkbox" id="sponsor_${row.id}">
+              <span>Marcar como Patrocinio de Alto Valor (x1.5)</span>
             </label>
           </div>
         `;
@@ -394,17 +375,17 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       let actionsHTML = '';
       if (row.estado_aprobacion === 'pending') {
         actionsHTML = `
-          <div style="margin-top: 1.5rem;">
-            <label style="display: block; font-size: 0.9rem; font-weight: 700; color: #333; margin-bottom: 0.4rem;">Notas de auditoría (opcional)</label>
-            <input type="text" id="notas_${row.id}" placeholder="Ej: Excelente trabajo, o faltó adjuntar X..." style="width: 100%; padding: 0.8rem; border-radius: 6px; background: #fafafa; border: 2px solid #ddd; color: #000; font-family: inherit; font-size: 0.95rem; transition: border-color 0.2s;">
+          <div class="admin-notes-field">
+            <label for="notas_${row.id}">Notas de auditoría (opcional)</label>
+            <input type="text" id="notas_${row.id}" class="admin-text-input" placeholder="Ej: Excelente trabajo, o faltó adjuntar X...">
           </div>
         `;
       } else if (row.notas_admin) {
         actionsHTML = `
-          <div style="margin-top: 1.5rem; background: #fdfdfd; padding: 1rem; border-left: 4px solid #6225e6; border-radius: 0 4px 4px 0; border-top: 1px solid #ddd; border-right: 1px solid #ddd; border-bottom: 1px solid #ddd;">
-            <p style="font-size: 0.8rem; font-weight: 800; color: #6225e6; margin-bottom: 0.3rem; text-transform: uppercase;">Nota de Auditoría</p>
-            <p style="color: #333; font-size: 0.95rem; margin: 0; font-style: italic;">"${row.notas_admin}"</p>
-            ${row.reviewed_by ? `<p style="margin-top: 0.5rem; margin-bottom: 0; font-size: 0.75rem; color: #666; font-weight: 600;"><i class="bi bi-person-fill"></i> Por: ${row.reviewed_by}</p>` : ''}
+          <div class="admin-audit-note">
+            <p class="admin-audit-note-label">Nota de Auditoría</p>
+            <p class="admin-audit-note-text">"${row.notas_admin}"</p>
+            ${row.reviewed_by ? `<p class="admin-audit-note-by"><i class="bi bi-person-fill"></i> Por: ${row.reviewed_by}</p>` : ''}
           </div>
         `;
       }
@@ -412,11 +393,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       let actionButtons = '';
       if (row.estado_aprobacion === 'pending') {
         actionButtons += `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.8rem;">
-            <button class="approve-btn" data-id="${row.id}" data-base-pts="${row.puntos_solicitados}" data-sponsor-allowed="${config?.permite_sponsor_alto_valor}" style="background: #6225e6; color: #fff; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; cursor: pointer; transition: transform 0.1s;">
+          <div class="card-registro-btnrow">
+            <button class="approve-btn admin-btn admin-btn-approve" data-id="${row.id}" data-base-pts="${row.puntos_solicitados}" data-sponsor-allowed="${config?.permite_sponsor_alto_valor}">
               <i class="bi bi-check-lg"></i> Aprobar
             </button>
-            <button class="reject-btn" data-id="${row.id}" data-email="${miembro.correo}" data-nombre="${miembro.nombre}" data-accion="${config?.accion}" data-pts="${row.puntos_solicitados}" style="background: #fff; color: #ef4444; padding: 0.8rem; font-size: 0.95rem; font-weight: 800; text-transform: uppercase; border: 2px solid #ef4444; border-radius: 6px; box-shadow: 3px 3px 0 rgba(239,68,68,0.2); cursor: pointer;">
+            <button class="reject-btn admin-btn admin-btn-reject" data-id="${row.id}" data-email="${miembro.correo}" data-nombre="${miembro.nombre}" data-accion="${config?.accion}" data-pts="${row.puntos_solicitados}">
               <i class="bi bi-x-lg"></i> Rechazar
             </button>
           </div>
@@ -425,13 +406,13 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
       if (isManual && row.estado_aprobacion === 'approved') {
         actionButtons += `
-          <button class="revoke-btn" data-id="${row.id}" data-cantidad="${manualSigned}" data-nombre="${miembro.nombre.replace(/"/g, '&quot;')}" data-motivo="${(row.notas_admin || '').replace(/"/g, '&quot;')}" style="width: 100%; background: #fef2f2; color: #b91c1c; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed #f87171; border-radius: 6px; cursor: pointer; transition: background 0.2s;">
+          <button class="revoke-btn admin-btn-ghost-danger" data-id="${row.id}" data-cantidad="${manualSigned}" data-nombre="${miembro.nombre.replace(/"/g, '&quot;')}" data-motivo="${(row.notas_admin || '').replace(/"/g, '&quot;')}">
             <i class="bi bi-arrow-counterclockwise"></i> Anular Ajuste
           </button>
         `;
       } else {
         actionButtons += `
-          <button class="delete-btn" data-id="${row.id}" ${row.estado_aprobacion === 'deleted' ? 'disabled' : ''} style="width: 100%; background: ${row.estado_aprobacion === 'deleted' ? '#f3f4f6' : '#fee2e2'}; color: ${row.estado_aprobacion === 'deleted' ? '#9ca3af' : '#b91c1c'}; padding: 0.6rem; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; border: 2px dashed ${row.estado_aprobacion === 'deleted' ? '#d1d5db' : '#f87171'}; border-radius: 6px; ${row.estado_aprobacion === 'deleted' ? 'cursor: not-allowed;' : 'cursor: pointer; transition: background 0.2s;'}">
+          <button class="delete-btn admin-btn-ghost-danger" data-id="${row.id}" ${row.estado_aprobacion === 'deleted' ? 'disabled' : ''}>
             <i class="bi bi-trash3-fill"></i> ${row.estado_aprobacion === 'deleted' ? 'Ya Eliminado' : 'Eliminar Registro'}
           </button>
         `;
@@ -444,58 +425,60 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       let evidenciaMediaHTML = '';
       if (isImage) {
         evidenciaMediaHTML = `
-          <div style="margin-bottom: 1.2rem; border: 2px solid #000; border-radius: 8px; overflow: hidden; box-shadow: 3px 3px 0 #000; background: #fafafa;">
-            <a href="${row.url_evidencia}" target="_blank" style="display: block;">
-              <img src="${row.url_evidencia}" alt="Previsualización" style="width: 100%; height: 160px; object-fit: contain; display: block;">
+          <div class="admin-evidence-frame">
+            <a href="${row.url_evidencia}" target="_blank">
+              <img src="${row.url_evidencia}" alt="Previsualización">
             </a>
-            <div style="padding: 0.5rem; text-align: center; background: #fff; border-top: 2px solid #000; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">
-              <a href="${row.url_evidencia}" target="_blank" style="color: #6225e6; text-decoration: none;"><i class="bi bi-arrows-fullscreen"></i> Abrir Original</a>
+            <div class="admin-evidence-caption">
+              <a href="${row.url_evidencia}" target="_blank"><i class="bi bi-arrows-fullscreen"></i> Abrir Original</a>
             </div>
           </div>
         `;
       } else if (isPdf) {
         evidenciaMediaHTML = `
-          <a href="${row.url_evidencia}" target="_blank" style="text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 1rem; background: #fff; color: #ef4444; font-weight: 800; text-transform: uppercase; text-decoration: none; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; font-size: 0.9rem; letter-spacing: 0.5px; margin-bottom: 1.2rem; transition: transform 0.1s;">
-            <i class="bi bi-file-earmark-pdf-fill" style="font-size: 1.2rem;"></i> Abrir PDF Adjunto
+          <a href="${row.url_evidencia}" target="_blank" class="admin-evidence-link admin-evidence-link-pdf">
+            <i class="bi bi-file-earmark-pdf-fill"></i> Abrir PDF Adjunto
           </a>
         `;
       } else if (row.url_evidencia) {
         evidenciaMediaHTML = `
-          <a href="${row.url_evidencia}" target="_blank" style="text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 1rem; background: #fff; color: #000; font-weight: 800; text-transform: uppercase; text-decoration: none; border: 2px solid #000; border-radius: 6px; box-shadow: 3px 3px 0 #000; font-size: 0.9rem; letter-spacing: 0.5px; margin-bottom: 1.2rem; transition: transform 0.1s;">
+          <a href="${row.url_evidencia}" target="_blank" class="admin-evidence-link">
             <i class="bi bi-box-arrow-up-right"></i> Abrir Enlace Externo
           </a>
         `;
       } else {
         evidenciaMediaHTML = `
-          <div style="text-align: center; padding: 1.5rem; border: 2px dashed #ccc; border-radius: 6px; color: #888; font-weight: bold; margin-bottom: 1.2rem; background: #fafafa;">
-            <i class="bi bi-slash-circle" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem;"></i> Sin evidencia adjunta
+          <div class="admin-evidence-empty">
+            <i class="bi bi-slash-circle"></i> Sin evidencia adjunta
           </div>
         `;
       }
 
+      const ptsBoxClass = isManual ? (manualIsAdd ? 'admin-pts-box admin-pts-box-add' : 'admin-pts-box admin-pts-box-sub') : 'admin-pts-box';
+
       card.innerHTML = `
         <div class="card-registro-content">
           <div class="card-registro-left">
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; flex-wrap: wrap;">
-              <h2 style="font-size: 1.5rem; font-weight: 900; margin: 0; color: #000; letter-spacing: -0.5px;">${config ? config.accion : (manualIsAdd ? 'Ajuste manual (suma)' : 'Ajuste manual (resta)')}</h2>
+            <div class="card-registro-titlerow">
+              <h2 class="card-registro-title">${config ? config.accion : (manualIsAdd ? 'Ajuste manual (suma)' : 'Ajuste manual (resta)')}</h2>
               ${statusHTML}
               ${dynamicInfo}
             </div>
-            <p style="color: #444; font-size: 0.95rem; margin-bottom: 0.3rem;">
-              <strong>${miembro.nombre}</strong> <span style="color: #666;">(${miembro.correo})</span> • Cta: <span style="font-weight: 700; color: #000;">${miembro.numero_cuenta}</span>
+            <p class="card-registro-member">
+              <strong>${miembro.nombre}</strong> <span style="color: #666;">(${miembro.correo})</span> • Cta: <span class="admin-cell-mono">${miembro.numero_cuenta}</span>
             </p>
-            <p style="color: #666; font-size: 0.85rem; font-weight: 500; margin-bottom: 1.5rem;"><i class="bi bi-clock"></i> Enviado: ${date}</p>
-            
+            <p class="card-registro-date"><i class="bi bi-clock"></i> Enviado: ${date}</p>
+
             ${adminSponsorHTML}
             ${actionsHTML}
           </div>
 
           <div class="card-registro-right">
             ${evidenciaMediaHTML}
-            
-            <div style="background: ${isManual ? (manualIsAdd ? '#ecfdf5' : '#fef2f2') : '#f1ecff'}; border: 2px solid #000; border-radius: 8px; padding: 1.2rem; text-align: center; box-shadow: 3px 3px 0 ${isManual ? (manualIsAdd ? '#10b981' : '#ef4444') : '#6225e6'}; margin-bottom: 0.5rem;">
-              <p style="font-size: 0.8rem; font-weight: 800; color: ${isManual ? (manualIsAdd ? '#065f46' : '#991b1b') : '#6225e6'}; text-transform: uppercase; margin-bottom: 0.3rem; letter-spacing: 1px;">${isManual ? 'Ajuste de balance' : 'Puntos Solicitados'}</p>
-              <p style="font-size: 3.2rem; font-weight: 900; color: ${isManual ? (manualIsAdd ? '#10b981' : '#ef4444') : '#000'}; line-height: 1; margin: 0;" id="puntos_${row.id}">${isManual && manualIsAdd ? '+' : ''}${row.puntos_solicitados}</p>
+
+            <div class="${ptsBoxClass}">
+              <p class="admin-pts-label">${isManual ? 'Ajuste de balance' : 'Puntos Solicitados'}</p>
+              <p class="admin-pts-num" id="puntos_${row.id}">${isManual && manualIsAdd ? '+' : ''}${row.puntos_solicitados}</p>
             </div>
 
             ${actionButtons}
@@ -528,7 +511,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         const id = target.getAttribute('data-id')!;
         const basePts = parseInt(target.getAttribute('data-base-pts')!);
         const sponsorAllowed = target.getAttribute('data-sponsor-allowed') === 'true';
-        
+
         let finalPts = basePts;
         if (sponsorAllowed) {
           const isHighValue = (document.getElementById(`sponsor_${id}`) as HTMLInputElement).checked;
@@ -549,7 +532,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         const accionName = target.getAttribute('data-accion')!;
         const ptsSolicitados = parseInt(target.getAttribute('data-pts')!);
         const notas = (document.getElementById(`notas_${id}`) as HTMLInputElement).value;
-        
+
         if (!notas) {
           alert('Por favor, agrega una nota explicando por qué se rechaza la evidencia.');
           return;
@@ -573,10 +556,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       btn.addEventListener('click', async (e) => {
         const target = e.currentTarget as HTMLButtonElement;
         const id = target.getAttribute('data-id')!;
-        
+
         const razon = prompt('Vas a ELIMINAR este registro de la base de datos (queda guardado en auditoría).\\nPor favor, escribe el motivo o tu nombre:');
         if (!razon) return; // Cancelado
-        
+
         target.disabled = true;
         target.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Eliminando...';
 
@@ -602,7 +585,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     btnElement.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i>';
 
     const rpcName = action === 'approve' ? 'approve_puntos' : 'reject_puntos';
-    const payload = action === 'approve' 
+    const payload = action === 'approve'
       ? { p_registro_id: id, p_puntos_aprobados: pts, p_admin_email: sessionEmail, p_notas: notas }
       : { p_registro_id: id, p_admin_email: sessionEmail, p_notas: notas };
 
@@ -613,7 +596,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       btnElement.disabled = false;
       btnElement.innerHTML = action === 'approve' ? '<i class="bi bi-check-lg"></i> Aprobar' : '<i class="bi bi-x-lg"></i> Rechazar';
     } else {
-      
+
       // If rejected, send the email via our new internal API
       if (action === 'reject' && email) {
         try {
@@ -798,20 +781,21 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     function applyModeStyles() {
       const isSuma = currentMode === 'suma';
-      const color = isSuma ? '#10b981' : '#ef4444';
+      const color = isSuma ? '#065f46' : '#991b1b';
+      const bg = isSuma ? '#d1fae5' : '#fee2e2';
       const icon = isSuma ? 'bi-plus-circle-fill' : 'bi-dash-circle-fill';
       const verbUpper = isSuma ? 'Sumar' : 'Restar';
       const verbLower = isSuma ? 'sumarán' : 'restarán';
       const prep = isSuma ? 'al' : 'del';
 
-      header.style.background = isSuma ? '#ecfdf5' : '#fef2f2';
-      header.style.borderColor = color;
+      header.style.background = bg;
+      header.style.borderColor = '#000';
       titleEl.innerHTML = `<i class="bi ${icon}" style="color: ${color};"></i> ${verbUpper.toUpperCase()} PUNTOS MANUALES`;
       subtitleEl.textContent = `Los puntos se ${verbLower} ${prep} balance del miembro seleccionado.`;
 
-      confirmWarning.style.background = isSuma ? '#ecfdf5' : '#fef2f2';
-      confirmWarning.style.borderColor = color;
-      confirmWarning.style.color = isSuma ? '#065f46' : '#991b1b';
+      confirmWarning.style.background = bg;
+      confirmWarning.style.borderColor = '#000';
+      confirmWarning.style.color = color;
 
       confirmBtn.style.background = color;
     }
@@ -832,7 +816,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     function updateHint() {
       const len = notasInput.value.trim().length;
       notasHint.textContent = `${len} / ${MIN_MOTIVO_LEN} caracteres mínimos`;
-      notasHint.style.color = len >= MIN_MOTIVO_LEN ? '#10b981' : '#888';
+      notasHint.style.color = len >= MIN_MOTIVO_LEN ? '#065f46' : '#888';
     }
 
     function openModal(mode: 'suma' | 'resta') {
@@ -919,7 +903,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     function updateHint() {
       const len = motivoInput.value.trim().length;
       motivoHint.textContent = `${len} / ${MIN_MOTIVO_LEN} caracteres mínimos`;
-      motivoHint.style.color = len >= MIN_MOTIVO_LEN ? '#10b981' : '#888';
+      motivoHint.style.color = len >= MIN_MOTIVO_LEN ? '#065f46' : '#888';
     }
 
     function close() { modal.style.display = 'none'; }

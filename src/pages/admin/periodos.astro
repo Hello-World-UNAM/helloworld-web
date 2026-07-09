@@ -2,31 +2,36 @@
 import AdminLayout from '@layouts/AdminLayout.astro';
 ---
 
-<AdminLayout title="Gestión de Periodos | Admin">
-  <div class="admin-header-flex" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-    <div style="flex: 1; min-width: 300px;">
-      <h1 class="admin-page-title" style="margin-bottom: 0.5rem;"><i class="bi bi-calendar-range"></i> Periodos y Semestres</h1>
-      <p class="admin-page-subtitle" style="margin-bottom: 1.5rem;">Crea nuevos semestres y elige cuál es el activo actualmente.</p>
-      
-      <div style="background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e; padding: 1rem 1.5rem; border-radius: 4px; display: flex; gap: 1rem; align-items: flex-start;">
-        <i class="bi bi-info-circle-fill" style="color: #16a34a; font-size: 1.2rem; margin-top: 0.2rem;"></i>
-        <div>
-          <h4 style="color: #16a34a; font-weight: 800; margin: 0 0 0.3rem 0; font-size: 1rem;">El Historial es Seguro</h4>
-          <p style="margin: 0; color: #166534; font-size: 0.95rem; font-weight: 500; line-height: 1.5;">Al marcar un semestre pasado como "Activo", los alumnos subirán evidencias amarradas a ese semestre histórico. <strong>Ningún punto pasado se perderá o sobrescribirá</strong>. Para volver a la normalidad, simplemente marca el semestre en curso como activo nuevamente.</p>
-        </div>
-      </div>
+<AdminLayout title="Gestión de Periodos | Admin" activeNav="periodos">
+  <div class="admin-page-head">
+    <div>
+      <h1 class="admin-page-title">
+        <span class="admin-title-icon"><i class="bi bi-calendar-range"></i></span>
+        Periodos y semestres
+      </h1>
+      <p class="admin-page-subtitle">Crea nuevos semestres y elige cuál es el activo actualmente.</p>
     </div>
-    <button id="btn-new-period" class="hw-btn hw-btn-primary" style="font-size: 0.95rem; font-weight: 800; padding: 0.6rem 1.2rem; border-radius: 6px; border: 2px solid #000; box-shadow: 3px 3px 0 #000; height: fit-content;">
-      <i class="bi bi-plus-lg"></i> Nuevo Periodo
-    </button>
+    <div class="admin-page-actions">
+      <button id="btn-new-period" class="admin-btn admin-btn-purple">
+        <i class="bi bi-plus-lg"></i> Nuevo periodo
+      </button>
+    </div>
   </div>
 
-  <div id="new-period-form" style="display: none; background: #fdfdfd; border: 2px dashed #000; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-    <h3 style="margin-bottom: 1rem; font-weight: 800;">Crear Nuevo Periodo</h3>
+  <div class="admin-info-banner" style="margin-bottom: 26px;">
+    <i class="bi bi-shield-check"></i>
+    <div>
+      <h4>El historial es seguro</h4>
+      <p>Al marcar un semestre pasado como "Activo", los alumnos subirán evidencias amarradas a ese semestre histórico. <strong>Ningún punto pasado se perderá o sobrescribirá</strong>. Para volver a la normalidad, simplemente marca el semestre en curso como activo nuevamente.</p>
+    </div>
+  </div>
+
+  <div id="new-period-form" class="admin-inline-form" style="display: none;">
+    <h3><i class="bi bi-calendar-plus"></i> Crear nuevo periodo</h3>
     <form id="form-create-period" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
-      <div style="flex: 1; min-width: 200px;">
-        <label style="display: block; font-weight: 700; margin-bottom: 0.4rem; font-size: 0.9rem;">ID del Periodo</label>
-        <select id="input-period-id" required style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 2px solid #000; font-family: inherit; font-size: 1rem; background: #fff; cursor: pointer;">
+      <div style="flex: 1; min-width: 180px;">
+        <label class="admin-field-label" for="input-period-id" style="margin-top: 0;">ID del periodo</label>
+        <select id="input-period-id" class="admin-select admin-select-block" required>
           <option value="2027-1">2027-1</option>
           <option value="2027-2">2027-2</option>
           <option value="2028-1">2028-1</option>
@@ -34,25 +39,25 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <option value="2029-1">2029-1</option>
         </select>
       </div>
-      <div style="flex: 2; min-width: 250px;">
-        <label style="display: block; font-weight: 700; margin-bottom: 0.4rem; font-size: 0.9rem;">Nombre Descriptivo (Automático)</label>
-        <input type="text" id="input-period-name" readonly required style="width: 100%; padding: 0.8rem; border-radius: 6px; border: 2px solid #ddd; background: #f5f5f5; color: #666; font-family: inherit; font-size: 1rem; cursor: not-allowed;" value="Semestre 2027-1">
+      <div style="flex: 2; min-width: 220px;">
+        <label class="admin-field-label" for="input-period-name" style="margin-top: 0;">Nombre descriptivo (automático)</label>
+        <input type="text" id="input-period-name" readonly required class="admin-text-input" style="background: #f5f5f5; color: #666; cursor: not-allowed;" value="Semestre 2027-1">
       </div>
-      <button type="submit" class="hw-btn hw-btn-primary" style="padding: 0.8rem 1.5rem; border: 2px solid #000; font-weight: 800; border-radius: 6px; box-shadow: 3px 3px 0 #000;">
+      <button type="submit" class="admin-btn admin-btn-purple">
         Guardar
       </button>
-      <button type="button" id="btn-cancel-new" class="hw-btn hw-btn-secondary" style="padding: 0.8rem 1.5rem; border: 2px solid #000; font-weight: 800; border-radius: 6px;">
+      <button type="button" id="btn-cancel-new" class="admin-btn">
         Cancelar
       </button>
     </form>
   </div>
 
-  <div id="loading" style="text-align: center; padding: 3rem;">
-    <i class="bi bi-arrow-clockwise admin-redirect-spin" style="font-size: 2rem;"></i>
-    <p style="margin-top: 1rem; color: var(--color-text-muted);">Cargando periodos...</p>
+  <div id="loading" class="admin-redirect" style="min-height: 30vh;">
+    <i class="bi bi-arrow-clockwise admin-redirect-spin"></i>
+    <p>Cargando periodos...</p>
   </div>
 
-  <div id="periods-list" style="display: grid; gap: 1.5rem;">
+  <div id="periods-list" style="display: grid; gap: 1.2rem;">
     <!-- Populated by JS -->
   </div>
 
@@ -79,7 +84,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   btnCancelNew.addEventListener('click', () => {
     formContainer.style.display = 'none';
-    btnNewPeriod.style.display = 'block';
+    btnNewPeriod.style.display = '';
     formCreate.reset();
   });
 
@@ -99,7 +104,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     formCreate.reset();
     formContainer.style.display = 'none';
-    btnNewPeriod.style.display = 'block';
+    btnNewPeriod.style.display = '';
     loadPeriods();
   });
 
@@ -108,7 +113,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const loading = document.getElementById('loading')!;
 
     list.innerHTML = '';
-    loading.style.display = 'block';
+    loading.style.display = 'flex';
 
     const { data: periodos, error } = await supabase
       .from('periodos')
@@ -124,23 +129,23 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     periodos.forEach(p => {
       const card = document.createElement('div');
-      card.style.cssText = `background: ${p.es_activo ? '#fdf8ff' : '#fff'}; border: 2px solid ${p.es_activo ? '#6225e6' : '#000'}; border-radius: 8px; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 4px 4px 0 ${p.es_activo ? '#6225e6' : 'rgba(0,0,0,0.05)'}; transition: all 0.2s;`;
-      
-      const statusBadge = p.es_activo 
-        ? `<span style="background: #6225e6; color: #fff; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;"><i class="bi bi-star-fill"></i> Activo Actual</span>`
-        : `<span style="background: #f1f1f1; color: #666; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;">Inactivo</span>`;
+      card.className = `admin-period-card ${p.es_activo ? 'admin-period-card-active' : ''}`;
+
+      const statusBadge = p.es_activo
+        ? `<span class="admin-period-badge"><i class="bi bi-star-fill"></i> Activo actual</span>`
+        : `<span class="admin-period-badge admin-period-badge-inactive">Inactivo</span>`;
 
       const actionBtn = p.es_activo
         ? ``
-        : `<button class="set-active-btn" data-id="${p.id}" style="background: #fff; color: #000; padding: 0.6rem 1.2rem; font-size: 0.9rem; font-weight: 800; border: 2px solid #000; border-radius: 6px; box-shadow: 2px 2px 0 #000; cursor: pointer;"><i class="bi bi-check-circle"></i> Marcar Activo</button>`;
+        : `<button class="set-active-btn admin-btn" data-id="${p.id}" style="font-size: 0.8rem; padding: 9px 14px;"><i class="bi bi-check-circle"></i> Marcar activo</button>`;
 
       card.innerHTML = `
         <div>
-          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
-            <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0; color: #000;">${p.nombre}</h2>
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 2px; flex-wrap: wrap;">
+            <h2 class="admin-period-name">${p.nombre}</h2>
             ${statusBadge}
           </div>
-          <p style="color: #555; font-size: 0.95rem; font-weight: 500;"><i class="bi bi-hash"></i> ID: ${p.id}</p>
+          <p class="admin-period-id"><i class="bi bi-hash"></i>${p.id}</p>
         </div>
         <div>
           ${actionBtn}
