@@ -55,6 +55,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <i class="bi bi-broadcast"></i> Selecciones activas
         </div>
         <h1>Temporada <span id="active-season-display">—</span></h1>
+        <p style="margin:.25rem 0 0;"><span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span></p>
         <p class="admin-config-sub">
           El sitio público está mostrando el flujo de aplicación. Los aspirantes pueden enviar su solicitud ahora mismo.
         </p>
@@ -932,4 +933,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function escapeAttr(s: string): string { return escapeHtml(s); }
+</script>
+
+<script>
+  import { paintBackendStatus } from '@lib/backend-status';
+  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
+  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>

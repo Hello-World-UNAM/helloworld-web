@@ -23,6 +23,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           </p>
           <p class="admin-detalle-sub">
             Recibida el <span id="d-fecha">—</span> · Temporada <strong id="d-season">—</strong>
+            <span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span>
           </p>
         </div>
         <div>
@@ -716,4 +717,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     el.className = `admin-save-feedback admin-save-feedback-${type}`;
     el.textContent = msg;
   }
+</script>
+
+<script>
+  import { paintBackendStatus } from '@lib/backend-status';
+  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
+  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>

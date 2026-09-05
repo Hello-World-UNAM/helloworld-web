@@ -15,7 +15,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       <div class="admin-list-header">
         <div>
           <h1>Entrevistas</h1>
-          <p class="admin-list-subtitle">Temporada <strong id="active-season">—</strong></p>
+          <p class="admin-list-subtitle">Temporada <strong id="active-season">—</strong><span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span></p>
         </div>
         <div class="admin-list-header-actions">
           <a href="/admin/solicitudes?view=1" class="admin-action-btn">
@@ -460,4 +460,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function escapeAttr(s: string): string { return escapeHtml(s); }
+</script>
+
+<script>
+  import { paintBackendStatus } from '@lib/backend-status';
+  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
+  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>
