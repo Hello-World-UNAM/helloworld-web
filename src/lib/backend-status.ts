@@ -1,13 +1,45 @@
 /**
- * Puente de solo-lectura entre el front legacy del panel admin y el nuevo
+ * Puente de solo-lectura entre el front del panel admin y el nuevo
  * backend de selecciones (RPC `selection_admin`).
  *
- * Diseñado para NO romper nunca el front anterior:
- * - El cliente nuevo se carga con `import()` dinámico dentro de try/catch.
- * - Si el backend no responde, falta sesión o el flag no existe, la pill
- *   muestra "sin conexión" y el resto de la página sigue intacto.
- * - No oculta, mueve ni deshabilita ningún elemento legacy.
+ * Diseñado para NO romper nunca el front:
+ * - Toda la lógica vive aquí; no depende de archivos fuera del repo
+ *   commiteado (solo `@lib/supabase`, que ya usa cada página legacy).
+ * - Cualquier fallo (sin sesión, sin permisos, RPC ausente, red) deja la
+ *   pill en estado informativo y la página sigue intacta.
+ * - No oculta, mueve ni deshabilita ningún elemento existente.
+ *
+ * NOTA: replica a propósito solo la detección de modo de
+ * `getSelectionFeatureMode()` para no acoplar el deploy a módulos nuevos
+ * sin revisar. Cuando se cableen acciones progresivas, este puente debe
+ * migrar a `@lib/selection-client` como única fuente de verdad.
  */
+
+import { supabase } from '@lib/supabase';
+
+type RpcResponse = {
+  data: unknown;
+  error: { message?: string } | null;
+};
+
+type SelectionStateLike = {
+  config?: { progressive_enabled?: unknown };
+  messages?: Array<{ status?: unknown }>;
+  [key: string]: unknown;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeRpcData(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as unknown;
+  } catch {
+    return value;
+  }
+}
 
 const PILL_BASE_STYLE = [
   'display:inline-flex',
@@ -48,7 +80,7 @@ function paint(pill: HTMLElement, text: string, tone: PillTone): void {
 
 /**
  * Rellena la pill `#backend-status` con el modo del nuevo backend.
- * Seguro para llamar desde cualquier página legacy del panel admin.
+ * Seguro para llamar desde cualquier página del panel admin.
  */
 export async function paintBackendStatus(pillId = 'backend-status'): Promise<void> {
   const pill = document.getElementById(pillId);
@@ -57,15 +89,27 @@ export async function paintBackendStatus(pillId = 'backend-status'): Promise<voi
   pill.setAttribute('title', 'Conexión con el nuevo backend de selecciones (solo lectura)');
 
   try {
-    const mod = await import('./selection-client');
-    const feature = await mod.getSelectionFeatureMode();
-    if (feature.mode === 'progressive') {
-      const messages = feature.state?.messages ?? [];
-      const queued = messages.filter((m) =>
+    const client = supabase as unknown as {
+      rpc(name: string, params: Record<string, unknown>): Promise<RpcResponse>;
+    };
+    const response = await client.rpc('selection_admin', { p_action: 'state', p_data: {} });
+    if (response.error) {
+      paint(pill, 'Backend: sin conexión', 'bad');
+      return;
+    }
+    const normalized = normalizeRpcData(response.data);
+    if (isRecord(normalized) && isRecord(normalized.error)) {
+      paint(pill, 'Backend: sin conexión', 'bad');
+      return;
+    }
+    const state = (normalized ?? {}) as SelectionStateLike;
+    const enabled = state.config?.progressive_enabled;
+    if (enabled === true) {
+      const queued = (state.messages ?? []).filter((m) =>
         ['queued', 'sending', 'uncertain'].includes(String(m.status ?? '')),
       ).length;
       paint(pill, `Backend: progresivo${queued > 0 ? ` · ${queued} en cola` : ''}`, 'ok');
-    } else if (feature.mode === 'legacy') {
+    } else if (enabled === false) {
       paint(pill, 'Backend: legacy ✓', 'info');
     } else {
       paint(pill, 'Backend: sin conexión', 'bad');
