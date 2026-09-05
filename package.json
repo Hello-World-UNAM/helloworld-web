@@ -8,7 +8,13 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check": "astro check",
+    "check:selection": "astro check --tsconfig tsconfig.selection.json",
+    "test": "node --experimental-strip-types --test tests/selection-mail.test.ts",
+    "test:edge": "deno test --node-modules-dir=none --allow-env tests/selection-edge.test.ts",
+    "test:db": "node scripts/test-selection-db.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@astrojs/vercel": "^8.2.11",
@@ -21,5 +27,10 @@
     "csv-parse": "^7.0.0",
     "exceljs": "^4.4.0",
     "resend": "^6.14.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@playwright/test": "1.63.0",
+    "typescript": "5.9.3"
   }
 }

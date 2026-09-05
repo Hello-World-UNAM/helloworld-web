@@ -13,6 +13,7 @@ pnpm-debug.log*
 
 # environment variables
 .env
+.env.local
 .env.production
 
 # macOS
@@ -20,6 +21,8 @@ pnpm-debug.log*
 
 # astro
 .astro/
+test-results/
+playwright-report/
 
 # Claude Code artefactos locales
 .claude/
