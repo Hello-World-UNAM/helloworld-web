@@ -8,7 +8,7 @@ const { handleSelectionWebhook } = await import('../supabase/functions/selection
 Object.defineProperty(Deno, 'serve', { value: realServe, configurable: true });
 
 const id = '00000000-0000-0000-0000-000000000099';
-const env = { SELECTION_WORKER_SECRET: 'synthetic-worker-secret', RESEND_API_KEY: 're_synthetic', SUPABASE_URL: 'http://127.0.0.1:59999', SELECTION_DB_SECRET_KEY: 'synthetic-service', RESEND_WEBHOOK_SECRET: 'whsec_c3ludGhldGljLXNlY3JldA==' };
+const env = { SELECTION_WORKER_SECRET: 'synthetic-worker-secret', RESEND_API_KEY: 'synthetic-resend-api-key', SUPABASE_URL: 'http://127.0.0.1:59999', SELECTION_DB_SECRET_KEY: 'synthetic-service', RESEND_WEBHOOK_SECRET: 'c3ludGhldGljLXNlY3JldA==' };
 function setup() { for (const [key,value] of Object.entries(env)) Deno.env.set(key,value); }
 const request = () => new Request('http://localhost/worker', { method: 'POST', headers: { 'X-Selection-Worker-Secret': env.SELECTION_WORKER_SECRET } });
 

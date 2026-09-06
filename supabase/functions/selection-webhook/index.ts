@@ -74,7 +74,7 @@ function verifyEvent(
 ): unknown {
   // Resend's verifier only performs local signature work, but its constructor
   // requires an API-key-shaped value. No API request is made here.
-  const verifier = new Resend(env('RESEND_API_KEY') ?? 're_webhook_signature_only');
+  const verifier = new Resend(env('RESEND_API_KEY') ?? 'test-only-webhook-signature-placeholder');
   return verifier.webhooks.verify({
     payload: rawBody,
     headers: { id, timestamp, signature },

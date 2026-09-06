@@ -13,8 +13,8 @@ const productionProjectRef = 'hzewxtimkbxljozyrafk';
 const adminEmail = 'admin@selection.local';
 const adminPassword = 'SelectionLab!2026';
 const workerSecret = 'selection-lab-worker-secret-only';
-const resendApiKey = 're_selection_lab_only';
-const webhookSecret = 'whsec_c2VsZWN0aW9uLWxhYi13ZWJob29rLXNlY3JldA==';
+const resendApiKey = 'selection-lab-resend-api-key';
+const webhookSecret = 'c2VsZWN0aW9uLWxhYi13ZWJob29rLXNlY3JldA==';
 
 function fail(message) {
   console.error(`\nSelection Lab: ${message}`);
