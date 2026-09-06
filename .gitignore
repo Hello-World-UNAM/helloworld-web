@@ -23,6 +23,11 @@ pnpm-debug.log*
 .astro/
 test-results/
 playwright-report/
+.selection-lab/
+.env.selection-lab
+
+# Artefactos del agente/opencode; no forman parte del release.
+agent/
 
 # Claude Code artefactos locales
 .claude/

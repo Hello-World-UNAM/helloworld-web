@@ -4,10 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 
 const resend = new Resend(import.meta.env.RESEND_API_KEY);
 
-const supabase = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-);
+const supabaseSecretKey = import.meta.env.SUPABASE_SECRET_KEY;
+const supabase = supabaseSecretKey
+  ? createClient(import.meta.env.PUBLIC_SUPABASE_URL, supabaseSecretKey)
+  : null;
 
 export const GET: APIRoute = async ({ request }) => {
   try {
@@ -22,6 +22,10 @@ export const GET: APIRoute = async ({ request }) => {
       if (authHeader !== `Bearer ${cronSecret}` && token !== cronSecret) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
       }
+    }
+
+    if (!supabase) {
+      return new Response(JSON.stringify({ error: 'Server Supabase key is not configured' }), { status: 503 });
     }
 
     // 2. Query Supabase for pending requests

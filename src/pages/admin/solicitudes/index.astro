@@ -15,13 +15,12 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       <!-- Header -->
       <div class="admin-list-header">
         <div>
-          <h1>Solicitudes</h1>
-          <p class="admin-list-subtitle">
+            <h1>Solicitudes</h1>
+            <p class="admin-list-subtitle">
             Temporada <strong id="active-season">—</strong>
             <span id="historical-badge" class="admin-historical-badge" style="display:none;">
               <i class="bi bi-archive-fill"></i> Histórico · sólo lectura
             </span>
-            <span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span>
           </p>
         </div>
         <div class="admin-list-header-actions">
@@ -35,6 +34,14 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <button id="btn-export" type="button" class="admin-action-btn">
             <i class="bi bi-download"></i> CSV
           </button>
+          <div id="progressive-header-actions" class="admin-batch-header-actions" style="display:none;">
+            <button id="progressive-select-all" type="button" class="admin-action-btn admin-select-all-btn" aria-pressed="false" disabled>
+              <i class="bi bi-check2-square"></i> Seleccionar todos
+            </button>
+            <button id="progressive-preview" type="button" class="admin-action-btn admin-action-btn-primary" disabled>
+              <i class="bi bi-envelope-check"></i> Previsualizar lote
+            </button>
+          </div>
           <button id="btn-cierre" type="button" class="admin-action-btn admin-action-btn-primary" disabled>
             <i class="bi bi-send-fill"></i> Cierre de inscripciones
           </button>
@@ -82,6 +89,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <table class="admin-table">
           <thead>
             <tr>
+              <th class="progressive-check-column"><span class="visually-hidden">Seleccionar</span></th>
               <th>Nombre</th>
               <th>Carrera</th>
               <th class="admin-th-num">Sem.</th>
@@ -91,7 +99,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             </tr>
           </thead>
           <tbody id="admin-tbody">
-            <tr><td colspan="6" class="admin-empty">Cargando…</td></tr>
+            <tr><td colspan="7" class="admin-empty">Cargando…</td></tr>
           </tbody>
         </table>
       </div>
@@ -104,6 +112,17 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
 <script>
   import { supabase } from '@lib/supabase';
+  import {
+    confirmSelectionCommunication,
+    commsOccupancyLabel,
+    getSelectionFeatureMode,
+    getSelectionState,
+    previewSelectionCommunication,
+    selectionErrorMessage,
+    stageCommsOccupancy,
+    type SelectionMessage,
+    type SelectionSolicitud,
+  } from '@lib/selection-client';
 
   type Status = 'pending' | 'reviewing' | 'accepted' | 'rejected';
   type Row = {
@@ -116,6 +135,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     season: string;
     created_at: string;
     email_notification_sent: boolean;
+    final_decision: 'accepted' | 'rejected' | null;
+    final_email_sent: boolean;
+    selection_revision: number;
   };
 
   const STATUS_LABELS: Record<Status, string> = {
@@ -132,6 +154,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   let viewingActiveSeason = false;
   let interviewDeadline: Date | null = null;
   let interviewSlots = { total: 0, withMissingMeet: 0, daysCount: 0 };
+  let progressiveEnabled = false;
+  let defaultBookingHours = 168;
+  const selectedRows = new Set<string>();
+  let stateMessages: SelectionMessage[] = [];
 
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Auth guard ──────────────────────────────────────────────────────
@@ -151,14 +177,33 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       return;
     }
 
+    const feature = await getSelectionFeatureMode();
+    if (feature.mode === 'unavailable') {
+      document.getElementById('admin-list-loading')!.innerHTML =
+        '<p class="admin-empty admin-empty-error">No se pudo verificar el backend de selecciones. Recarga antes de operar.</p>';
+      return;
+    }
+    progressiveEnabled = feature.mode === 'progressive';
+    if (progressiveEnabled) {
+      const oldBulk = document.getElementById('btn-cierre') as HTMLButtonElement;
+      oldBulk.style.display = 'none';
+      document.getElementById('progressive-header-actions')!.style.display = 'flex';
+      document.getElementById('progressive-select-all')!.addEventListener('click', toggleSelectAll);
+      const preview = document.getElementById('progressive-preview') as HTMLButtonElement;
+      preview.addEventListener('click', communicateSelected);
+    }
+
     // ── Temporada activa + deadline entrevista ─────────────────────────
     const { data: config } = await supabase
       .from('seleccion_config')
-      .select('is_open, active_season, interview_deadline_at, applications_closed')
+      .select('is_open, active_season, interview_deadline_at, applications_closed, default_booking_hours')
       .eq('id', true)
       .maybeSingle();
     activeSeason = (config?.is_open && config.active_season) ? config.active_season : null;
     interviewDeadline = config?.interview_deadline_at ? new Date(config.interview_deadline_at) : null;
+    if (Number.isInteger(config?.default_booking_hours) && Number(config?.default_booking_hours) >= 1) {
+      defaultBookingHours = Number(config?.default_booking_hours);
+    }
 
     // En fase de entrevistas: entrevistas es el panel principal (bypass con ?view=1)
     if (config?.is_open && config?.applications_closed && new URLSearchParams(window.location.search).get('view') !== '1') {
@@ -250,7 +295,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   async function loadRows() {
     const seasonSelect = document.getElementById('season-filter') as HTMLSelectElement;
     const tbody = document.getElementById('admin-tbody')!;
-    tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">Cargando…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">Cargando…</td></tr>';
 
     // Update header
     const activeSeasonEl = document.getElementById('active-season')!;
@@ -259,14 +304,30 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     viewingActiveSeason = seasonSelect.value === activeSeason;
     histBadge.style.display = viewingActiveSeason ? 'none' : 'inline-flex';
 
-    const { data, error } = await supabase
-      .from('solicitudes')
-      .select('id, nombre, correo, carrera, semestre, status, season, created_at, email_notification_sent')
-      .eq('season', seasonSelect.value)
-      .order('created_at', { ascending: false });
+    selectedRows.clear();
+    let data: unknown[] | null = null;
+    let error: { message: string } | null = null;
+    stateMessages = [];
+    if (progressiveEnabled && viewingActiveSeason) {
+      try {
+        const state = await getSelectionState(seasonSelect.value);
+        data = state.solicitudes;
+        stateMessages = state.messages ?? [];
+      } catch (cause) {
+        error = { message: selectionErrorMessage(cause) };
+      }
+    } else {
+      const response = await supabase
+        .from('solicitudes')
+        .select('id, nombre, correo, carrera, semestre, status, season, created_at, email_notification_sent, final_decision, final_email_sent, selection_revision')
+        .eq('season', seasonSelect.value)
+        .order('created_at', { ascending: false });
+      data = response.data;
+      error = response.error;
+    }
 
     if (error) {
-      tbody.innerHTML = `<tr><td colspan="6" class="admin-empty admin-empty-error">Error: ${escapeHtml(error.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="admin-empty admin-empty-error">Error: ${escapeHtml(error.message)}</td></tr>`;
       return;
     }
 
@@ -287,6 +348,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   function updateBulkButton() {
     const cierreBtn = document.getElementById('btn-cierre') as HTMLButtonElement;
+    if (progressiveEnabled) {
+      updateProgressiveSelection();
+      return;
+    }
     const pendingNotifications = allRows.filter(
       r => (r.status === 'accepted' || r.status === 'rejected') && !r.email_notification_sent
     ).length;
@@ -364,20 +429,23 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     }
 
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" class="admin-empty">Sin solicitudes que mostrar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="admin-empty">Sin solicitudes que mostrar.</td></tr>';
       foot.textContent = '';
       return;
     }
 
     tbody.innerHTML = filtered.map(r => `
       <tr>
+        <td class="progressive-check-column">
+          ${progressiveEnabled && viewingActiveSeason ? `<input type="checkbox" data-progressive-row="${r.id}" ${selectedRows.has(r.id) ? 'checked' : ''} ${isEligible(r) ? '' : 'disabled'} aria-label="Seleccionar ${escapeHtml(r.nombre)}">` : ''}
+        </td>
         <td>
           <div class="admin-row-name">${escapeHtml(r.nombre)}</div>
           <div class="admin-row-sub">${escapeHtml(r.correo)}</div>
         </td>
         <td>${escapeHtml(r.carrera)}</td>
         <td class="admin-th-num">${r.semestre}°</td>
-        <td><span class="admin-status admin-status-${r.status}">${STATUS_LABELS[r.status]}</span></td>
+        <td><div class="admin-status-stack"><span class="admin-status admin-status-${r.status}">${STATUS_LABELS[r.status]}</span>${commsBadge(r)}</div></td>
         <td>${formatDate(r.created_at)}</td>
         <td class="admin-th-actions">
           <a href="/admin/solicitudes/detalle?id=${r.id}" class="admin-row-link" title="Ver detalle">
@@ -386,7 +454,122 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </td>
       </tr>
     `).join('');
+    tbody.querySelectorAll<HTMLInputElement>('[data-progressive-row]').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        const id = checkbox.dataset.progressiveRow!;
+        if (checkbox.checked) selectedRows.add(id);
+        else selectedRows.delete(id);
+        updateProgressiveSelection();
+      });
+    });
     foot.textContent = `Mostrando ${filtered.length} de ${allRows.length} solicitud(es).`;
+    updateProgressiveSelection();
+  }
+
+  function initialOccupancy(row: Row) {
+    return stageCommsOccupancy(stateMessages, row.id, 'initial', row.email_notification_sent);
+  }
+
+  function isEligible(row: Row): boolean {
+    if (!(row.status === 'accepted' || row.status === 'rejected')) return false;
+    return initialOccupancy(row) === 'free';
+  }
+
+  function commsBadge(row: Row): string {
+    if (!progressiveEnabled || !viewingActiveSeason) return '';
+    const occupancy = initialOccupancy(row);
+    if (occupancy === 'free') return '';
+    const text = occupancy === 'failed' ? 'Falló envío'
+      : occupancy === 'uncertain' ? 'Envío incierto'
+      : occupancy === 'sent' ? 'Enviado'
+      : 'En cola';
+    return `<span class="admin-comms-badge admin-comms-badge-${occupancy}" title="${commsOccupancyLabel(occupancy)}"><i class="bi ${occupancy === 'sent' ? 'bi-envelope-check-fill' : 'bi-envelope'}"></i>${text}</span>`;
+  }
+
+  function updateProgressiveSelection() {
+    if (!progressiveEnabled) return;
+    for (const id of [...selectedRows]) {
+      const row = allRows.find((candidate) => candidate.id === id);
+      if (!row || !isEligible(row)) selectedRows.delete(id);
+    }
+    const count = selectedRows.size;
+    const eligibleRows = viewingActiveSeason ? allRows.filter(isEligible) : [];
+    const allSelected = eligibleRows.length > 0 && eligibleRows.every((row) => selectedRows.has(row.id));
+    const selectAll = document.getElementById('progressive-select-all') as HTMLButtonElement;
+    selectAll.disabled = eligibleRows.length === 0 || !viewingActiveSeason;
+    selectAll.setAttribute('aria-pressed', String(allSelected));
+    selectAll.innerHTML = allSelected
+      ? '<i class="bi bi-square"></i> Deseleccionar todos'
+      : '<i class="bi bi-check2-square"></i> Seleccionar todos';
+    selectAll.title = !viewingActiveSeason
+      ? 'La selección masiva sólo está disponible en la temporada activa.'
+      : eligibleRows.length === 0
+        ? 'No hay decisiones pendientes de comunicar.'
+        : `${allSelected ? 'Quitar' : 'Marcar'} las ${eligibleRows.length} decisiones pendientes de comunicar.`;
+    const preview = document.getElementById('progressive-preview') as HTMLButtonElement;
+    preview.disabled = count === 0 || !viewingActiveSeason;
+    preview.innerHTML = `<i class="bi bi-envelope-check"></i> Previsualizar lote${count > 0 ? ` (${count})` : ''}`;
+    const bookingDays = Math.max(1, Math.round(defaultBookingHours / 24));
+    preview.title = !viewingActiveSeason
+      ? 'Los lotes sólo se pueden comunicar desde la temporada activa.'
+      : count === 0
+        ? 'Selecciona al menos una solicitud aceptada o rechazada pendiente de comunicar.'
+        : `Revisar ${count} comunicación(es). Los aceptados tendrán ${bookingDays} día${bookingDays === 1 ? '' : 's'} para agendar.`;
+  }
+
+  function toggleSelectAll() {
+    if (!progressiveEnabled || !viewingActiveSeason) return;
+    const eligibleRows = allRows.filter(isEligible);
+    const allSelected = eligibleRows.length > 0 && eligibleRows.every((row) => selectedRows.has(row.id));
+    for (const row of eligibleRows) {
+      if (allSelected) selectedRows.delete(row.id);
+      else selectedRows.add(row.id);
+    }
+    renderTable();
+  }
+
+  async function communicateSelected() {
+    const rows = allRows.filter((row) => selectedRows.has(row.id));
+    if (rows.length === 0) return;
+    const kind = 'initial' as const;
+    // Revalidar contra el estado fresco: otra persona pudo encolar mientras tanto.
+    try {
+      stateMessages = (await getSelectionState((document.getElementById('season-filter') as HTMLSelectElement).value)).messages ?? [];
+    } catch { /* si falla, el preview del backend es la última palabra */ }
+    const busy = rows.filter((row) => initialOccupancy(row) !== 'free');
+    if (busy.length > 0) {
+      alert(`Ya hay una comunicación en curso para: ${busy.map((row) => row.nombre).join(', ')}. Actualizando la lista.`);
+      await loadRows();
+      return;
+    }
+    const button = document.getElementById('progressive-preview') as HTMLButtonElement;
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Preparando…';
+    try {
+      const draft = await previewSelectionCommunication(
+        kind,
+        rows as unknown as SelectionSolicitud[],
+        defaultBookingHours,
+      );
+      const summary = draft.preview.items
+        .map((item) => `• ${item.nombre} <${item.correo}>\n  ${item.subject}`)
+        .join('\n\n');
+      if (!confirm(
+        `PREVISUALIZACIÓN DEL LOTE (${draft.preview.items.length})\n\n${summary}\n\n` +
+        'Confirmar sólo encola estos mensajes. No cierra inscripciones y no afecta a otras solicitudes.'
+      )) return;
+
+      const result = await confirmSelectionCommunication(draft);
+      alert(`${result.queued} comunicación(es) encolada(s). El envío se procesa por separado.`);
+      await loadRows();
+    } catch (error) {
+      alert(selectionErrorMessage(error));
+    } finally {
+      button.disabled = false;
+      button.innerHTML = original;
+      updateProgressiveSelection();
+    }
   }
 
   function escapeHtml(s: string): string {
@@ -491,10 +674,4 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       return;
     }
   }
-</script>
-
-<script>
-  import { paintBackendStatus } from '@lib/backend-status';
-  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
-  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>

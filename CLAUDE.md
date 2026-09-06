@@ -16,7 +16,7 @@ No linting or test scripts configured. Type-checking happens implicitly via `ast
 
 ## Architecture
 
-Astro 5.x **SSR site** with `@astrojs/vercel/serverless` adapter (`astro.config.mjs` sets `output: 'server'`). Pages render on the Vercel function unless purely static. Stylesheets are inlined (`build.inlineStylesheets: 'always'`).
+Astro 5.x **SSR site** with `@astrojs/vercel` adapter (`astro.config.mjs` sets `output: 'server'`). Pages render on the Vercel function unless purely static. Stylesheets are inlined (`build.inlineStylesheets: 'always'`).
 
 ### Path aliases (tsconfig.json)
 
@@ -55,7 +55,7 @@ Three flavors — pick the right one:
 ### API routes (`src/pages/api/`)
 
 - `auth/callback.ts` — Supabase OAuth code exchange.
-- `cron/daily-digest.ts` — invoked by Vercel Cron. Gated by `CRON_SECRET` (Bearer header or `?token=` query). Uses `SUPABASE_SERVICE_ROLE_KEY` if present, else falls back to anon key.
+- `cron/daily-digest.ts` — invoked by Vercel Cron. Gated by `CRON_SECRET` (Bearer header or `?token=` query). Requires the server-only `SUPABASE_SECRET_KEY`; it fails closed when the privileged key is missing.
 - `send-rejection.ts` — Resend-powered transactional email.
 
 ### Layouts
@@ -110,6 +110,6 @@ Scroll-triggered animations use `IntersectionObserver` — **never autoplay on l
 ## Environment variables
 
 - `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` — required by all Supabase clients (browser + server).
-- `SUPABASE_SERVICE_ROLE_KEY` — used by cron jobs that need to bypass RLS.
+- `SUPABASE_SECRET_KEY` — required modern server-only key used by cron jobs that need to bypass RLS.
 - `RESEND_API_KEY` — outbound email.
 - `CRON_SECRET` — required to invoke `/api/cron/*` endpoints in production.

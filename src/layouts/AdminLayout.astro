@@ -1,6 +1,8 @@
 ---
 import '@/styles/global.css';
 import { getSafeSupabaseServerClient } from '../lib/supabaseServer';
+import SelectionLabBanner from '@components/SelectionLabBanner.astro';
+import { isSelectionLab } from '@lib/selection-lab';
 
 interface Props {
   title: string;
@@ -35,6 +37,9 @@ const NAV_ITEMS = [
   { id: 'solicitudes', href: '/admin/solicitudes?view=1', icon: 'bi-person-lines-fill', label: 'Solicitudes' },
   { id: 'entrevistas', href: '/admin/entrevistas',      icon: 'bi-calendar-week',      label: 'Entrevistas' },
   { id: 'config',      href: '/admin/seleccion-config', icon: 'bi-gear-fill',          label: 'Temporada' },
+  ...(isSelectionLab
+    ? [{ id: 'lab-inbox', href: '/admin/selection-lab', icon: 'bi-inbox-fill', label: 'Buzón de pruebas' }]
+    : []),
 ];
 ---
 
@@ -54,6 +59,7 @@ const NAV_ITEMS = [
   <title>{title}</title>
 </head>
 <body class="admin-body" id="admin-body">
+  <SelectionLabBanner />
   {showHeader && (
     <div class="admin-top">
       <header class="admin-header">

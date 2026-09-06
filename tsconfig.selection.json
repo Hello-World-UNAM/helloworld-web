@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    ".astro/types.d.ts",
+    "src/env.d.ts",
+    "src/components/admin/**/*",
+    "src/lib/selection-*.ts",
+    "src/pages/admin/solicitudes/**/*",
+    "src/pages/admin/entrevistas.astro",
+    "src/pages/admin/seleccion-config.astro",
+    "src/pages/seleccion/**/*",
+    "src/middleware.ts"
+  ]
+}

@@ -23,7 +23,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           </p>
           <p class="admin-detalle-sub">
             Recibida el <span id="d-fecha">—</span> · Temporada <strong id="d-season">—</strong>
-            <span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span>
           </p>
         </div>
         <div>
@@ -104,7 +103,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             </div>
 
             <p class="admin-eval-intro" id="eval-intro">
-              Califica cada área del 1 al 5 y deja notas. Cuando guardes, la entrevista se marca como completada automáticamente.
+              Califica cada área del 1 al 5 y deja notas. El resultado final se guarda por separado y sólo se comunica cuando lo confirmes.
             </p>
 
             <form id="eval-form" class="admin-eval-form" novalidate>
@@ -165,9 +164,14 @@ import AdminLayout from '@layouts/AdminLayout.astro';
                 <textarea id="eval-overall" name="eval_overall_notes" class="admin-textarea" rows="3" placeholder="Cualquier observación adicional sobre la entrevista…"></textarea>
               </div>
 
-              <!-- Decisión final -->
-              <div class="admin-eval-decision">
-                <span class="admin-field-label">Decisión final</span>
+              <!-- La decisión final vive junto a la evaluación en ambos modos.
+                   Sigue siendo editable hasta que el resultado se comunica. -->
+              <div class="admin-eval-decision" id="eval-decision" style="display:none;">
+                <div class="admin-eval-decision-heading">
+                  <span class="admin-field-label">Resultado final</span>
+                  <p id="eval-decision-help">Puedes cambiarlo mientras el resultado no haya sido comunicado.</p>
+                </div>
+                <p id="eval-interview-context" class="admin-eval-interview-context" aria-live="polite"></p>
                 <div class="admin-eval-decision-options">
                   <label class="admin-eval-decision-option admin-eval-decision-accept">
                     <input type="radio" name="final_decision" value="accepted">
@@ -180,6 +184,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
                     <span>Rechazar</span>
                   </label>
                 </div>
+                <label id="eval-exception-wrap" class="admin-eval-exception" style="display:none;">
+                  Motivo de excepción
+                  <textarea id="eval-exception-reason" rows="2" placeholder="Obligatorio si admites sin entrevista completada…"></textarea>
+                  <small>Para admitir sin una entrevista completada, el backend exige dejar este motivo.</small>
+                </label>
               </div>
 
               <!-- Auditoría -->
@@ -222,6 +231,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             <button type="button" id="btn-save" class="hw-btn hw-btn-primary admin-save-btn">
               Guardar cambios
             </button>
+            <button type="button" id="btn-communicate-initial" class="admin-action-btn admin-action-btn-primary admin-action-block" style="display:none; margin-top:.75rem;">
+              <i class="bi bi-envelope-check"></i> Previsualizar y comunicar decisión
+            </button>
+            <div id="comms-initial-note" class="admin-save-feedback" style="display:none;"></div>
             <div id="save-feedback" class="admin-save-feedback" style="display:none;"></div>
           </article>
 
@@ -256,8 +269,25 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
 <script>
   import { supabase } from '@lib/supabase';
+  import type { Database } from '@lib/database.types';
+  import { isSelectionLab } from '@lib/selection-lab';
+  import {
+    commsOccupancyLabel,
+    confirmSelectionCommunication,
+    getSelectionFeatureMode,
+    getSelectionState,
+    previewSelectionCommunication,
+    selectionAdmin,
+    selectionErrorMessage,
+    selectionLabSaveEvaluation,
+    selectionRevision,
+    stageCommsOccupancy,
+    type SelectionMessage,
+    type SelectionSolicitud,
+  } from '@lib/selection-client';
 
   type Status = 'pending' | 'reviewing' | 'accepted' | 'rejected';
+  type SolicitudUpdate = Database['public']['Tables']['solicitudes']['Update'];
   type Solicitud = {
     id: string;
     season: string;
@@ -300,6 +330,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     evaluated_at: string | null;
     final_decision: 'accepted' | 'rejected' | null;
     final_email_sent: boolean;
+    email_notification_sent: boolean;
+    selection_revision: number;
+    decision_exception_reason: string | null;
   };
 
   const STATUS_LABELS: Record<Status, string> = {
@@ -312,6 +345,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   let solicitud: Solicitud | null = null;
   let userEmail = '';
   let isHistorical = false;
+  let progressiveEnabled = false;
+  let solicitudMessages: SelectionMessage[] = [];
+  let evaluationInterviewStatus: 'none' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' = 'none';
+  let evaluationInterviewSlot: string | null = null;
 
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Auth ────────────────────────────────────────────────────────────
@@ -358,6 +395,16 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     solicitud = data as Solicitud;
 
+    const feature = await getSelectionFeatureMode();
+    if (feature.mode === 'unavailable') {
+      showError('No se pudo verificar el backend de selecciones. Recarga antes de hacer cambios.');
+      return;
+    }
+    progressiveEnabled = feature.mode === 'progressive';
+    const progressiveRow = feature.state?.solicitudes.find((row) => row.id === id);
+    if (progressiveRow) solicitud = progressiveRow as unknown as Solicitud;
+    solicitudMessages = (feature.state?.messages ?? []).filter((message) => message.solicitud_id === id);
+
     // Verificar si es de season activa o histórica
     const { data: config } = await supabase
       .from('seleccion_config')
@@ -374,6 +421,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     await setupEvaluation();
 
     document.getElementById('btn-save')!.addEventListener('click', saveChanges);
+    document.getElementById('btn-communicate-initial')!.addEventListener('click', () => communicate('initial'));
     document.getElementById('btn-cv')?.addEventListener('click', generateCvLink);
 
     // Scroll a evaluación si viene anchor #evaluacion
@@ -464,6 +512,16 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     (document.getElementById('status-select') as HTMLSelectElement).value = s.status;
     (document.getElementById('notes-textarea') as HTMLTextAreaElement).value = s.notes || '';
 
+    const initialButton = document.getElementById('btn-communicate-initial') as HTMLButtonElement;
+    const initialReady = progressiveEnabled && !isHistorical &&
+      (s.status === 'accepted' || s.status === 'rejected');
+    paintCommsState('initial', initialButton, 'comms-initial-note', initialReady);
+    if (progressiveEnabled && s.email_notification_sent) {
+      (document.getElementById('status-select') as HTMLSelectElement).disabled = true;
+      (document.getElementById('status-select') as HTMLSelectElement).title =
+        'La decisión ya fue comunicada; cualquier cambio requiere una rectificación auditada.';
+    }
+
     // Review metadata
     const meta = document.getElementById('d-review-meta')!;
     if (s.reviewed_by) {
@@ -492,7 +550,29 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     saveBtn.textContent = 'Guardando…';
     fb.style.display = 'none';
 
-    const updates: Record<string, unknown> = {
+    if (progressiveEnabled) {
+      try {
+        await selectionAdmin('save', {
+          id: solicitud.id,
+          revision: selectionRevision(solicitud as unknown as SelectionSolicitud),
+          status,
+          notes,
+        });
+        fb.style.display = 'block';
+        fb.className = 'admin-save-feedback admin-save-feedback-success';
+        fb.textContent = '✓ Revisión guardada. La comunicación sigue pendiente hasta que la confirmes.';
+        setTimeout(() => location.reload(), 650);
+      } catch (error) {
+        fb.style.display = 'block';
+        fb.className = 'admin-save-feedback admin-save-feedback-error';
+        fb.textContent = selectionErrorMessage(error);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar cambios';
+      }
+      return;
+    }
+
+    const updates: SolicitudUpdate = {
       status,
       notes,
       reviewed_at: new Date().toISOString(),
@@ -576,6 +656,17 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     const card = document.getElementById('eval-card')!;
     card.style.display = 'block';
+    const decisionBlock = document.getElementById('eval-decision')!;
+    decisionBlock.style.display = '';
+    const decisionHelp = document.getElementById('eval-decision-help')!;
+    const interviewContext = document.getElementById('eval-interview-context')!;
+    const intro = document.getElementById('eval-intro')!;
+    if (progressiveEnabled) {
+      intro.textContent = 'Califica cada área del 1 al 5 y deja notas. Puedes guardar avances sin decidir; el resultado final seguirá editable hasta que lo comuniques.';
+      decisionHelp.textContent = 'Elige Aceptar o Rechazar aquí. Guardar no envía correo; podrás cambiarlo mientras no se comunique.';
+    } else {
+      decisionHelp.textContent = 'En el flujo histórico la decisión es obligatoria para guardar la evaluación.';
+    }
 
     // Detectar contexto: ¿tiene entrevista? ¿qué estado?
     const { data: iv } = await supabase
@@ -586,12 +677,41 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       .limit(1)
       .maybeSingle();
 
+    evaluationInterviewStatus = (iv?.status as typeof evaluationInterviewStatus) ?? 'none';
+    evaluationInterviewSlot = iv?.slot_datetime ?? null;
+    const exceptionWrap = document.getElementById('eval-exception-wrap')!;
+    const exceptionInput = document.getElementById('eval-exception-reason') as HTMLTextAreaElement;
+    exceptionInput.value = solicitud.decision_exception_reason || '';
+    const needsExceptionInput = progressiveEnabled &&
+      evaluationInterviewStatus !== 'completed' && evaluationInterviewStatus !== 'confirmed';
+    exceptionWrap.style.display = needsExceptionInput ? '' : 'none';
+
+    interviewContext.className = 'admin-eval-interview-context';
+    if (evaluationInterviewStatus === 'confirmed' && evaluationInterviewSlot) {
+      const scheduledAt = formatInterviewDate(evaluationInterviewSlot);
+      const isFuture = new Date(evaluationInterviewSlot).getTime() > Date.now();
+      if (isFuture && isSelectionLab) {
+        interviewContext.className += ' admin-eval-interview-context-lab';
+        interviewContext.textContent = `Prueba local: la entrevista está programada para ${scheduledAt}, pero el laboratorio ignora esa fecha. Puedes guardar Aceptar o Rechazar ahora y continuar el flujo completo.`;
+      } else if (isFuture) {
+        interviewContext.className += ' admin-eval-interview-context-production';
+        interviewContext.textContent = `La entrevista está programada para ${scheduledAt}. En producción debes esperar a que ocurra para cerrar la evaluación y guardar el resultado final.`;
+      } else {
+        interviewContext.textContent = `La entrevista está programada para ${scheduledAt}. Al guardar un resultado final también quedará marcada como completada.`;
+      }
+    } else if (evaluationInterviewStatus === 'completed') {
+      interviewContext.textContent = 'La entrevista ya está marcada como completada. Puedes guardar o modificar el resultado mientras no se haya comunicado.';
+    } else if (evaluationInterviewStatus === 'no_show' || evaluationInterviewStatus === 'cancelled') {
+      interviewContext.textContent = 'La entrevista no terminó normalmente. Si eliges Aceptar, el motivo de excepción es obligatorio.';
+    } else {
+      interviewContext.textContent = 'No hay una entrevista confirmada. Si eliges Aceptar, el motivo de excepción es obligatorio.';
+    }
+
     if (!iv) {
       document.getElementById('eval-banner-noiview')!.style.display = '';
     } else if (iv.status === 'cancelled' || iv.status === 'no_show') {
       document.getElementById('eval-banner-noshow')!.style.display = '';
     }
-
     // Lock si ya se envió el correo final
     const locked = !!solicitud.final_email_sent;
     if (locked) {
@@ -660,16 +780,50 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     });
   }
 
+  function formatInterviewDate(iso: string): string {
+    const date = new Date(iso);
+    if (!Number.isFinite(date.getTime())) return 'una fecha futura';
+    return new Intl.DateTimeFormat('es-MX', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Mexico_City',
+    }).format(date);
+  }
+
   async function saveEvaluation(e: Event) {
     e.preventDefault();
     if (!solicitud) return;
     const fb     = document.getElementById('eval-feedback') as HTMLElement;
     const saveBtn = document.getElementById('eval-save') as HTMLButtonElement;
 
-    const finalDecisionEl = document.querySelector<HTMLInputElement>('input[name="final_decision"]:checked');
-    const finalDecision = finalDecisionEl?.value as 'accepted' | 'rejected' | undefined;
-    if (!finalDecision) {
+    const finalDecision = document.querySelector<HTMLInputElement>('input[name="final_decision"]:checked')?.value as 'accepted' | 'rejected' | undefined;
+    if (!progressiveEnabled && !finalDecision) {
       showEvalFeedback(fb, 'Elige la decisión final (Aceptar o Rechazar).', 'error');
+      return;
+    }
+
+    const exceptionReason = progressiveEnabled
+      ? (document.getElementById('eval-exception-reason') as HTMLTextAreaElement).value.trim()
+      : '';
+    const needsInterviewException = progressiveEnabled && finalDecision === 'accepted' &&
+      evaluationInterviewStatus !== 'completed' && evaluationInterviewStatus !== 'confirmed';
+    if (needsInterviewException && !exceptionReason) {
+      showEvalFeedback(fb, 'Para admitir sin una entrevista completada debes indicar el motivo de excepción.', 'error');
+      (document.getElementById('eval-exception-reason') as HTMLTextAreaElement).focus();
+      return;
+    }
+    const shouldCompleteInterview = progressiveEnabled && !!finalDecision && evaluationInterviewStatus === 'confirmed';
+    const interviewIsFuture = !!evaluationInterviewSlot && new Date(evaluationInterviewSlot).getTime() > Date.now();
+    if (shouldCompleteInterview && interviewIsFuture && !isSelectionLab) {
+      showEvalFeedback(
+        fb,
+        `No se puede guardar el resultado final todavía: la entrevista está programada para ${formatInterviewDate(evaluationInterviewSlot!)}. En producción debes esperar a que ocurra; guardar avances sin decidir sí está permitido.`,
+        'error',
+      );
       return;
     }
 
@@ -677,17 +831,52 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     saveBtn.textContent = 'Guardando…';
     fb.style.display = 'none';
 
-    const update: Record<string, unknown> = {
+    const update: SolicitudUpdate = {
       eval_overall_notes: (document.getElementById('eval-overall') as HTMLTextAreaElement).value.trim() || null,
       evaluated_by: userEmail,
       evaluated_at: new Date().toISOString(),
-      final_decision: finalDecision,
     };
+    if (finalDecision) update.final_decision = finalDecision;
     EVAL_AREAS.forEach(area => {
       update[`eval_${area}_score`] = scores[area];
       const notesEl = document.querySelector<HTMLTextAreaElement>(`textarea[name="eval_${area}_notes"]`);
       update[`eval_${area}_notes`] = notesEl?.value.trim() || null;
     });
+
+    if (progressiveEnabled) {
+      const evaluation = Object.fromEntries(
+        Object.entries(update).filter(([key]) => key.startsWith('eval_')),
+      );
+      const evaluationPayload = {
+        id: solicitud.id,
+        revision: selectionRevision(solicitud as unknown as SelectionSolicitud),
+        evaluation,
+        ...(finalDecision ? {
+          final_decision: finalDecision,
+          exception_reason: exceptionReason,
+        } : {}),
+        ...(shouldCompleteInterview ? { complete_interview: true } : {}),
+      };
+      try {
+        if (isSelectionLab && shouldCompleteInterview) {
+          await selectionLabSaveEvaluation(evaluationPayload);
+        } else {
+          await selectionAdmin('save', evaluationPayload);
+        }
+        const message = finalDecision
+          ? shouldCompleteInterview
+            ? '✓ Evaluación guardada, entrevista completada y resultado final guardado. Todavía falta comunicarlo.'
+            : '✓ Evaluación y resultado final guardados. Puedes cambiarlo hasta comunicarlo.'
+          : '✓ Evaluación guardada. El resultado final sigue pendiente.';
+        showEvalFeedback(fb, message, 'success');
+        setTimeout(() => location.reload(), 650);
+      } catch (error) {
+        showEvalFeedback(fb, selectionErrorMessage(error), 'error');
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar evaluación';
+      }
+      return;
+    }
 
     const { error } = await supabase
       .from('solicitudes')
@@ -712,15 +901,80 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     saveBtn.textContent = 'Guardar evaluación';
   }
 
+  // Refleja state.messages: una etapa con comunicación en curso/fallida/incierta
+  // no ofrece "comunicar" normal (el backend la rechazaría); muestra el estado.
+  function paintCommsState(kind: 'initial' | 'final', button: HTMLButtonElement, noteId: string, ready: boolean) {
+    const note = document.getElementById(noteId)!;
+    note.style.display = 'none';
+    if (!ready) {
+      button.style.display = 'none';
+      return;
+    }
+    const occupancy = solicitud
+      ? stageCommsOccupancy(
+          solicitudMessages,
+          solicitud.id,
+          kind,
+          kind === 'initial' ? solicitud.email_notification_sent : solicitud.final_email_sent,
+        )
+      : 'free';
+    if (occupancy !== 'free') {
+      button.style.display = 'none';
+      note.style.display = 'block';
+      note.textContent = occupancy === 'sent'
+        ? `✓ ${commsOccupancyLabel(occupancy)}`
+        : `⏳ ${commsOccupancyLabel(occupancy)}`;
+      return;
+    }
+    button.style.display = 'inline-flex';
+  }
+
+  async function communicate(kind: 'initial' | 'final') {
+    if (!solicitud) return;
+    // Revalidar contra el estado fresco antes de previsualizar.
+    try {
+      const fresh = await getSelectionState(solicitud.season);
+      solicitudMessages = (fresh.messages ?? []).filter((message) => message.solicitud_id === solicitud!.id);
+    } catch { /* si falla, el preview del backend es la última palabra */ }
+    if (stageCommsOccupancy(solicitudMessages, solicitud.id, kind) !== 'free') {
+      alert('Ya hay una comunicación en curso para esta decisión. Actualizando la vista.');
+      location.reload();
+      return;
+    }
+    const button = document.getElementById(
+      kind === 'initial' ? 'btn-communicate-initial' : 'btn-communicate-final',
+    ) as HTMLButtonElement;
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Preparando…';
+
+    try {
+      const draft = await previewSelectionCommunication(
+        kind,
+        [solicitud as unknown as SelectionSolicitud],
+      );
+      const item = draft.preview.items[0];
+      const confirmed = confirm(
+        `PREVISUALIZACIÓN — ${item.nombre}\n\n` +
+        `Para: ${item.correo}\nAsunto: ${item.subject}\n\n${item.body}\n\n` +
+        'Confirmar pondrá este correo en la cola. Guardar una decisión por sí solo nunca envía nada.'
+      );
+      if (!confirmed) return;
+
+      const result = await confirmSelectionCommunication(draft);
+      alert(`Comunicación encolada (${result.queued}). El dispatcher la procesará por separado.`);
+      location.reload();
+    } catch (error) {
+      alert(selectionErrorMessage(error));
+    } finally {
+      button.disabled = false;
+      button.innerHTML = original;
+    }
+  }
+
   function showEvalFeedback(el: HTMLElement, msg: string, type: 'success' | 'error') {
     el.style.display = 'block';
     el.className = `admin-save-feedback admin-save-feedback-${type}`;
     el.textContent = msg;
   }
-</script>
-
-<script>
-  import { paintBackendStatus } from '@lib/backend-status';
-  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
-  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>

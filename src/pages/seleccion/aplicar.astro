@@ -348,8 +348,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   document.title = `Solicitud · Selección ${activeSeason} | Club Hello World`;
 
-  const form = document.getElementById('form-seleccion') as HTMLFormElement | null;
-  if (!form) return;
+  const formElement = document.getElementById('form-seleccion') as HTMLFormElement | null;
+  if (!formElement) return;
+  const form: HTMLFormElement = formElement;
   form.dataset.season = activeSeason;
 
   // ── State ──────────────────────────────────────────────────────────────────
@@ -369,7 +370,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const successScreen = document.getElementById('success-screen') as HTMLElement;
   const indicator    = document.getElementById('wizard-indicator') as HTMLElement;
   const tagsContainer = document.getElementById('tags-seleccion') as HTMLElement;
-  const hiddenIntereses = document.getElementById('intereses-hidden') as HTMLInputElement;
   const nivelGroup    = document.getElementById('nivel-group') as HTMLElement;
   const lenguajesGroup = document.querySelector<HTMLElement>('#step-2 .sel-check-group')!
   const wizardNav    = document.querySelector<HTMLElement>('.sel-wizard-nav');

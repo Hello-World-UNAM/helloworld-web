@@ -34,7 +34,7 @@ Aplicación full-stack construida con **Astro 5 (SSR)** sobre **Vercel** y **Sup
 
 | | |
 |---|---|
-| Framework | Astro 5.7 SSR + `@astrojs/vercel/serverless` |
+| Framework | Astro 5.7 SSR + `@astrojs/vercel` |
 | Backend | Supabase (Postgres, Auth, Storage, RLS) |
 | Emails | Resend |
 | Reportes | ExcelJS |
@@ -57,7 +57,7 @@ npm run dev             # http://localhost:4321
 | Variable | Uso |
 |---|---|
 | `PUBLIC_SUPABASE_URL` · `PUBLIC_SUPABASE_ANON_KEY` | Cliente Supabase (browser + server) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Cron. Bypasa RLS. Nunca al cliente. |
+| `SUPABASE_SECRET_KEY` | Cron. Bypasa RLS. Nunca al cliente. |
 | `RESEND_API_KEY` | Correos transaccionales |
 | `CRON_SECRET` | Autoriza `/api/cron/*` |
 

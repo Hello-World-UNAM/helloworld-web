@@ -63,11 +63,68 @@ import Layout from '@layouts/Layout.astro';
           <button type="button" id="btn-reschedule" class="hw-btn hw-btn-secondary">
             Reagendar →
           </button>
-          <button type="button" id="btn-cancel" class="admin-action-btn admin-action-btn-danger">
-            <i class="bi bi-x-circle"></i> Cancelar entrevista
-          </button>
         </div>
+        <a class="agendar-withdraw-link" href="mailto:contacto@helloworld-unam.tech?subject=Proceso%20de%20selecci%C3%B3n">
+          ¿Tuviste algún problema? Escríbenos
+        </a>
       </div>
+
+      <!-- Confirmación cuidada antes de liberar una reserva existente -->
+      <dialog
+        id="reschedule-dialog"
+        class="agendar-reschedule-dialog"
+        aria-labelledby="reschedule-dialog-title"
+        aria-describedby="reschedule-dialog-description"
+      >
+        <div class="agendar-reschedule-dialog-inner">
+          <div class="agendar-reschedule-dialog-heading">
+            <span class="agendar-reschedule-dialog-icon" aria-hidden="true">
+              <i class="bi bi-calendar2-plus"></i>
+            </span>
+            <div>
+              <span class="agendar-reschedule-dialog-eyebrow">Cambio de horario</span>
+              <h2 id="reschedule-dialog-title">¿Buscamos otro momento?</h2>
+            </div>
+          </div>
+
+          <p id="reschedule-dialog-description" class="agendar-reschedule-dialog-lead">
+            Tu entrevista está apartada. Si quieres revisar otras opciones, primero tendremos que liberar tu lugar actual.
+          </p>
+          <p id="reschedule-dialog-current" class="agendar-reschedule-dialog-current">Tu cita actual: —</p>
+
+          <div class="agendar-reschedule-dialog-points">
+            <div class="agendar-reschedule-dialog-point">
+              <i class="bi bi-unlock-fill" aria-hidden="true"></i>
+              <div>
+                <strong>Tu horario actual se libera</strong>
+                <span>Dejará de estar reservado en cuanto continúes.</span>
+              </div>
+            </div>
+            <div class="agendar-reschedule-dialog-point">
+              <i class="bi bi-arrow-repeat" aria-hidden="true"></i>
+              <div>
+                <strong>Podrás elegir de nuevo</strong>
+                <span>Incluso podrás tomar el horario anterior si sigue disponible.</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="agendar-reschedule-dialog-warning">
+            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+            <span>Este cambio cuenta como uno de tus reagendamientos. Si continúas y después cierras la página sin elegir otra hora, tu cita actual ya no quedará apartada.</span>
+          </p>
+          <p id="reschedule-dialog-feedback" class="agendar-reschedule-dialog-feedback" role="alert" style="display:none;"></p>
+
+          <div class="agendar-reschedule-dialog-actions">
+            <button type="button" id="btn-reschedule-back" class="hw-btn hw-btn-secondary">
+              Conservar mi horario
+            </button>
+            <button type="button" id="btn-reschedule-confirm" class="hw-btn hw-btn-primary">
+              <i class="bi bi-calendar2-plus"></i> Liberar y reagendar
+            </button>
+          </div>
+        </div>
+      </dialog>
 
       <!-- Estado: sin slots disponibles -->
       <div id="state-no-slots" class="agendar-state-card" style="display:none;">
@@ -165,7 +222,7 @@ import Layout from '@layouts/Layout.astro';
 <script>
   import { supabase } from '@lib/supabase';
   import {
-    generateSlots, formatSlotTime, formatDayShort, formatDayLong, sameDay,
+    generateSlots, formatSlotTime, formatDayShort, formatDayLong,
     type InterviewDay,
   } from '@lib/interview-slots';
 
@@ -174,10 +231,14 @@ import Layout from '@layouts/Layout.astro';
     current_interview: { id: string; slot_datetime: string; duration_minutes: number; meet_url: string | null } | null;
     days: InterviewDay[];
     taken_slots: string[];
+    slots?: Array<{ slot_datetime: string; duration_minutes: number; meet_url: string | null }>;
+    progressive?: boolean;
     reschedule_count: number;
     max_reschedules: number;
     can_reschedule: boolean;
   };
+
+  type BookingMutationResult = { ok?: boolean; error?: string };
 
   let token = '';
   let state: State | null = null;
@@ -212,7 +273,7 @@ import Layout from '@layouts/Layout.astro';
       return;
     }
 
-    state = data as State;
+    state = normalizeBookingState(data as State);
     document.getElementById('welcome-name')!.textContent = `Hola, ${state.solicitud.nombre.split(' ')[0]}.`;
 
     if (state.current_interview && !rescheduling) {
@@ -234,6 +295,7 @@ import Layout from '@layouts/Layout.astro';
 
   function allDaysFull(): boolean {
     if (!state) return true;
+    if (state.progressive) return (state.slots?.length ?? 0) === 0;
     const takenSet = new Set(state.taken_slots);
     for (const d of state.days) {
       const slots = generateSlots(d);
@@ -242,6 +304,40 @@ import Layout from '@layouts/Layout.astro';
       }
     }
     return true;
+  }
+
+  function normalizeBookingState(raw: State): State {
+    if (!raw.progressive) return raw;
+
+    const slots = Array.isArray(raw.slots) ? raw.slots : [];
+    const grouped = new Map<string, typeof slots>();
+    for (const slot of slots) {
+      const date = mexicoDateKey(slot.slot_datetime);
+      const group = grouped.get(date) || [];
+      group.push(slot);
+      grouped.set(date, group);
+    }
+
+    const days = [...grouped.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([date, daySlots]) => ({
+        id: `progressive-${date}`,
+        date,
+        start_time: '00:00:00',
+        end_time: '23:59:59',
+        duration_minutes: daySlots[0]?.duration_minutes ?? 30,
+      }));
+
+    return { ...raw, slots, days, taken_slots: [] };
+  }
+
+  function mexicoDateKey(value: string | Date): string {
+    const date = value instanceof Date ? value : new Date(value);
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Mexico_City', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(item => item.type === type)?.value || '';
+    return `${part('year')}-${part('month')}-${part('day')}`;
   }
 
   function renderBookedState() {
@@ -265,30 +361,70 @@ import Layout from '@layouts/Layout.astro';
       rescheduleNote.textContent = `Si necesitas cambiar de horario, puedes hacerlo abajo (te quedan ${left} cambios).`;
     }
 
-    rescheduleBtn.onclick = () => {
-      rescheduling = true;
-      document.getElementById('state-booked')!.style.display = 'none';
-      document.getElementById('state-picker')!.style.display = 'block';
-      renderDayCards();
-    };
-
-    (document.getElementById('btn-cancel') as HTMLButtonElement).onclick = cancelInterview;
+    rescheduleBtn.onclick = openRescheduleDialog;
   }
 
-  async function cancelInterview() {
-    const ok = confirm('¿Cancelar tu entrevista?\n\nQuedará liberado tu horario y necesitarás reagendar.');
-    if (!ok) return;
-    const btn = document.getElementById('btn-cancel') as HTMLButtonElement;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Cancelando…';
+  function openRescheduleDialog() {
+    if (!state?.current_interview || !state.can_reschedule) return;
+    const dialog = document.getElementById('reschedule-dialog') as HTMLDialogElement;
+    const current = document.getElementById('reschedule-dialog-current')!;
+    const feedback = document.getElementById('reschedule-dialog-feedback')!;
+    const confirmBtn = document.getElementById('btn-reschedule-confirm') as HTMLButtonElement;
+    const backBtn = document.getElementById('btn-reschedule-back') as HTMLButtonElement;
+    const left = state.max_reschedules - state.reschedule_count;
+
+    current.textContent = `Tu cita actual: ${formatDayLong(new Date(state.current_interview.slot_datetime))} a las ${formatSlotTime(new Date(state.current_interview.slot_datetime))} hrs.`;
+    feedback.style.display = 'none';
+    feedback.textContent = '';
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = `<i class="bi bi-calendar2-plus"></i> Liberar y reagendar`;
+    backBtn.disabled = false;
+    confirmBtn.title = `Te queda${left === 1 ? '' : 'n'} ${left} reagendamiento${left === 1 ? '' : 's'}.`;
+    backBtn.onclick = () => dialog.close();
+    confirmBtn.onclick = releaseAndStartReschedule;
+
+    if (!dialog.open) {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+    }
+  }
+
+  async function releaseAndStartReschedule() {
+    if (!state?.current_interview) return;
+    const dialog = document.getElementById('reschedule-dialog') as HTMLDialogElement;
+    const feedback = document.getElementById('reschedule-dialog-feedback')!;
+    const confirmBtn = document.getElementById('btn-reschedule-confirm') as HTMLButtonElement;
+    const backBtn = document.getElementById('btn-reschedule-back') as HTMLButtonElement;
+
+    confirmBtn.disabled = true;
+    backBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Liberando tu horario…';
+    feedback.style.display = 'none';
+
     const { data, error } = await supabase.rpc('cancel_interview', { p_token: token });
-    if (error || !data?.ok) {
-      alert(`Error: ${data?.error || error?.message || 'Desconocido'}`);
-      btn.disabled = false;
-      btn.innerHTML = '<i class="bi bi-x-circle"></i> Cancelar entrevista';
+    const result = data as BookingMutationResult | null;
+    if (error || !result?.ok) {
+      const code = result?.error || error?.message || 'UNKNOWN';
+      const messages: Record<string, string> = {
+        INVITATION_REVOKED: 'Esta invitación ya no permite cambios. Actualiza la página o contacta al equipo.',
+        NO_ACTIVE_INTERVIEW: 'La reserva cambió antes de confirmar. Actualiza la página para consultar el estado real.',
+        MAX_RESCHEDULES: 'Ya utilizaste tus reagendamientos disponibles. Contacta al equipo si necesitas ayuda.',
+        INTERVIEW_IN_PAST: 'La entrevista ya comenzó y ya no se puede reagendar desde este enlace.',
+      };
+      feedback.textContent = messages[code] || 'No pudimos liberar tu horario. Tu cita actual se conserva; actualiza la página e inténtalo de nuevo.';
+      feedback.style.display = 'block';
+      confirmBtn.disabled = false;
+      backBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="bi bi-calendar2-plus"></i> Liberar y reagendar';
       return;
     }
+
+    dialog.close();
     rescheduling = true;
+    chosenSlot = null;
+    chosenDay = null;
+    document.getElementById('state-booked')!.style.display = 'none';
+    document.getElementById('state-picker')!.style.display = 'block';
     await loadState();
   }
 
@@ -298,9 +434,10 @@ import Layout from '@layouts/Layout.astro';
     const takenSet = new Set(state.taken_slots);
 
     const cards = state.days.map(d => {
-      const slots = generateSlots(d);
+      const slots = state!.progressive
+        ? (state!.slots || []).filter(slot => mexicoDateKey(slot.slot_datetime) === d.date).map(slot => new Date(slot.slot_datetime))
+        : generateSlots(d);
       const free = slots.filter(s => !takenSet.has(s.toISOString())).length;
-      const total = slots.length;
       const isFull = free === 0;
 
       // Si estás reagendando, tu propio slot actual cuenta como ocupado, pero
@@ -337,7 +474,11 @@ import Layout from '@layouts/Layout.astro';
     document.getElementById('hour-section-sub')!.textContent = formatDayLong(chosenDay.date);
     const grid = document.getElementById('hour-grid')!;
     const takenSet = new Set(state.taken_slots);
-    const slots = generateSlots(chosenDay);
+    const slots = state.progressive
+      ? (state.slots || [])
+          .filter(slot => mexicoDateKey(slot.slot_datetime) === chosenDay!.date)
+          .map(slot => new Date(slot.slot_datetime))
+      : generateSlots(chosenDay);
 
     grid.innerHTML = slots.map(s => {
       const taken = takenSet.has(s.toISOString());
@@ -396,8 +537,9 @@ import Layout from '@layouts/Layout.astro';
       p_slot:  chosenSlot.toISOString(),
     });
 
-    if (error || !data?.ok) {
-      const code = data?.error || error?.message || 'UNKNOWN';
+    const result = data as BookingMutationResult | null;
+    if (error || !result?.ok) {
+      const code = result?.error || error?.message || 'UNKNOWN';
       const msgs: Record<string, string> = {
         TOKEN_INVALID: 'Tu invitación ya no es válida.',
         NOT_ACCEPTED: 'Esta invitación ya no está activa.',

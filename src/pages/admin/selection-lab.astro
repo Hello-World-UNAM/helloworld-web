@@ -1,0 +1,205 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+import { isSelectionLab } from '@lib/selection-lab';
+
+if (!isSelectionLab) {
+  return Astro.redirect('/admin', 302);
+}
+---
+
+<AdminLayout title="Buzón de pruebas · Panel Hello World" activeNav="lab-inbox">
+  <section class="lab-inbox-page">
+    <header class="lab-inbox-header">
+      <div>
+        <span class="lab-eyebrow">Sólo localhost</span>
+        <h1>Buzón de pruebas</h1>
+        <p>Los mensajes quedan aquí. Ningún correo sale a internet.</p>
+      </div>
+      <div class="lab-actions">
+        <button id="lab-dispatch" type="button" class="admin-action-btn admin-action-btn-primary">
+          <i class="bi bi-send-check-fill"></i> Procesar cola local
+        </button>
+        <button id="lab-refresh" type="button" class="admin-action-btn">
+          <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+        <button id="lab-advance" type="button" class="admin-action-btn" title="Opcional: mueve las entrevistas confirmadas al pasado para probar el botón explícito de completarlas.">
+          <i class="bi bi-clock-history"></i> Adelantar hora (opcional)
+        </button>
+      </div>
+    </header>
+
+    <div class="lab-explainer">
+      <strong>Cómo usarlo:</strong>
+      después de comunicar una decisión desde Solicitudes, procesa la cola. La invitación aparecerá abajo y podrás abrir su enlace personal para probar la agenda. Para no esperar a la hora elegida, guarda Aceptar o Rechazar desde la evaluación: el laboratorio local ignora la fecha futura y completa la entrevista. El botón de adelantar hora queda disponible, pero es opcional.
+    </div>
+
+    <div id="lab-feedback" class="admin-save-feedback" style="display:none;"></div>
+    <div id="lab-loading" class="admin-redirect"><p>Cargando buzón sintético…</p></div>
+    <div id="lab-empty" class="lab-empty" style="display:none;">
+      <i class="bi bi-inbox"></i>
+      <h2>El buzón está vacío</h2>
+      <p>Primero guarda y comunica una decisión desde Solicitudes.</p>
+    </div>
+    <div id="lab-messages" class="lab-message-list"></div>
+  </section>
+</AdminLayout>
+
+<script>
+  import { supabase } from '@lib/supabase';
+
+  type LabMessage = {
+    provider_id: string;
+    recipients: string[];
+    subject: string;
+    text_body: string;
+    html_body: string;
+    simulated_delivery_status: string;
+    webhook_http_status: number | null;
+    created_at: string;
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('lab-refresh')!.addEventListener('click', loadInbox);
+    document.getElementById('lab-dispatch')!.addEventListener('click', processQueue);
+    document.getElementById('lab-advance')!.addEventListener('click', advanceInterviews);
+    void loadInbox();
+  });
+
+  async function loadInbox() {
+    const loading = document.getElementById('lab-loading')!;
+    const empty = document.getElementById('lab-empty')!;
+    const list = document.getElementById('lab-messages')!;
+    loading.style.display = 'grid';
+    empty.style.display = 'none';
+    list.innerHTML = '';
+
+    const { data, error } = await (supabase.rpc as any)('selection_lab_inbox');
+    loading.style.display = 'none';
+    if (error) {
+      showFeedback(`No se pudo leer el buzón: ${error.message}`, 'error');
+      return;
+    }
+
+    const messages = (data || []) as LabMessage[];
+    if (messages.length === 0) {
+      empty.style.display = 'grid';
+      return;
+    }
+    list.innerHTML = messages.map(renderMessage).join('');
+  }
+
+  function renderMessage(message: LabMessage): string {
+    const bookingUrl = findLocalBookingUrl(message.html_body) || findLocalBookingUrl(message.text_body);
+    const delivered = message.simulated_delivery_status === 'delivered' && message.webhook_http_status === 200;
+    return `
+      <article class="lab-message">
+        <div class="lab-message-meta">
+          <span class="lab-delivery ${delivered ? 'lab-delivery-ok' : ''}">${delivered ? 'ENTREGADO (SIMULADO)' : 'REVISAR ENTREGA'}</span>
+          <time>${escapeHtml(new Date(message.created_at).toLocaleString('es-MX'))}</time>
+        </div>
+        <h2>${escapeHtml(message.subject)}</h2>
+        <p class="lab-recipient"><strong>Para:</strong> ${escapeHtml(message.recipients.join(', '))}</p>
+        <pre>${escapeHtml(message.text_body)}</pre>
+        <div class="lab-message-actions">
+          ${bookingUrl ? `<a class="admin-action-btn admin-action-btn-primary" href="${escapeAttr(bookingUrl)}" target="_blank" rel="noopener noreferrer">Abrir enlace de agenda <i class="bi bi-box-arrow-up-right"></i></a>` : ''}
+          <span>ID ficticio: ${escapeHtml(message.provider_id)}</span>
+        </div>
+      </article>`;
+  }
+
+  function findLocalBookingUrl(body: string): string | null {
+    const matches = body.match(/https?:\/\/[^\s<>"']+/g) || [];
+    for (const raw of matches) {
+      const candidate = raw.replace(/[).,;]+$/, '').replace(/&amp;/g, '&');
+      try {
+        const url = new URL(candidate);
+        if ((url.hostname === '127.0.0.1' || url.hostname === 'localhost') && url.pathname === '/seleccion/agendar' && url.searchParams.has('t')) {
+          return url.toString();
+        }
+      } catch {
+        // Ignora texto que no sea una URL válida.
+      }
+    }
+    return null;
+  }
+
+  async function processQueue() {
+    const button = document.getElementById('lab-dispatch') as HTMLButtonElement;
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Procesando…';
+    try {
+      const response = await fetch('/api/selection-lab/dispatch', { method: 'POST' });
+      const text = await response.text();
+      if (!response.ok) throw new Error(text || `HTTP ${response.status}`);
+      showFeedback('Cola local procesada. El buzón se actualizó.', 'success');
+      await loadInbox();
+    } catch (error) {
+      showFeedback(`No se pudo procesar la cola: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    } finally {
+      button.disabled = false;
+      button.innerHTML = original;
+    }
+  }
+
+  async function advanceInterviews() {
+    const button = document.getElementById('lab-advance') as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      const { data, error } = await (supabase.rpc as any)('selection_lab_advance_interviews');
+      if (error) throw error;
+      const affected = Number(data || 0);
+      showFeedback(
+        affected > 0
+          ? `Se adelantaron ${affected} entrevista(s). Ahora puedes probar el botón explícito “Marcar completada” en Entrevistas (paso opcional).`
+          : 'No hay entrevistas confirmadas por adelantar.',
+        'success',
+      );
+    } catch (error) {
+      showFeedback(`No se pudo simular el horario: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function showFeedback(message: string, type: 'success' | 'error') {
+    const feedback = document.getElementById('lab-feedback')!;
+    feedback.style.display = 'block';
+    feedback.className = `admin-save-feedback admin-save-feedback-${type}`;
+    feedback.textContent = message;
+  }
+
+  function escapeHtml(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  function escapeAttr(value: string): string {
+    return escapeHtml(value);
+  }
+</script>
+
+<style>
+  .lab-inbox-page { max-width: 1100px; margin: 0 auto; }
+  .lab-inbox-header { display: flex; align-items: end; justify-content: space-between; gap: 1.5rem; margin-bottom: 1rem; }
+  .lab-inbox-header h1 { margin: .15rem 0; font-size: clamp(2rem, 4vw, 3.25rem); text-transform: uppercase; }
+  .lab-inbox-header p { margin: 0; color: #5d5d5d; }
+  .lab-eyebrow { color: #6225e6; font-size: .74rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+  .lab-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+  .lab-explainer { margin-bottom: 1.25rem; padding: 1rem 1.1rem; border: 2px solid #111; background: #fff3b8; box-shadow: 4px 4px 0 #111; }
+  .lab-message-list { display: grid; gap: 1rem; }
+  .lab-message { padding: 1.25rem; border: 2px solid #111; background: #fff; box-shadow: 5px 5px 0 #111; }
+  .lab-message h2 { margin: .8rem 0 .35rem; font-size: 1.2rem; }
+  .lab-message-meta, .lab-message-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .lab-message-meta time, .lab-message-actions span { color: #777; font-size: .75rem; }
+  .lab-delivery { padding: .25rem .45rem; border: 1.5px solid #111; background: #ffd3d3; font-size: .68rem; font-weight: 900; letter-spacing: .06em; }
+  .lab-delivery-ok { background: #c9f6df; }
+  .lab-recipient { margin: 0 0 1rem; }
+  .lab-message pre { overflow: auto; margin: 0 0 1rem; padding: 1rem; border: 1.5px solid #aaa; background: #f8f6fc; white-space: pre-wrap; font: inherit; font-size: .88rem; line-height: 1.55; }
+  .lab-empty { place-items: center; min-height: 280px; border: 2px dashed #8d8d8d; text-align: center; }
+  .lab-empty i { font-size: 2.4rem; color: #6225e6; }
+  .lab-empty h2, .lab-empty p { margin: .2rem; }
+  @media (max-width: 760px) {
+    .lab-inbox-header, .lab-message-meta, .lab-message-actions { align-items: stretch; flex-direction: column; }
+  }
+</style>

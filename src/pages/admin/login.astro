@@ -1,5 +1,6 @@
 ---
 import AdminLayout from '@layouts/AdminLayout.astro';
+const selectionLab = import.meta.env.PUBLIC_SELECTION_LAB === 'true';
 ---
 
 <AdminLayout title="Acceso · Panel Hello World" showHeader={false}>
@@ -15,9 +16,25 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
       <div id="admin-login-feedback" class="admin-login-feedback" style="display:none;"></div>
 
-      <button id="google-login-btn" class="admin-google-btn">
+      <button id="google-login-btn" class="admin-google-btn" style={selectionLab ? 'display:none' : undefined}>
         <i class="bi bi-google"></i> Continuar con Google
       </button>
+
+      {selectionLab && (
+        <form id="selection-lab-login" class="selection-lab-login">
+          <label>
+            Correo local
+            <input id="selection-lab-email" type="email" value="admin@selection.local" autocomplete="username" required />
+          </label>
+          <label>
+            Contraseña local
+            <input id="selection-lab-password" type="password" value="SelectionLab!2026" autocomplete="current-password" required />
+          </label>
+          <button id="selection-lab-login-btn" type="submit" class="admin-google-btn">
+            <i class="bi bi-box-arrow-in-right"></i> Entrar al laboratorio
+          </button>
+        </form>
+      )}
 
       <p class="admin-login-tip" style="margin-top: 1.5rem;">
         <i class="bi bi-info-circle"></i>
@@ -29,10 +46,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
 <script>
   import { supabase } from '@lib/supabase';
+  import { isSelectionLab } from '@lib/selection-lab';
 
   document.addEventListener('DOMContentLoaded', () => {
 
-    const btn = document.getElementById('google-login-btn') as HTMLButtonElement;
+    const btn = document.getElementById('google-login-btn') as HTMLButtonElement | null;
     const feedback = document.getElementById('admin-login-feedback') as HTMLElement;
 
     // Check for error URL parameter (e.g., if AdminLayout rejected them)
@@ -43,7 +61,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       feedback.innerHTML = 'Acceso denegado: Tu correo no pertenece a la mesa directiva.';
     }
 
-    btn.addEventListener('click', async () => {
+    btn?.addEventListener('click', async () => {
       btn.disabled = true;
       btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Conectando...';
       feedback.style.display = 'none';
@@ -64,5 +82,70 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         btn.innerHTML = '<i class="bi bi-google"></i> Continuar con Google';
       }
     });
+
+    if (isSelectionLab) {
+      const form = document.getElementById('selection-lab-login') as HTMLFormElement | null;
+      const labButton = document.getElementById('selection-lab-login-btn') as HTMLButtonElement | null;
+      form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!labButton) return;
+        labButton.disabled = true;
+        labButton.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Entrando…';
+        feedback.style.display = 'none';
+
+        const email = (document.getElementById('selection-lab-email') as HTMLInputElement).value;
+        const password = (document.getElementById('selection-lab-password') as HTMLInputElement).value;
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (!error) {
+          window.location.assign('/admin/solicitudes?view=1');
+          return;
+        }
+
+        feedback.style.display = 'block';
+        feedback.className = 'admin-login-feedback admin-login-feedback-error';
+        feedback.textContent = `No se pudo entrar al laboratorio: ${error.message}`;
+        labButton.disabled = false;
+        labButton.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Entrar al laboratorio';
+      });
+    }
   });
 </script>
+
+<style>
+  .selection-lab-login {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1.25rem;
+    padding: 1.1rem;
+    border: 2px solid #111;
+    background: #fff9cc;
+    box-shadow: 5px 5px 0 #111;
+  }
+
+  .selection-lab-login label {
+    display: grid;
+    gap: .4rem;
+    color: #111;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .selection-lab-login input {
+    width: 100%;
+    padding: .75rem .8rem;
+    border: 2px solid #111;
+    border-radius: 0;
+    background: #fff;
+    color: #111;
+    font: 500 .95rem 'DM Sans', sans-serif;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .selection-lab-login input:focus-visible {
+    outline: 3px solid #6225e6;
+    outline-offset: 2px;
+  }
+</style>

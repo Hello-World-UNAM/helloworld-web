@@ -5,8 +5,12 @@
 Cada push a `main` genera un preview y promueve a producción si viene de la rama por default.
 
 - Framework preset: **Astro**.
-- Node runtime: **Node 22** (versión soportada por el adaptador Astro actual; Vercel corre 22 aunque el default de la plataforma sea 24).
-- Adaptador: `@astrojs/vercel/serverless` (SSR).
+- Node runtime: el repositorio se valida con **Node 22** (`engines`); el
+  proyecto Vercel auditado está configurado actualmente en **Node 24.x**. Antes
+  de promover cambios, alinea Vercel a Node 22 o ejecuta la batería completa
+  también con Node 24 y actualiza el pin; no des por probada una versión que no
+  se haya validado.
+- Adaptador: `@astrojs/vercel` (SSR).
 - Variables de entorno declaradas en **Vercel → Settings → Environment Variables**.
 
 ## Comandos locales
@@ -36,6 +40,26 @@ Alternativamente, se puede declarar el cron en `vercel.json` con:
   ]
 }
 ```
+
+## Variables de entorno
+
+- `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY` — cliente público; en
+  producción usa la clave moderna `sb_publishable_…`.
+- `SUPABASE_SECRET_KEY` — clave moderna `sb_secret_…`, sólo para servidor y
+  tareas Vercel que necesitan privilegios elevados.
+- `RESEND_API_KEY` y `CRON_SECRET` — correo y autorización del cron de Vercel.
+- `SELECTION_DB_SECRET_KEY` — clave sólo para las Edge Functions progresivas;
+  nunca se expone al navegador.
+- `SELECTION_WORKER_SECRET`, `RESEND_WEBHOOK_SECRET` y `SELECTION_MAIL_FROM` —
+  configuración de las Edge Functions progresivas. Se cargan en Supabase
+  Edge Functions, no en Vercel ni en variables `PUBLIC_*`.
+
+No se debe volver a configurar la antigua `service_role` en triggers SQL ni
+publicarla en el repositorio, logs o variables `PUBLIC_*`.
+
+El detalle de configuración de Vault, Resend, el cron de Supabase y el doble
+respaldo de CVs está en
+[`supabase/operations/production-secrets.md`](../supabase/operations/production-secrets.md).
 
 ## CSP y nuevos orígenes
 

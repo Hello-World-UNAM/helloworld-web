@@ -15,7 +15,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       <div class="admin-list-header">
         <div>
           <h1>Entrevistas</h1>
-          <p class="admin-list-subtitle">Temporada <strong id="active-season">—</strong><span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span></p>
+          <p class="admin-list-subtitle">Temporada <strong id="active-season">—</strong></p>
         </div>
         <div class="admin-list-header-actions">
           <a href="/admin/solicitudes?view=1" class="admin-action-btn">
@@ -24,8 +24,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <a href="/admin/seleccion-config" class="admin-action-btn">
             <i class="bi bi-gear-fill"></i> Configurar
           </a>
+          <button id="final-select-all" type="button" class="admin-action-btn admin-select-all-btn" style="display:none;" aria-pressed="false" disabled>
+            <i class="bi bi-check2-square"></i> Seleccionar todos
+          </button>
           <button id="btn-bulk-final" type="button" class="admin-action-btn admin-action-btn-primary" disabled>
-            <i class="bi bi-send-fill"></i> Enviar resultados finales
+            <i class="bi bi-send-fill"></i> Comunicar listos
           </button>
         </div>
       </div>
@@ -54,6 +57,12 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </div>
       </div>
 
+      <div id="final-selection-guide" class="admin-final-selection-guide" style="display:none;" aria-live="polite">
+        <i class="bi bi-check2-square"></i>
+        <span id="final-selection-guide-text"></span>
+        <strong id="final-selection-count">0 seleccionados</strong>
+      </div>
+
       <!-- Periodo de agendado (antes del deadline) -->
       <div id="booking-phase-section" style="display:none;">
         <div id="booking-phase-banner"></div>
@@ -71,7 +80,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <span class="admin-agenda-day-count" id="no-interview-count">0</span>
         </h2>
         <p class="admin-no-interview-hint">
-          Estos candidatos pasaron el formulario pero nunca agendaron entrevista. Requieren decisión manual.
+          Estos candidatos ya fueron invitados pero no han agendado entrevista. Requieren decisión manual.
         </p>
         <div class="admin-agenda-list" id="no-interview-list"></div>
       </section>
@@ -84,16 +93,33 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 <script>
   import { supabase } from '@lib/supabase';
   import { formatDayLong } from '@lib/interview-slots';
+  import { isSelectionLab } from '@lib/selection-lab';
+  import {
+    commsOccupancyLabel,
+    confirmSelectionCommunication,
+    getSelectionFeatureMode,
+    getSelectionState,
+    previewSelectionCommunication,
+    selectionAdmin,
+    selectionErrorMessage,
+    selectionLabCompleteInterview,
+    stageCommsOccupancy,
+    type SelectionMessage,
+    type SelectionSolicitud,
+  } from '@lib/selection-client';
 
   type SolicitudWithEval = {
     id: string;
     nombre: string;
     correo: string;
+    email_notification_sent: boolean;
     carrera: string;
     semestre: number;
     final_decision: 'accepted' | 'rejected' | null;
     final_email_sent: boolean;
     evaluated_at: string | null;
+    selection_revision: number;
+    decision_exception_reason: string | null;
   };
 
   type InterviewRow = {
@@ -115,6 +141,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   };
 
   let activeSeason = '';
+  let progressiveEnabled = false;
+  let stateMessages: SelectionMessage[] = [];
+  let visibleSolicitudes: SolicitudWithEval[] = [];
+  let finalInterviewStatuses = new Map<string, InterviewRow['status']>();
+  const selectedFinalIds = new Set<string>();
 
   document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -124,6 +155,46 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (!directiva) {
       await supabase.auth.signOut();
       window.location.replace('/admin/login');
+      return;
+    }
+
+    const feature = await getSelectionFeatureMode();
+    if (feature.mode === 'unavailable') {
+      document.getElementById('entrevistas-loading')!.innerHTML =
+        '<p class="admin-empty admin-empty-error">No se pudo verificar el backend de selecciones.</p>';
+      return;
+    }
+    progressiveEnabled = feature.mode === 'progressive';
+    if (progressiveEnabled && feature.state) {
+      stateMessages = feature.state.messages ?? [];
+      activeSeason = String(feature.state.config.active_season ?? '');
+      document.getElementById('active-season')!.textContent = activeSeason || '—';
+      document.getElementById('entrevistas-loading')!.style.display = 'none';
+      document.getElementById('entrevistas-content')!.style.display = 'block';
+      const accepted = feature.state.solicitudes
+        .filter((row) => row.status === 'accepted') as unknown as SolicitudWithEval[];
+      const interviewIds = new Set(feature.state.interviews.map((interview) => interview.solicitud_id));
+      // Un token se crea al confirmar el lote, pero sólo representa una
+      // invitación utilizable después de que el worker lo haya enviado y
+      // asentado (`invited_at`). Un aceptado aún no notificado permanece en
+      // Solicitudes; una entrevista existente siempre conserva visibilidad.
+      const invitedIds = new Set(
+        (feature.state.invitations ?? [])
+          .filter((invitation) => invitation.revoked_at == null && invitation.invited_at != null)
+          .map((invitation) => invitation.solicitud_id),
+      );
+      const visibleIds = new Set([...invitedIds, ...interviewIds]);
+      const sols = accepted.filter((row) => visibleIds.has(row.id));
+      visibleSolicitudes = sols;
+      const byId = new Map(sols.map((row) => [row.id, row]));
+      const ivs = feature.state.interviews.map((interview) => ({
+        ...interview,
+        solicitudes: byId.get(interview.solicitud_id) ?? null,
+      })).filter((interview) => interview.solicitudes) as unknown as InterviewRow[];
+      renderStats(sols);
+      renderAgenda(ivs);
+      renderNoInterview(sols, ivs, invitedIds);
+      setupBulkBtn(sols);
       return;
     }
 
@@ -142,7 +213,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     // Todas las solicitudes que pasaron forms en esta temporada
     const { data: solicitudes, error: solErr } = await supabase
       .from('solicitudes')
-      .select('id, nombre, correo, carrera, semestre, final_decision, final_email_sent, evaluated_at')
+      .select('id, nombre, correo, carrera, semestre, email_notification_sent, final_decision, final_email_sent, evaluated_at')
       .eq('season', activeSeason)
       .eq('status', 'accepted');
 
@@ -167,13 +238,15 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     const sols = (solicitudes || []) as SolicitudWithEval[];
     const ivs = (interviews || []) as unknown as InterviewRow[];
+    visibleSolicitudes = sols;
 
     const deadlinePassed = !interviewDeadline || Date.now() >= interviewDeadline.getTime();
 
     if (deadlinePassed) {
       renderStats(sols);
       renderAgenda(ivs);
-      renderNoInterview(sols, ivs);
+      // En legacy, "invitado" = el bulk ya le envió la decisión inicial.
+      renderNoInterview(sols, ivs, new Set(sols.filter((s) => s.email_notification_sent).map((s) => s.id)));
       setupBulkBtn(sols);
     } else {
       renderBookingPhase(sols, ivs, interviewDeadline!);
@@ -193,7 +266,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     const scheduledIds = new Set(ivs.filter(i => i.status !== 'cancelled').map(i => i.solicitud_id));
     const withList  = sols.filter(s => scheduledIds.has(s.id));
-    const noList    = sols.filter(s => !scheduledIds.has(s.id));
+    // Pendiente = invitado (bulk enviado) pero sin entrevista vigente.
+    // Un aceptado aún no notificado no aparece aquí: sigue en Solicitudes.
+    const noList    = sols.filter(s => s.email_notification_sent && !scheduledIds.has(s.id));
 
     const deadlineFormatted = deadline.toLocaleDateString('es-MX', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -275,6 +350,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   }
 
   function renderAgenda(rows: InterviewRow[]) {
+    selectedFinalIds.clear();
+    finalInterviewStatuses = new Map(rows.map((row) => [row.solicitud_id, row.status]));
     const container = document.getElementById('agenda-by-day')!;
     if (rows.length === 0) {
       container.innerHTML = '<div class="admin-empty">Sin entrevistas agendadas todavía.</div>';
@@ -301,9 +378,12 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     container.innerHTML = html;
 
-    container.querySelectorAll<HTMLButtonElement>('.admin-mini-btn').forEach(btn => {
+    // Sólo estos dos botones cambian el estado de una entrevista. Los
+    // controles de selección final viven en otra interacción independiente.
+    container.querySelectorAll<HTMLButtonElement>('.admin-agenda-row-actions .admin-mini-btn[data-action]').forEach(btn => {
       btn.addEventListener('click', () => updateStatus(btn.dataset.id!, btn.dataset.action as 'completed' | 'no_show'));
     });
+    bindFinalSelectionCheckboxes(container);
   }
 
   function renderInterviewItem(r: InterviewRow): string {
@@ -311,7 +391,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const sol = r.solicitudes;
     const evalBadge = renderEvalBadge(sol);
     return `
-      <article class="admin-agenda-item admin-agenda-status-${r.status}">
+      <article class="admin-agenda-item ${progressiveEnabled ? 'admin-agenda-item-progressive' : ''} admin-agenda-status-${r.status} ${progressiveEnabled && sol?.final_decision ? `admin-agenda-decision-${sol.final_decision}` : ''}">
+        ${progressiveEnabled ? renderFinalSelectionControl(sol, r.status) : ''}
         <div class="admin-agenda-time">${time}</div>
         <div class="admin-agenda-info">
           <div class="admin-agenda-name">${escapeHtml(sol?.nombre || 'Sin nombre')}</div>
@@ -329,6 +410,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             <i class="bi bi-clipboard-data"></i>
           </a>
         </div>
+        ${progressiveEnabled && sol ? renderFinalDecisionSummary(sol, r.status) : ''}
         ${r.status === 'confirmed' ? `
           <div class="admin-agenda-row-actions">
             <button type="button" class="admin-mini-btn admin-mini-btn-success" data-id="${r.id}" data-action="completed">
@@ -354,16 +436,19 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     return `<span class="admin-eval-pill admin-eval-pill-pending"><i class="bi bi-hourglass-split"></i> Sin evaluar</span>`;
   }
 
-  function renderNoInterview(sols: SolicitudWithEval[], ivs: InterviewRow[]) {
+  function renderNoInterview(sols: SolicitudWithEval[], ivs: InterviewRow[], invitedIds: Set<string>) {
     const withIv = new Set(ivs.map(i => i.solicitud_id));
-    const without = sols.filter(s => !withIv.has(s.id));
+    // Sólo invitados sin entrevista: un aceptado aún no notificado
+    // no ha podido agendar y pertenece a Solicitudes, no aquí.
+    const without = sols.filter(s => invitedIds.has(s.id) && !withIv.has(s.id));
     if (without.length === 0) return;
 
     document.getElementById('no-interview-section')!.style.display = '';
     document.getElementById('no-interview-count')!.textContent = String(without.length);
     const list = document.getElementById('no-interview-list')!;
     list.innerHTML = without.map(s => `
-      <article class="admin-agenda-item admin-agenda-no-interview">
+      <article class="admin-agenda-item ${progressiveEnabled ? 'admin-agenda-item-progressive' : ''} admin-agenda-no-interview ${progressiveEnabled && s.final_decision ? `admin-agenda-decision-${s.final_decision}` : ''}">
+        ${progressiveEnabled ? renderFinalSelectionControl(s, null) : ''}
         <div class="admin-agenda-time">—</div>
         <div class="admin-agenda-info">
           <div class="admin-agenda-name">${escapeHtml(s.nombre)}</div>
@@ -377,14 +462,25 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             <i class="bi bi-clipboard-data"></i>
           </a>
         </div>
+        ${progressiveEnabled ? renderFinalDecisionSummary(s, null) : ''}
       </article>
     `).join('');
+    bindFinalSelectionCheckboxes(list);
   }
 
   function setupBulkBtn(sols: SolicitudWithEval[]) {
     const btn = document.getElementById('btn-bulk-final') as HTMLButtonElement;
     const pendingDecision = sols.filter(s => !s.final_decision).length;
-    const pendingNotify   = sols.filter(s => s.final_decision && !s.final_email_sent).length;
+    const pendingNotify = sols.filter((row) => row.final_decision && finalCommunicationOccupancy(row) === 'free').length;
+
+    if (progressiveEnabled) {
+      const selectAll = document.getElementById('final-select-all') as HTMLButtonElement;
+      selectAll.style.display = 'inline-flex';
+      selectAll.onclick = toggleFinalSelectAll;
+      btn.onclick = null;
+      refreshFinalSelection(sols, pendingDecision);
+      return;
+    }
 
     if (pendingDecision > 0) {
       btn.disabled = true;
@@ -444,13 +540,208 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     });
   }
 
+  function refreshFinalSelection(sols: SolicitudWithEval[], pendingDecision: number) {
+    const btn = document.getElementById('btn-bulk-final') as HTMLButtonElement;
+    const guide = document.getElementById('final-selection-guide')!;
+    const guideText = document.getElementById('final-selection-guide-text')!;
+    const count = document.getElementById('final-selection-count')!;
+    const ready = sols.filter((row) => isFinalSelectable(row));
+
+    // Descarta selecciones que ya no son comunicables después de un cambio
+    // en otra pestaña o de una comunicación previa.
+    for (const id of selectedFinalIds) {
+      if (!ready.some((row) => row.id === id)) selectedFinalIds.delete(id);
+    }
+    const selected = ready.filter((row) => selectedFinalIds.has(row.id));
+    const allSelected = ready.length > 0 && ready.every((row) => selectedFinalIds.has(row.id));
+    const selectAll = document.getElementById('final-select-all') as HTMLButtonElement;
+
+    selectAll.disabled = ready.length === 0;
+    selectAll.setAttribute('aria-pressed', String(allSelected));
+    selectAll.innerHTML = allSelected
+      ? '<i class="bi bi-square"></i> Deseleccionar todos'
+      : '<i class="bi bi-check2-square"></i> Seleccionar todos';
+    selectAll.title = ready.length === 0
+      ? 'No hay resultados finales pendientes de comunicar.'
+      : `${allSelected ? 'Quitar' : 'Marcar'} los ${ready.length} resultados listos para comunicar.`;
+
+    guide.style.display = 'flex';
+    count.textContent = `${selected.length} seleccionado${selected.length === 1 ? '' : 's'}`;
+    if (ready.length === 0) {
+      guideText.textContent = pendingDecision > 0
+        ? `Faltan ${pendingDecision} resultado${pendingDecision === 1 ? '' : 's'} finales. Cuando estén guardados aparecerán aquí para comunicar.`
+        : 'No hay resultados finales pendientes de comunicar.';
+      btn.disabled = true;
+      btn.title = pendingDecision > 0
+        ? 'Primero guarda el resultado final desde Evaluar / Ver solicitud.'
+        : 'No hay resultados finales pendientes de comunicar.';
+      btn.innerHTML = '<i class="bi bi-send-fill"></i> Comunicar listos';
+      btn.onclick = null;
+      return;
+    }
+
+    if (selected.length === 0) {
+      guideText.textContent = `Hay ${ready.length} resultado${ready.length === 1 ? '' : 's'} listo${ready.length === 1 ? '' : 's'}. Marca las casillas individualmente o usa “Seleccionar todos”.`;
+      btn.disabled = true;
+      btn.title = 'Selecciona al menos un resultado para comunicar.';
+      btn.innerHTML = '<i class="bi bi-send-fill"></i> Comunicar listos';
+      btn.onclick = null;
+      return;
+    }
+
+    guideText.textContent = 'Revisa la selección y usa el botón superior para previsualizar y comunicar sólo estas personas.';
+    btn.disabled = false;
+    btn.title = `Previsualizar y comunicar ${selected.length} resultado(s) seleccionado(s)`;
+    btn.innerHTML = `<i class="bi bi-send-fill"></i> Comunicar listos (${selected.length})`;
+    btn.onclick = () => { void communicateFinalRows(selected, btn, pendingDecision); };
+  }
+
+  function toggleFinalSelectAll() {
+    if (!progressiveEnabled) return;
+    const ready = visibleSolicitudes.filter((row) => isFinalSelectable(row));
+    const allSelected = ready.length > 0 && ready.every((row) => selectedFinalIds.has(row.id));
+    for (const row of ready) {
+      if (allSelected) selectedFinalIds.delete(row.id);
+      else selectedFinalIds.add(row.id);
+    }
+    document.querySelectorAll<HTMLInputElement>('.admin-final-select').forEach((checkbox) => {
+      const id = checkbox.dataset.solicitudId;
+      checkbox.checked = !!id && selectedFinalIds.has(id);
+    });
+    refreshFinalSelection(visibleSolicitudes, visibleSolicitudes.filter((row) => !row.final_decision).length);
+  }
+
   async function updateStatus(id: string, action: 'completed' | 'no_show') {
     const label = action === 'completed' ? 'completada' : 'no show';
     const ok = confirm(`¿Marcar esta entrevista como ${label}?`);
     if (!ok) return;
-    const { error } = await supabase.from('interviews').update({ status: action }).eq('id', id);
-    if (error) { alert(`Error: ${error.message}`); return; }
+    if (progressiveEnabled) {
+      try {
+        if (isSelectionLab && action === 'completed') {
+          await selectionLabCompleteInterview(id);
+        } else {
+          await selectionAdmin('interview', { id, status: action, reason: `Marcada como ${label} desde el panel.` });
+        }
+      } catch (error) {
+        alert(selectionErrorMessage(error));
+        return;
+      }
+    } else {
+      const { error } = await supabase.from('interviews').update({ status: action }).eq('id', id);
+      if (error) { alert(`Error: ${error.message}`); return; }
+    }
     location.reload();
+  }
+
+  function finalCommunicationOccupancy(row: SolicitudWithEval): ReturnType<typeof stageCommsOccupancy> {
+    return stageCommsOccupancy(stateMessages, row.id, 'final', row.final_email_sent);
+  }
+
+  function isFinalSelectable(sol: SolicitudWithEval): boolean {
+    const interviewStatus = finalInterviewStatuses.get(sol.id) ?? 'none';
+    return progressiveEnabled &&
+      !!sol.final_decision &&
+      !sol.final_email_sent &&
+      interviewStatus !== 'confirmed' &&
+      finalCommunicationOccupancy(sol) === 'free';
+  }
+
+  function renderFinalSelectionControl(sol: SolicitudWithEval | null, interviewStatus: InterviewRow['status'] | null): string {
+    if (!sol || !isFinalSelectable(sol) || ['confirmed', 'cancelled'].includes(interviewStatus ?? 'none')) {
+      return '<span class="admin-agenda-select admin-agenda-select-placeholder" aria-hidden="true"></span>';
+    }
+    const decisionLabel = sol.final_decision === 'accepted' ? 'aceptado' : 'rechazado';
+    return `<label class="admin-agenda-select" title="Seleccionar resultado ${decisionLabel} para comunicar">
+      <input type="checkbox" class="admin-final-select" data-solicitud-id="${escapeAttr(sol.id)}" aria-label="Seleccionar a ${escapeAttr(sol.nombre)} para comunicar su resultado final">
+      <span class="visually-hidden">Seleccionar para comunicar resultado final</span>
+    </label>`;
+  }
+
+  function renderFinalDecisionSummary(sol: SolicitudWithEval, interviewStatus: InterviewRow['status'] | null): string {
+    const status = interviewStatus ?? 'none';
+    const statusText = status === 'completed'
+      ? (sol.final_decision ? 'Entrevista completada' : 'Falta decidir en Evaluar / Ver solicitud')
+      : status === 'no_show'
+        ? 'No show: decisión en Evaluar / Ver solicitud'
+        : status === 'cancelled'
+          ? 'Entrevista cancelada: decisión en Evaluar / Ver solicitud'
+          : status === 'confirmed'
+            ? 'Entrevista pendiente: todavía no se puede comunicar'
+            : 'Decisión en Evaluar / Ver solicitud';
+    const finalLabel = sol.final_decision === 'accepted' ? 'Aceptado' : sol.final_decision === 'rejected' ? 'Rechazado' : '';
+
+    if (sol.final_email_sent) {
+      return `<div class="admin-agenda-final admin-agenda-final-locked">
+        <div class="admin-agenda-final-result"><span class="admin-agenda-final-label">Resultado final</span><strong>${finalLabel || 'Comunicado'}</strong></div>
+        <span class="admin-agenda-final-note"><i class="bi bi-lock-fill"></i> Resultado comunicado</span>
+      </div>`;
+    }
+
+    const occupancy = finalCommunicationOccupancy(sol);
+    const communicationNote = sol.final_decision && occupancy !== 'free'
+      ? `<span class="admin-agenda-final-note admin-agenda-final-note-${occupancy}"><i class="bi bi-envelope"></i> ${commsOccupancyLabel(occupancy)}</span>`
+      : sol.final_decision && status !== 'confirmed'
+        ? '<span class="admin-agenda-final-note admin-agenda-final-note-ready"><i class="bi bi-check2-circle"></i> Listo: marca la casilla izquierda para comunicar</span>'
+        : '';
+
+    return `<div class="admin-agenda-final ${status === 'confirmed' ? 'admin-agenda-final-waiting' : ''}">
+      <div class="admin-agenda-final-heading">
+        <div class="admin-agenda-final-result"><span class="admin-agenda-final-label">Resultado final</span><strong>${finalLabel || 'Aún sin decidir'}</strong></div>
+        <span class="admin-agenda-final-context">${statusText}</span>
+      </div>
+      ${communicationNote}
+    </div>`;
+  }
+
+  function bindFinalSelectionCheckboxes(container: HTMLElement) {
+    if (!progressiveEnabled) return;
+    container.querySelectorAll<HTMLInputElement>('.admin-final-select').forEach((checkbox) => {
+      checkbox.addEventListener('change', () => {
+        const id = checkbox.dataset.solicitudId;
+        if (!id) return;
+        if (checkbox.checked) selectedFinalIds.add(id);
+        else selectedFinalIds.delete(id);
+        refreshFinalSelection(visibleSolicitudes, visibleSolicitudes.filter((row) => !row.final_decision).length);
+      });
+    });
+  }
+
+  async function communicateFinalRows(
+    candidates: SolicitudWithEval[],
+    trigger: HTMLButtonElement,
+    pendingDecision?: number,
+  ) {
+    const original = trigger.innerHTML;
+    trigger.disabled = true;
+    trigger.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Preparando…';
+    try {
+      const fresh = await getSelectionState(activeSeason);
+      stateMessages = fresh.messages ?? [];
+      const freshRows = (fresh.solicitudes ?? [])
+        .filter((row) => candidates.some((candidate) => candidate.id === row.id)) as unknown as SolicitudWithEval[];
+      const ready = freshRows.filter((row) => row.final_decision && finalCommunicationOccupancy(row) === 'free');
+      if (ready.length === 0) {
+        alert('No hay resultados finales libres para comunicar; alguien pudo actualizarlos en otra pestaña.');
+        location.reload();
+        return;
+      }
+      const draft = await previewSelectionCommunication('final', ready as unknown as SelectionSolicitud[]);
+      const summary = draft.preview.items
+        .map((item) => `• ${item.nombre} <${item.correo}>\n  ${item.subject}`)
+        .join('\n\n');
+      const suffix = pendingDecision && pendingDecision > 0
+        ? `\n\nQuedarán ${pendingDecision} persona(s) todavía en proceso.`
+        : '';
+      if (!confirm(`PREVISUALIZACIÓN — RESULTADO(S) FINAL(ES) (${ready.length})\n\n${summary}${suffix}\n\n¿Encolar este envío?`)) return;
+      const result = await confirmSelectionCommunication(draft);
+      alert(`${result.queued} resultado(s) encolado(s). El dispatcher local procesará el correo.`);
+      location.reload();
+    } catch (error) {
+      alert(selectionErrorMessage(error));
+    } finally {
+      trigger.disabled = false;
+      trigger.innerHTML = original;
+    }
   }
 
   function formatTime(iso: string): string {
@@ -460,10 +751,4 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function escapeAttr(s: string): string { return escapeHtml(s); }
-</script>
-
-<script>
-  import { paintBackendStatus } from '@lib/backend-status';
-  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
-  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>

@@ -4166,6 +4166,286 @@ header {
   margin-top: 16px;
 }
 
+.agendar-withdraw-link {
+  display: inline-block;
+  margin-top: 20px;
+  color: #777;
+  font-size: .78rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: #c4b5fd;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.agendar-withdraw-link:hover,
+.agendar-withdraw-link:focus-visible {
+  color: #6225e6;
+}
+
+.agendar-withdraw-link:focus-visible {
+  outline: 3px solid #c4b5fd;
+  outline-offset: 4px;
+}
+
+/* ── Reagendar: confirmación antes de liberar la cita ─────────────────── */
+.agendar-reschedule-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  width: min(620px, calc(100vw - 48px));
+  max-width: 620px;
+  max-height: calc(100dvh - 48px);
+  margin: auto;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 4px solid #000;
+  background: #fff;
+  box-shadow: 10px 10px 0 #6225e6;
+  color: #000;
+}
+
+body:has(.agendar-reschedule-dialog[open]) {
+  overflow: hidden;
+}
+
+.agendar-reschedule-dialog::backdrop {
+  background: rgba(45, 0, 46, 0.72);
+}
+
+.agendar-reschedule-dialog-inner {
+  padding: 30px 32px 32px;
+}
+
+.agendar-reschedule-dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.agendar-reschedule-dialog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  background: #6225e6;
+  color: #fff;
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  font-size: 1.35rem;
+}
+
+.agendar-reschedule-dialog-eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #6225e6;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.agendar-reschedule-dialog h2 {
+  margin: 0;
+  color: #000;
+  font-family: "DM Sans", sans-serif;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+  font-weight: 900;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.agendar-reschedule-dialog-lead {
+  margin: 0 0 10px;
+  color: #444;
+  font-size: .98rem;
+  line-height: 1.6;
+}
+
+.agendar-reschedule-dialog-current {
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 7px 10px;
+  background: #f0e6ff;
+  border-left: 4px solid #6225e6;
+  color: #2d002e;
+  font-size: .84rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.agendar-reschedule-dialog-points {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.agendar-reschedule-dialog-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #faf8ff;
+  border: 2px solid #c4b5fd;
+}
+
+.agendar-reschedule-dialog-point > i {
+  flex: 0 0 auto;
+  padding-top: 2px;
+  color: #6225e6;
+  font-size: 1.15rem;
+}
+
+.agendar-reschedule-dialog-point div {
+  display: grid;
+  gap: 2px;
+}
+
+.agendar-reschedule-dialog-point strong {
+  font-size: .86rem;
+  font-weight: 900;
+}
+
+.agendar-reschedule-dialog-point span {
+  color: #666;
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.agendar-reschedule-dialog-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 11px 12px;
+  background: #fff8e1;
+  border: 2px solid #b7791f;
+  color: #684b08;
+  font-size: .79rem;
+  line-height: 1.5;
+}
+
+.agendar-reschedule-dialog-warning i {
+  flex: 0 0 auto;
+  padding-top: 2px;
+}
+
+.agendar-reschedule-dialog-feedback {
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+  background: #fee2e2;
+  border: 2px solid #dc2626;
+  color: #991b1b;
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.agendar-reschedule-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.agendar-reschedule-dialog-actions .hw-btn {
+  margin: 0;
+}
+
+.agendar-reschedule-dialog-actions .hw-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+@media (max-width: 600px) {
+  .agendar-reschedule-dialog {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    box-shadow: 6px 6px 0 #6225e6;
+  }
+
+  .agendar-reschedule-dialog-inner {
+    padding: 22px 18px 20px;
+  }
+
+  .agendar-reschedule-dialog-heading {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .agendar-reschedule-dialog-icon {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+    box-shadow: 3px 3px 0 #000;
+    font-size: 1.15rem;
+  }
+
+  .agendar-reschedule-dialog h2 {
+    font-size: clamp(1.2rem, 6vw, 1.5rem);
+  }
+
+  .agendar-reschedule-dialog-lead {
+    font-size: .9rem;
+  }
+
+  .agendar-reschedule-dialog-current {
+    display: block;
+    margin-bottom: 16px;
+    font-size: .78rem;
+  }
+
+  .agendar-reschedule-dialog-points {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .agendar-reschedule-dialog-point {
+    gap: 10px;
+    padding: 10px 11px;
+  }
+
+  .agendar-reschedule-dialog-warning {
+    margin-bottom: 14px;
+    padding: 10px;
+    font-size: .75rem;
+  }
+
+  .agendar-reschedule-dialog-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .agendar-reschedule-dialog-actions .hw-btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 14px;
+    font-size: .9rem;
+  }
+}
+
+@media (max-height: 680px) {
+  .agendar-reschedule-dialog-inner {
+    padding-block: 20px;
+  }
+
+  .agendar-reschedule-dialog-heading {
+    margin-bottom: 14px;
+  }
+
+  .agendar-reschedule-dialog-points {
+    margin-bottom: 12px;
+  }
+}
+
 /* Success final */
 .agendar-success-screen {
   position: relative;
@@ -5055,7 +5335,7 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 24px;
 }
@@ -5086,9 +5366,58 @@ header {
 
 .admin-list-header-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.admin-list-header-actions .admin-action-btn {
+  box-sizing: border-box;
+  padding-left: 10px;
+  padding-right: 10px;
+  white-space: nowrap;
+}
+
+/* Reservar el ancho evita que el encabezado salte cuando aparece el contador. */
+.admin-select-all-btn {
+  justify-content: center;
+  min-width: 230px;
+  width: 230px;
+}
+
+#btn-bulk-final,
+#progressive-preview {
+  justify-content: center;
+  min-width: 224px;
+  width: 224px;
+}
+
+.admin-batch-header-actions {
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-select-all-btn[aria-pressed="true"] {
+  background: #f0e6ff;
+  box-shadow: 3px 3px 0 #6225e6;
+}
+
+@media (max-width: 600px) {
+  .admin-batch-header-actions {
+    width: 100%;
+  }
+
+  .admin-select-all-btn,
+  #btn-bulk-final,
+  #progressive-preview {
+    min-width: 0;
+    width: auto;
+  }
+
+  .admin-batch-header-actions .admin-action-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
 }
 
 .admin-select {
@@ -5279,6 +5608,44 @@ header {
   vertical-align: middle;
 }
 
+/* Seleccionar es una acción del flujo: el morado la distingue de la decisión. */
+.progressive-check-column {
+  box-sizing: border-box;
+  width: 46px;
+  min-width: 46px;
+  padding-left: 14px !important;
+  padding-right: 6px !important;
+  text-align: center !important;
+}
+
+.progressive-check-column input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #6225e6;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.progressive-check-column input[type="checkbox"]:focus-visible {
+  outline: 3px solid #c4b5fd;
+  outline-offset: 3px;
+}
+
+.progressive-check-column input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.admin-table tbody tr:has([data-progressive-row]:checked) {
+  background: #f0e6ff;
+  box-shadow: inset 5px 0 0 #6225e6;
+}
+
+.admin-table tbody tr:has([data-progressive-row]:checked):hover {
+  background: #ede9fe;
+}
+
 .admin-row-name {
   font-weight: 700;
   color: #000;
@@ -5324,6 +5691,52 @@ header {
 .admin-status-reviewing { background: #ede9fe; color: #5b21b6; }
 .admin-status-accepted  { background: #d1fae5; color: #065f46; }
 .admin-status-rejected  { background: #fee2e2; color: #991b1b; }
+
+.admin-status-stack {
+  display: inline-flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Comunicación y decisión son estados distintos: correo = morado. */
+.admin-comms-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 2px solid;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-comms-badge-sent {
+  background: #6225e6;
+  border-color: #000;
+  color: #fff;
+}
+
+.admin-comms-badge-queued {
+  background: #f0e6ff;
+  border-color: #6225e6;
+  color: #4c1d95;
+}
+
+.admin-comms-badge-failed {
+  background: #fee2e2;
+  border-color: #991b1b;
+  color: #991b1b;
+}
+
+.admin-comms-badge-uncertain {
+  background: #fef3c7;
+  border-color: #92400e;
+  color: #92400e;
+}
 
 .admin-empty {
   text-align: center;
@@ -6130,6 +6543,33 @@ header {
   gap: 28px;
 }
 
+.admin-final-selection-guide {
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 22px;
+  padding: 12px 14px;
+  background: #faf8ff;
+  border: 2px solid #c4b5fd;
+  color: #4c1d95;
+  font-size: .82rem;
+  line-height: 1.45;
+}
+
+.admin-final-selection-guide > i {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+}
+
+.admin-final-selection-guide strong {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: #000;
+  font-size: .72rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .admin-agenda-day-header {
   display: flex;
   align-items: center;
@@ -6171,9 +6611,56 @@ header {
   position: relative;
 }
 
+.admin-agenda-item-progressive {
+  grid-template-columns: 32px 80px 1fr auto auto;
+}
+
+.admin-agenda-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  width: 32px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.admin-agenda-select input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #6225e6;
+  cursor: pointer;
+}
+
+.admin-agenda-select:has(input:focus-visible) {
+  outline: 3px solid rgba(98, 37, 230, .35);
+  outline-offset: 2px;
+}
+
+.admin-agenda-select-placeholder {
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
 .admin-agenda-status-cancelled { opacity: 0.55; }
 .admin-agenda-status-no_show { background: #fef3c7; }
-.admin-agenda-status-completed { background: #ecfdf5; }
+.admin-agenda-status-completed { background: #fff; }
+
+/* La tarjeta permanece neutra; el badge comunica el resultado sin teñir la agenda. */
+.admin-agenda-item.admin-agenda-decision-accepted {
+  background: #fff;
+}
+
+.admin-agenda-item.admin-agenda-decision-rejected {
+  background: #fff;
+}
+
+.admin-agenda-item:has(.admin-final-select:checked) {
+  border-color: #6225e6;
+  box-shadow: 6px 6px 0 #6225e6;
+}
 
 .admin-agenda-time {
   font-family: "DM Sans", sans-serif;
@@ -6237,6 +6724,78 @@ header {
   margin-top: 4px;
 }
 
+/* ── Resultado final progresivo dentro de Entrevistas ─────────────────── */
+.admin-agenda-final {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 2px dashed #c4b5fd;
+}
+
+.admin-agenda-final-heading,
+.admin-agenda-final-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-agenda-final-heading {
+  justify-content: space-between;
+}
+
+.admin-agenda-final-result {
+  display: grid;
+  gap: 5px;
+  line-height: 1.15;
+}
+
+.admin-agenda-final-label {
+  color: #6225e6;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.admin-agenda-final-context,
+.admin-agenda-final-note {
+  color: #666;
+  font-size: .76rem;
+}
+
+.admin-agenda-final-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.admin-agenda-final-note-failed { color: #991b1b; }
+.admin-agenda-final-note-uncertain { color: #92400e; }
+.admin-agenda-final-note-queued { color: #5b21b6; }
+.admin-agenda-final-note-ready {
+  align-self: start;
+  padding: 4px 8px;
+  background: #f0e6ff;
+  border-left: 3px solid #6225e6;
+  color: #4c1d95;
+  font-weight: 800;
+}
+.admin-agenda-final-locked {
+  margin-inline: -8px;
+  padding: 10px 8px 2px;
+  background: #f0e6ff;
+  border-top-color: #6225e6;
+  color: #4c1d95;
+}
+.admin-agenda-final-locked .admin-agenda-final-note {
+  color: #4c1d95;
+  font-weight: 800;
+}
+.admin-agenda-final-waiting { background: #faf8ff; }
+
 .admin-mini-btn {
   font-family: "DM Sans", sans-serif;
   font-size: 0.72rem;
@@ -6259,12 +6818,28 @@ header {
 .admin-mini-btn-warn:hover { background: #92400e; color: #fff; }
 
 @media (max-width: 600px) {
+  .admin-final-selection-guide {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .admin-final-selection-guide strong {
+    width: 100%;
+    margin-left: 0;
+    padding-left: 29px;
+  }
   .admin-agenda-item {
     grid-template-columns: 80px 1fr;
     grid-template-rows: auto auto auto;
   }
+  .admin-agenda-item-progressive {
+    grid-template-columns: 32px 80px 1fr;
+  }
   .admin-agenda-status-cell { grid-column: 1 / -1; }
   .admin-agenda-actions { grid-column: 1 / -1; }
+  .admin-agenda-item-progressive .admin-agenda-status-cell,
+  .admin-agenda-item-progressive .admin-agenda-actions {
+    grid-column: 2 / -1;
+  }
 }
 
 .admin-action-btn-danger:hover:not(:disabled) {
@@ -6407,6 +6982,43 @@ header {
   margin-top: 6px;
 }
 
+.admin-eval-decision-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-eval-decision-heading p {
+  margin: 0;
+  color: #666;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.admin-eval-interview-context {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid #6225e6;
+  background: #fff;
+  color: #4b4b4b;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.admin-eval-interview-context-production {
+  border-left-color: #92400e;
+  background: #fff7df;
+  color: #6b4b00;
+}
+
+.admin-eval-interview-context-lab {
+  border-left-color: #047857;
+  background: #e9fff4;
+  color: #065f46;
+}
+
 .admin-eval-decision-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6461,6 +7073,49 @@ header {
 
 .admin-eval-decision-option:has(input:checked) i {
   opacity: 1;
+}
+
+.admin-eval-exception {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+  color: #333;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-eval-exception textarea {
+  width: 100%;
+  min-height: 64px;
+  box-sizing: border-box;
+  resize: vertical;
+  border: 2px solid #000;
+  padding: 10px 12px;
+  background: #fff;
+  color: #222;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.admin-eval-exception textarea:focus {
+  outline: 3px solid rgba(98, 37, 230, 0.24);
+  outline-offset: 1px;
+}
+
+.admin-eval-exception small {
+  color: #6b4b00;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  line-height: 1.4;
+  text-transform: none;
 }
 
 .admin-eval-meta {
@@ -8038,5 +8693,96 @@ a.admin-dash-stat:hover {
 
   .admin-dash-stats {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ═══ Preferencias de invitaciones progresivas ══════════════════════════ */
+.admin-progressive-window {
+  margin-top: 0;
+}
+
+.admin-progressive-settings {
+  display: grid;
+  grid-template-columns: minmax(180px, .75fr) minmax(240px, 1.25fr);
+  align-items: stretch;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.admin-progressive-days {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+
+.admin-progressive-number-wrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: #fff;
+  border: 3px solid #000;
+  box-shadow: 4px 4px 0 #c4b5fd;
+}
+
+.admin-progressive-number-wrap .admin-text-input {
+  min-width: 0;
+  border: 0;
+  box-shadow: none;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.admin-progressive-number-wrap .admin-text-input:focus {
+  box-shadow: inset 0 0 0 3px #c4b5fd;
+}
+
+.admin-progressive-number-wrap > span {
+  padding: 0 12px;
+  color: #6225e6;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.admin-progressive-pause {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  background: #fff;
+  border: 2px solid #d4c6f5;
+  cursor: pointer;
+}
+
+.admin-progressive-pause input {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #6225e6;
+}
+
+.admin-progressive-pause span {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-progressive-pause strong {
+  color: #000;
+  font-size: .78rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.admin-progressive-pause small {
+  color: #666;
+  font-size: .74rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 640px) {
+  .admin-progressive-settings {
+    grid-template-columns: 1fr;
   }
 }

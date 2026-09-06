@@ -55,7 +55,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <i class="bi bi-broadcast"></i> Selecciones activas
         </div>
         <h1>Temporada <span id="active-season-display">—</span></h1>
-        <p style="margin:.25rem 0 0;"><span id="backend-status" title="Conexión con el nuevo backend de selecciones (solo lectura)">Backend…</span></p>
         <p class="admin-config-sub">
           El sitio público está mostrando el flujo de aplicación. Los aspirantes pueden enviar su solicitud ahora mismo.
         </p>
@@ -67,6 +66,34 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           <dd id="opened-by-display">—</dd>
         </dl>
 
+        <div id="progressive-window-section" class="admin-deadline-section admin-progressive-window" style="display:none;">
+          <h3 class="admin-deadline-title">
+            <i class="bi bi-hourglass-split"></i>
+            Invitaciones a entrevista
+          </h3>
+          <p class="admin-deadline-hint">
+            Define cuánto tiempo tendrá cada persona aceptada para elegir horario, contado desde que se procese su correo.
+            Este plazo se aplicará a los lotes futuros.
+          </p>
+          <div class="admin-progressive-settings">
+            <label class="admin-field-label admin-progressive-days" for="progressive-default-days">
+              Días para agendar
+              <span class="admin-progressive-number-wrap">
+                <input id="progressive-default-days" class="admin-text-input" type="number" min="1" max="365" value="7" />
+                <span aria-hidden="true">días</span>
+              </span>
+            </label>
+            <label class="admin-progressive-pause" for="progressive-dispatch-paused">
+              <input id="progressive-dispatch-paused" type="checkbox" />
+              <span><strong>Pausar correos</strong><small>Los lotes quedan en cola hasta reanudar el despacho.</small></span>
+            </label>
+          </div>
+          <button type="button" id="progressive-config-save" class="hw-btn hw-btn-primary admin-deadline-save">
+            Guardar configuración
+          </button>
+          <div id="progressive-config-feedback" class="admin-save-feedback" style="display:none;"></div>
+        </div>
+
         <!-- ═══ Estado del formulario público ═══ -->
         <div class="admin-forms-section">
           <h3 class="admin-deadline-title">
@@ -75,8 +102,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           </h3>
           <p class="admin-deadline-hint">
             Cuando el form está abierto, cualquiera puede aplicar desde la web pública.
-            Cuando se cierra (manual o al enviar el bulk a entrevista), el sitio público
-            muestra "En fase de entrevistas" hasta que se reabra o se cierre el ciclo.
+            Cuando se cierra manualmente, el sitio público muestra "En fase de entrevistas".
+            Comunicar un lote ya no cambia este estado automáticamente.
           </p>
 
           <div class="admin-forms-row">
@@ -94,7 +121,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </div>
 
         <!-- ═══ Fecha límite entrevista (configurable) ═══ -->
-        <div class="admin-deadline-section">
+        <div id="legacy-deadline-section" class="admin-deadline-section">
           <h3 class="admin-deadline-title">
             <i class="bi bi-calendar-event"></i>
             Fecha límite para agendar entrevista
@@ -278,7 +305,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           en el histórico para consulta futura.
         </p>
         <p class="admin-config-sub" style="font-weight:700;">
-          Esta acción es reversible — puedes abrir un nuevo ciclo en cualquier momento desde este mismo panel.
+          Esta acción archiva definitivamente esta temporada; después podrás abrir una temporada nueva.
         </p>
         <button type="button" id="close-btn" class="admin-action-btn admin-action-btn-danger" style="margin-top:4px;">
           <i class="bi bi-x-circle"></i> Cerrar ciclo de selección
@@ -294,10 +321,18 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   import { supabase } from '@lib/supabase';
   import { nextSemesters, formatSemesterDisplay } from '@lib/season';
   import { generateSlots, formatSlotTime, formatDayShort, type InterviewDay } from '@lib/interview-slots';
+  import {
+    getSelectionFeatureMode,
+    getSelectionState,
+    selectionAdmin,
+    selectionErrorMessage,
+  } from '@lib/selection-client';
 
   let userEmail = '';
   let activeSeasonGlobal: string | null = null;
   let interviewDeadlineGlobal: Date | null = null;
+  let progressiveEnabled = false;
+  let selectionConfigRevision = 0;
 
   document.addEventListener('DOMContentLoaded', async () => {
     // ── Auth guard ──────────────────────────────────────────────────────
@@ -315,6 +350,15 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       return;
     }
 
+    const feature = await getSelectionFeatureMode();
+    if (feature.mode === 'unavailable') {
+      document.getElementById('config-loading')!.innerHTML =
+        '<p class="admin-empty admin-empty-error">No se pudo verificar el backend de selecciones.</p>';
+      return;
+    }
+    progressiveEnabled = feature.mode === 'progressive';
+    selectionConfigRevision = Number(feature.state?.config.selection_revision ?? 0);
+
     // ── Load current config ─────────────────────────────────────────────
     await renderConfig();
 
@@ -323,7 +367,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     document.getElementById('close-btn')!.addEventListener('click', closeSelecciones);
 
     // Deadline section
-    setupDeadlineSection();
+    if (progressiveEnabled) setupProgressiveSection(feature.state?.config);
+    else setupDeadlineSection();
 
     // Interviews section (solo si hay temporada activa)
     if (activeSeasonGlobal) {
@@ -350,6 +395,47 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     }
   }
 
+  async function refreshProgressiveRevision() {
+    if (!progressiveEnabled) return;
+    const state = await getSelectionState(activeSeasonGlobal ?? undefined);
+    selectionConfigRevision = Number(state.config.selection_revision ?? 0);
+  }
+
+  function setupProgressiveSection(config: Record<string, unknown> | undefined) {
+    document.getElementById('legacy-deadline-section')!.style.display = 'none';
+    document.getElementById('progressive-window-section')!.style.display = '';
+    const configuredHours = Number(config?.default_booking_hours ?? 168);
+    (document.getElementById('progressive-default-days') as HTMLInputElement).value =
+      String(Math.max(1, Math.round(configuredHours / 24)));
+    (document.getElementById('progressive-dispatch-paused') as HTMLInputElement).checked =
+      config?.dispatch_paused === true;
+    document.getElementById('progressive-config-save')!.addEventListener('click', async () => {
+      const days = Number((document.getElementById('progressive-default-days') as HTMLInputElement).value);
+      const paused = (document.getElementById('progressive-dispatch-paused') as HTMLInputElement).checked;
+      const button = document.getElementById('progressive-config-save') as HTMLButtonElement;
+      const feedback = document.getElementById('progressive-config-feedback') as HTMLElement;
+      if (!Number.isInteger(days) || days < 1 || days > 365) {
+        showFeedback(feedback, 'Los días deben ser un número entero entre 1 y 365.', 'error');
+        return;
+      }
+      const hours = days * 24;
+      button.disabled = true;
+      try {
+        await selectionAdmin('config', {
+          revision: selectionConfigRevision,
+          default_booking_hours: hours,
+          dispatch_paused: paused,
+        });
+        await refreshProgressiveRevision();
+        showFeedback(feedback, `✓ Configuración guardada: ${days} día${days === 1 ? '' : 's'} para agendar.`, 'success');
+      } catch (error) {
+        showFeedback(feedback, selectionErrorMessage(error), 'error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
   function setupFormsToggle() {
     const btn = document.getElementById('forms-toggle-btn') as HTMLButtonElement | null;
     const fb  = document.getElementById('forms-feedback') as HTMLElement | null;
@@ -367,10 +453,20 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       const original = btn.innerHTML;
       btn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Guardando…';
 
-      const { error } = await supabase
-        .from('seleccion_config')
-        .update({ applications_closed: willClose })
-        .eq('id', true);
+      let error: { message: string } | null = null;
+      if (progressiveEnabled) {
+        try {
+          await selectionAdmin('config', { revision: selectionConfigRevision, applications_closed: willClose });
+          await refreshProgressiveRevision();
+        } catch (cause) {
+          error = { message: selectionErrorMessage(cause) };
+        }
+      } else {
+        error = (await supabase
+          .from('seleccion_config')
+          .update({ applications_closed: willClose })
+          .eq('id', true)).error;
+      }
 
       if (error) {
         showFeedback(fb, `Error: ${error.message}`, 'error');
@@ -409,10 +505,20 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       saveBtn.disabled = true;
       saveBtn.textContent = 'Guardando…';
 
-      const { error } = await supabase
-        .from('seleccion_config')
-        .update({ whatsapp_url: url })
-        .eq('id', true);
+      let error: { message: string } | null = null;
+      if (progressiveEnabled) {
+        try {
+          await selectionAdmin('config', { revision: selectionConfigRevision, whatsapp_url: url });
+          await refreshProgressiveRevision();
+        } catch (cause) {
+          error = { message: selectionErrorMessage(cause) };
+        }
+      } else {
+        error = (await supabase
+          .from('seleccion_config')
+          .update({ whatsapp_url: url })
+          .eq('id', true)).error;
+      }
 
       if (error) {
         showFeedback(fb, `Error: ${error.message}`, 'error');
@@ -548,6 +654,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (data?.is_open && data.active_season) {
       // Modo: abiertas
       activeSeasonGlobal = data.active_season;
+      selectionConfigRevision = Number(data.selection_revision ?? selectionConfigRevision);
       modeOpen.style.display = '';
       modeClosed.style.display = 'none';
       document.getElementById('active-season-display')!.textContent = formatSemesterDisplay(data.active_season);
@@ -609,19 +716,29 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     submit.textContent = 'Abriendo…';
     fb.style.display = 'none';
 
-    const { error } = await supabase
-      .from('seleccion_config')
-      .update({
-        is_open: true,
-        active_season: season,
-        next_season_hint: null,
-        applications_closed: false,
-        opened_at: new Date().toISOString(),
-        opened_by: userEmail,
-        closed_at: null,
-        closed_by: null,
-      })
-      .eq('id', true);
+    let error: { message: string } | null = null;
+    if (progressiveEnabled) {
+      try {
+        await selectionAdmin('config', { revision: selectionConfigRevision, open_season: season });
+        await refreshProgressiveRevision();
+      } catch (cause) {
+        error = { message: selectionErrorMessage(cause) };
+      }
+    } else {
+      error = (await supabase
+        .from('seleccion_config')
+        .update({
+          is_open: true,
+          active_season: season,
+          next_season_hint: null,
+          applications_closed: false,
+          opened_at: new Date().toISOString(),
+          opened_by: userEmail,
+          closed_at: null,
+          closed_by: null,
+        })
+        .eq('id', true)).error;
+    }
 
     if (error) {
       showFeedback(fb, `Error: ${error.message}`, 'error');
@@ -639,23 +756,32 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const closeBtn = document.getElementById('close-btn') as HTMLButtonElement;
 
     const ok1 = confirm(
-      `Cerrar las selecciones desactivará el formulario público.\n\n` +
-      `Las solicitudes recibidas se conservarán intactas. Puedes reabrir o abrir una temporada nueva en cualquier momento.\n\n` +
-      `¿Confirmar el cierre?`
+      `Archivar la temporada desactivará el formulario público.\n\n` +
+      `El servidor sólo lo permitirá si no quedan decisiones, reservas o comunicaciones pendientes.\n\n` +
+      `¿Confirmar el archivado?`
     );
     if (!ok1) return;
 
     closeBtn.disabled = true;
     closeBtn.innerHTML = '<i class="bi bi-arrow-clockwise admin-redirect-spin"></i> Cerrando…';
 
-    const { error } = await supabase
-      .from('seleccion_config')
-      .update({
-        is_open: false,
-        closed_at: new Date().toISOString(),
-        closed_by: userEmail,
-      })
-      .eq('id', true);
+    let error: { message: string } | null = null;
+    if (progressiveEnabled) {
+      try {
+        await selectionAdmin('config', { revision: selectionConfigRevision, archive: true });
+      } catch (cause) {
+        error = { message: selectionErrorMessage(cause) };
+      }
+    } else {
+      error = (await supabase
+        .from('seleccion_config')
+        .update({
+          is_open: false,
+          closed_at: new Date().toISOString(),
+          closed_by: userEmail,
+        })
+        .eq('id', true)).error;
+    }
 
     if (error) {
       showFeedback(fb, `Error: ${error.message}`, 'error');
@@ -678,7 +804,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const btn  = document.getElementById('day-add-btn') as HTMLButtonElement | null;
     const hint = document.getElementById('day-deadline-hint') as HTMLElement | null;
     if (!btn || !hint) return;
-    const valid = !!interviewDeadlineGlobal && interviewDeadlineGlobal.getTime() > Date.now();
+    const valid = progressiveEnabled || (!!interviewDeadlineGlobal && interviewDeadlineGlobal.getTime() > Date.now());
     hint.style.display = valid ? 'none' : '';
     btn.disabled = !valid;
     if (!valid) btn.title = 'Primero guarda la fecha límite para agendar entrevista';
@@ -739,14 +865,15 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       detailsEl.addEventListener('toggle', () => {
         if (!detailsEl.open || dateInput.value) return;
         let defaultDateStr: string;
-        if (interviewDeadlineGlobal) {
+        if (!progressiveEnabled && interviewDeadlineGlobal) {
           const deadlineLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadlineGlobal);
           const [y, m, d] = deadlineLocal.split('-').map(Number);
           const next = new Date(y, m - 1, d + 1);
           defaultDateStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
         } else {
-          const today = new Date();
-          defaultDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          defaultDateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
         }
         dateInput.value = defaultDateStr;
         updateSlotsPreview();
@@ -852,13 +979,16 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const duration = parseInt(durationInput.value, 10);
     const meet     = meetInput.value.trim();
 
-    if (!interviewDeadlineGlobal || interviewDeadlineGlobal.getTime() <= Date.now()) {
+    if (!progressiveEnabled && (!interviewDeadlineGlobal || interviewDeadlineGlobal.getTime() <= Date.now())) {
       showFeedback(fb, 'Configura primero la fecha límite para agendar entrevista.', 'error');
       return;
     }
-    const deadlineDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadlineGlobal);
-    if (date <= deadlineDateStr) {
-      const deadlineFormatted = interviewDeadlineGlobal.toLocaleDateString('es-MX', {
+    const interviewDeadline = interviewDeadlineGlobal;
+    const deadlineDateStr = interviewDeadline
+      ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadline)
+      : '';
+    if (!progressiveEnabled && interviewDeadline && date <= deadlineDateStr) {
+      const deadlineFormatted = interviewDeadline.toLocaleDateString('es-MX', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City',
       });
       showFeedback(fb, `La fecha de entrevista debe ser posterior a la fecha límite de agendado (${deadlineFormatted}).`, 'error');
@@ -881,17 +1011,34 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     btn.disabled = true;
     btn.textContent = 'Agregando…';
 
-    const { error } = await supabase
-      .from('interview_days')
-      .insert({
-        season: activeSeasonGlobal!,
-        date,
-        start_time: start + ':00',
-        end_time:   end + ':00',
-        duration_minutes: duration,
-        meet_url: meet,
-        created_by: userEmail,
-      });
+    let error: { message: string; code?: string } | null = null;
+    if (progressiveEnabled) {
+      try {
+        await selectionAdmin('day', {
+          date,
+          start_time: start + ':00',
+          end_time: end + ':00',
+          duration_minutes: duration,
+          meet_url: meet,
+          notes: null,
+        });
+        await refreshProgressiveRevision();
+      } catch (cause) {
+        error = { message: selectionErrorMessage(cause) };
+      }
+    } else {
+      error = (await supabase
+        .from('interview_days')
+        .insert({
+          season: activeSeasonGlobal!,
+          date,
+          start_time: start + ':00',
+          end_time: end + ':00',
+          duration_minutes: duration,
+          meet_url: meet,
+          created_by: userEmail,
+        })).error;
+    }
 
     if (error) {
       if (error.code === '23505') {
@@ -916,10 +1063,20 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const ok = confirm('¿Borrar este día de entrevista?\n\nSi ya hay entrevistas agendadas para este día, no se podrán cancelar desde aquí — esto solo borra el día del listado.');
     if (!ok) return;
 
-    const { error } = await supabase
-      .from('interview_days')
-      .delete()
-      .eq('id', id);
+    let error: { message: string } | null = null;
+    if (progressiveEnabled) {
+      try {
+        await selectionAdmin('day', { id, delete: true });
+        await refreshProgressiveRevision();
+      } catch (cause) {
+        error = { message: selectionErrorMessage(cause) };
+      }
+    } else {
+      error = (await supabase
+        .from('interview_days')
+        .delete()
+        .eq('id', id)).error;
+    }
 
     if (error) {
       alert(`Error: ${error.message}`);
@@ -933,10 +1090,4 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
   function escapeAttr(s: string): string { return escapeHtml(s); }
-</script>
-
-<script>
-  import { paintBackendStatus } from '@lib/backend-status';
-  // Puente no-bloqueante al nuevo backend: solo informa el modo, nunca altera el front legacy.
-  document.addEventListener('DOMContentLoaded', () => { void paintBackendStatus(); });
 </script>

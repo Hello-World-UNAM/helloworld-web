@@ -1,0 +1,55 @@
+---
+const selectionLab = import.meta.env.PUBLIC_SELECTION_LAB === 'true';
+---
+
+{selectionLab && (
+  <aside class="selection-lab-banner" role="status" aria-label="Entorno local de pruebas">
+    <span class="selection-lab-dot" aria-hidden="true"></span>
+    <strong>ENTORNO LOCAL</strong>
+    <span>Datos sintéticos · Los correos no salen a internet</span>
+  </aside>
+)}
+
+<style>
+  .selection-lab-banner {
+    position: relative;
+    z-index: 9999;
+    display: flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: .65rem;
+    padding: .45rem 1rem;
+    border-bottom: 3px solid #111;
+    background: #ffd400;
+    color: #111;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .78rem;
+    letter-spacing: .035em;
+    text-align: center;
+  }
+
+  .selection-lab-banner strong {
+    font-weight: 900;
+    letter-spacing: .09em;
+  }
+
+  .selection-lab-dot {
+    width: .65rem;
+    height: .65rem;
+    flex: 0 0 auto;
+    border: 2px solid #111;
+    border-radius: 50%;
+    background: #ff3d00;
+    box-shadow: 2px 2px 0 #111;
+  }
+
+  @media (max-width: 560px) {
+    .selection-lab-banner {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: .2rem .55rem;
+      line-height: 1.25;
+    }
+  }
+</style>

@@ -21,11 +21,12 @@ export const onRequest = defineMiddleware(async ({ url, cookies, redirect, local
   // Astro empiece a enviar el HTML al cliente.
   const supabase = getSupabaseServerClient(cookies);
   const { data: { user } } = await supabase.auth.getUser();
+  const userEmail = user?.email;
 
   // Guardar el email en locals para que los Layouts puedan leerlo sin tener 
   // que hacer otra petición a la base de datos y correr el riesgo de fallar.
-  if (user) {
-    locals.userEmail = user.email;
+  if (userEmail) {
+    locals.userEmail = userEmail;
   }
 
   // --- Lógica para el Panel de Administración ---
@@ -33,20 +34,20 @@ export const onRequest = defineMiddleware(async ({ url, cookies, redirect, local
     const isLoginPage = url.pathname.includes('/login');
     
     // 1. Redirigir a login si no hay usuario
-    if (!user && !isLoginPage) {
+    if ((!user || !userEmail) && !isLoginPage) {
       return redirect('/admin/login');
     }
     
     // 2. Si ya hay usuario y estamos en el login, mandarlo al index
-    if (user && isLoginPage) {
+    if (userEmail && isLoginPage) {
       // Necesitamos validar que de verdad sea un admin antes de redirigir
-      const { data: isAllowed } = await supabase.rpc('is_email_in_directiva', { p_email: user.email });
+      const { data: isAllowed } = await supabase.rpc('is_email_in_directiva', { p_email: userEmail });
       if (isAllowed) return redirect('/admin');
     }
     
     // 3. Validar permisos de Directiva para el resto de rutas protegidas
-    if (user && !isLoginPage) {
-      const { data: isAllowed } = await supabase.rpc('is_email_in_directiva', { p_email: user.email });
+    if (userEmail && !isLoginPage) {
+      const { data: isAllowed } = await supabase.rpc('is_email_in_directiva', { p_email: userEmail });
       if (!isAllowed) {
         return redirect('/admin/login?error=unauthorized');
       }

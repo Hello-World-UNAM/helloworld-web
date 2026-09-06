@@ -1,10 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
+import { assertSafeSupabaseEnvironment } from './selection-lab';
 
 export function getSupabaseServerClient(cookies: any): SupabaseClient<Database> {
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  assertSafeSupabaseEnvironment(url);
 
   if (!url || !anonKey) {
     throw new Error('Missing Supabase env vars.');
@@ -30,6 +33,8 @@ export function getSupabaseServerClient(cookies: any): SupabaseClient<Database> 
 export function getSafeSupabaseServerClient(cookies: any): SupabaseClient<Database> {
   const url = import.meta.env.PUBLIC_SUPABASE_URL;
   const anonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  assertSafeSupabaseEnvironment(url);
 
   return createServerClient<Database>(url, anonKey, {
     cookies: {
