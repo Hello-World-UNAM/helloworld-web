@@ -15,7 +15,7 @@ docker(['createdb', '-U', 'postgres', db]);
 const sql = (input) => docker(['psql', '-U', 'postgres', '-d', db, '-v', 'ON_ERROR_STOP=1'], input);
 console.log(`Isolated database: ${db}`);
 sql(readFileSync('supabase/tests/selection-baseline.sql', 'utf8'));
-for (const f of readdirSync('supabase/migrations').filter(f => /_(progressive_selection|selection_hardening|selection_reminder_window|selection_save_preserves_booking|selection_evaluation_metadata)\.sql$/.test(f)).sort()) sql(readFileSync(`supabase/migrations/${f}`, 'utf8'));
+for (const f of readdirSync('supabase/migrations').filter(f => /_(progressive_selection|selection_hardening|selection_reminder_window|selection_save_preserves_booking|selection_evaluation_metadata|restore_selection_mail_templates)\.sql$/.test(f)).sort()) sql(readFileSync(`supabase/migrations/${f}`, 'utf8'));
 console.log(sql(readFileSync('supabase/tests/selection-workflow.sql', 'utf8')));
 console.log(sql(readFileSync('supabase/tests/selection-edge-cases.sql', 'utf8')));
 console.log(sql(readFileSync('supabase/tests/selection-lifecycle.sql', 'utf8')));

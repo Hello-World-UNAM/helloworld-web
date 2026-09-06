@@ -1,3 +1,16 @@
+import {
+  legacyBookingTemplate,
+  legacyFinalAcceptedTemplate,
+  legacyFinalRejectedTemplate,
+  legacyInitialAcceptedTemplate,
+  legacyInitialRejectedTemplate,
+  legacyReceiptTemplate,
+  neutralFinalAcceptedTemplate,
+  neutralFinalRejectedTemplate,
+  noShowFinalRejectedTemplate,
+  type SelectionHtmlTemplate,
+} from './selection-legacy-templates.ts';
+
 export const MEXICO_CITY_TIME_ZONE = 'America/Mexico_City';
 
 export const SELECTION_MAIL_KINDS = [
@@ -14,6 +27,7 @@ export const SELECTION_MAIL_KINDS = [
 export type SelectionMailKind = (typeof SELECTION_MAIL_KINDS)[number];
 export type SelectionDecision = 'accepted' | 'rejected';
 export type SelectionStage = 'initial' | 'final';
+export type SelectionInterviewOutcome = 'completed' | 'no_show' | 'none';
 
 export interface SelectionMailPayload {
   nombre: string;
@@ -23,8 +37,10 @@ export interface SelectionMailPayload {
   expires_at?: string;
   booking_url?: string;
   slot_datetime?: string;
+  duration_minutes?: number;
   meet_url?: string;
   whatsapp_url?: string;
+  interview_outcome?: SelectionInterviewOutcome;
   /** Internal context only. It is deliberately never rendered. */
   reason?: string;
 }
@@ -210,6 +226,49 @@ function optionalDate(value: unknown, field: string): string | undefined {
   return normalized ? formatMexicoCityDate(normalized) : undefined;
 }
 
+function parsedDate(value: unknown, field: string): Date {
+  const normalized = requiredText(value, field);
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new SelectionMailTemplateError(`invalid_${field}`);
+  }
+  return parsed;
+}
+
+function formatLegacyDateLong(value: unknown, field: string): string {
+  return new Intl.DateTimeFormat('es-MX', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: MEXICO_CITY_TIME_ZONE,
+  }).format(parsedDate(value, field));
+}
+
+function formatLegacyTime(value: unknown, field: string): string {
+  return new Intl.DateTimeFormat('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: MEXICO_CITY_TIME_ZONE,
+  }).format(parsedDate(value, field));
+}
+
+function requiredDurationMinutes(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || ![15, 20, 30, 45, 60].includes(value)) {
+    throw new SelectionMailTemplateError('invalid_duration_minutes');
+  }
+  return value;
+}
+
+function interviewOutcome(value: unknown): SelectionInterviewOutcome {
+  if (value === undefined || value === null || value === '') return 'none';
+  if (value === 'completed' || value === 'no_show' || value === 'none') {
+    return value;
+  }
+  throw new SelectionMailTemplateError('invalid_interview_outcome');
+}
+
 function linkHtml(url: string, label: string): string {
   return `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
 }
@@ -239,6 +298,27 @@ function makeMail(subject: string, textParagraphs: string[], htmlParagraphs: str
   };
 }
 
+const SOCIAL_TEXT = [
+  'Mantente cerca:',
+  'Instagram: https://www.instagram.com/helloworld_unam/',
+  'LinkedIn: https://www.linkedin.com/in/hello-world-5243573b5/',
+  'GitHub: https://github.com/Hello-World-UNAM',
+].join('\n');
+
+const LEGACY_FOOTER_TEXT = ['Club Hello World · FES Aragón, UNAM', 'Si tienes dudas, responde a este correo.'].join('\n');
+
+function firstNameText(name: string): string {
+  return name.split(' ')[0] || name;
+}
+
+function makeLegacyMail(template: SelectionHtmlTemplate, textParagraphs: string[], includeSocials = true): SelectionMail {
+  return {
+    subject: template.subject,
+    text: [...textParagraphs, ...(includeSocials ? [SOCIAL_TEXT] : []), LEGACY_FOOTER_TEXT].join('\n\n'),
+    html: template.html,
+  };
+}
+
 export function renderSelectionMail(
   kind: SelectionMailKind,
   payload: SelectionMailPayload,
@@ -247,104 +327,109 @@ export function renderSelectionMail(
   const season = requiredText(payload.season, 'season');
   const safeName = escapeHtml(name);
   const safeSeason = escapeHtml(season);
+  const shortName = firstNameText(name);
 
   switch (kind) {
     case 'receipt': {
-      const subject = `Recibimos tu solicitud · ${season}`;
-      return makeMail(
-        subject,
+      const template = legacyReceiptTemplate(name, season);
+      return makeLegacyMail(
+        template,
         [
-          `Hola, ${name}.`,
-          `Recibimos tu solicitud para ingresar al Club Hello World en la temporada ${season}.`,
-          'El equipo la revisará y te avisará por correo cuando haya una actualización.',
+          `✦ Solicitud recibida · ${season}`,
+          `Hola, ${shortName}.`,
+          'Recibimos tu solicitud al Club Hello World. Está oficialmente en nuestras manos.',
+          'Cada solicitud la lee alguien del equipo — no un algoritmo. Tomamos lo que escribiste en serio y lo revisaremos con calma.',
+          'Te escribiremos a este correo cuando tengamos una decisión, sin importar cuál sea.',
+          'Mientras tanto, si quieres ver qué hacemos en el día a día:\n@helloworld_unam — https://www.instagram.com/helloworld_unam/',
         ],
-        [
-          `Hola, ${safeName}.`,
-          `Recibimos tu solicitud para ingresar al Club Hello World en la temporada ${safeSeason}.`,
-          'El equipo la revisará y te avisará por correo cuando haya una actualización.',
-        ],
+        false,
       );
     }
 
     case 'initial': {
       const decision = requiredDecision(payload.decision);
       if (decision === 'rejected') {
-        const subject = `Actualización de tu solicitud · ${season}`;
-        return makeMail(
-          subject,
-          [
-            `Hola, ${name}.`,
-            `Después de revisar tu solicitud para la temporada ${season}, por esta ocasión no continuarás a la siguiente etapa.`,
-            'Agradecemos el tiempo que dedicaste a participar.',
-          ],
-          [
-            `Hola, ${safeName}.`,
-            `Después de revisar tu solicitud para la temporada ${safeSeason}, por esta ocasión no continuarás a la siguiente etapa.`,
-            'Agradecemos el tiempo que dedicaste a participar.',
-          ],
-        );
+        const template = legacyInitialRejectedTemplate(name, season);
+        return makeLegacyMail(template, [
+          `Hola, ${shortName}.`,
+          'Gracias por aplicar al Club Hello World. Tu solicitud fue revisada con detenimiento por miembros del equipo — no por un algoritmo.',
+          'Lamentamos informarte que en esta temporada no pudimos avanzar con tu candidatura. La decisión no refleja una valoración de tu potencial; el proceso fue altamente competitivo y los espacios limitados.',
+          'Te invitamos a postularte nuevamente en la próxima convocatoria. Mientras tanto, te animamos a seguir construyendo y aprendiendo — el crecimiento técnico es un camino que recorres con nosotros o sin nosotros.',
+          '“El club no es la única forma de desarrollarse y seguir creciendo. Es solo una de miles.”',
+        ]);
       }
 
       const bookingUrl = requiredUrl(payload.booking_url, 'booking_url');
-      const expiresAt = optionalDate(payload.expires_at, 'expires_at');
-      if (!expiresAt) {
-        throw new SelectionMailTemplateError('missing_expires_at');
-      }
-
-      const subject = `Siguiente paso de tu solicitud · ${season}`;
-      return makeMail(
-        subject,
-        [
-          `Hola, ${name}.`,
-          `Tu solicitud para la temporada ${season} fue aceptada para continuar al proceso de entrevista.`,
-          `Agenda tu entrevista aquí:\n${bookingUrl}`,
-          `El enlace estará disponible hasta ${expiresAt}.`,
-        ],
-        [
-          `Hola, ${safeName}.`,
-          `Tu solicitud para la temporada ${safeSeason} fue aceptada para continuar al proceso de entrevista.`,
-          `Agenda tu entrevista aquí: ${linkHtml(bookingUrl, 'Agendar entrevista')}`,
-          `El enlace estará disponible hasta ${escapeHtml(expiresAt)}.`,
-        ],
-      );
+      const expiresAt = formatLegacyDateLong(payload.expires_at, 'expires_at');
+      const template = legacyInitialAcceptedTemplate(name, expiresAt, bookingUrl);
+      return makeLegacyMail(template, [
+        `${shortName}, queremos conocerte.`,
+        'Tu solicitud nos convenció. Lo que escribiste resonó con nosotros: vimos a alguien que vale la pena conocer en persona.',
+        'El siguiente paso es una entrevista corta con un par de personas del equipo. Queremos entender quién hay detrás de la solicitud y resolverte dudas que tengas sobre el club.',
+        `Agenda tu entrevista:\n${bookingUrl}\n\nPor Google Meet. Tú eliges el horario que mejor te quede.\nTienes hasta el ${expiresAt} para agendar.`,
+        'Qué esperar:',
+        'Es una conversación corta con un par de personas del equipo. Queremos entender quién hay detrás de la solicitud y resolverte dudas que tengas sobre el club.',
+        'No hay nada que preparar — lo que ya hiciste hasta hoy es suficiente.',
+        '“El formulario nos dijo lo que has hecho. La entrevista nos dirá quién eres.”',
+      ]);
     }
 
     case 'final': {
       const decision = requiredDecision(payload.decision);
+      const outcome = interviewOutcome(payload.interview_outcome);
       if (decision === 'rejected') {
-        const subject = `Resultado de tu proceso · ${season}`;
-        return makeMail(
-          subject,
-          [
-            `Hola, ${name}.`,
-            `Después de concluir la revisión de tu proceso para la temporada ${season}, por esta ocasión no fuiste admitido(a) al Club Hello World.`,
-            'Agradecemos sinceramente tu interés y el tiempo que dedicaste a participar.',
-          ],
-          [
-            `Hola, ${safeName}.`,
-            `Después de concluir la revisión de tu proceso para la temporada ${safeSeason}, por esta ocasión no fuiste admitido(a) al Club Hello World.`,
-            'Agradecemos sinceramente tu interés y el tiempo que dedicaste a participar.',
-          ],
-        );
+        if (outcome === 'completed') {
+          const template = legacyFinalRejectedTemplate(name, season);
+          return makeLegacyMail(template, [
+            `Gracias, ${shortName}.`,
+            'Llegaste hasta la entrevista, y eso ya te separa de la mayoría. Gracias por tomarte el tiempo de aplicar, agendar y conversar con nosotros.',
+            'Lamentamos informarte que tras la evaluación del equipo, en esta temporada no pudimos avanzar con tu candidatura. La decisión no refleja una valoración de tu potencial; el proceso fue altamente competitivo y los espacios limitados.',
+            'Te invitamos a postularte nuevamente en la próxima convocatoria. Mientras tanto, te animamos a seguir construyendo y aprendiendo — el crecimiento técnico es un camino que recorres con nosotros o sin nosotros.',
+            '“El club no es la única forma de desarrollarse y seguir creciendo. Es solo una de miles.”',
+          ]);
+        }
+
+        if (outcome === 'no_show') {
+          const template = noShowFinalRejectedTemplate(name, season);
+          return makeLegacyMail(template, [
+            `Hola, ${shortName}.`,
+            'No registramos tu asistencia a la entrevista que habías agendado con el equipo del Club Hello World.',
+            'Como esa conversación forma parte indispensable del proceso, en esta temporada no podremos continuar con tu candidatura.',
+            'Si ocurrió un problema o crees que recibiste este mensaje por error, responde a este correo para que podamos revisar tu caso.',
+            '“El club no es la única forma de desarrollarse y seguir creciendo. Es solo una de miles.”',
+          ]);
+        }
+
+        const template = neutralFinalRejectedTemplate(name, season);
+        return makeLegacyMail(template, [
+          `Hola, ${shortName}.`,
+          `Después de concluir la revisión de tu proceso para la temporada ${season}, por esta ocasión no fuiste admitido(a) al Club Hello World.`,
+          'Agradecemos sinceramente tu interés y el tiempo que dedicaste a participar.',
+        ]);
       }
 
       const whatsappUrl = requiredUrl(payload.whatsapp_url, 'whatsapp_url');
-      const subject = `Resultado de tu proceso · ${season}`;
-      return makeMail(
-        subject,
-        [
-          `Hola, ${name}.`,
-          `Nos da mucho gusto informarte que fuiste admitido(a) al Club Hello World para la temporada ${season}.`,
-          '¡Bienvenido(a) al Club Hello World!',
-          `Para recibir indicaciones y mantenerte en contacto con el equipo, únete al grupo de WhatsApp:\n${whatsappUrl}`,
-        ],
-        [
-          `Hola, ${safeName}.`,
-          `Nos da mucho gusto informarte que fuiste admitido(a) al Club Hello World para la temporada ${safeSeason}.`,
-          '¡Bienvenido(a) al Club Hello World!',
-          `Para recibir indicaciones y mantenerte en contacto con el equipo, únete al grupo de WhatsApp: ${linkHtml(whatsappUrl, 'Unirme al grupo de WhatsApp')}`,
-        ],
-      );
+      if (outcome === 'completed') {
+        const template = legacyFinalAcceptedTemplate(name, season, whatsappUrl);
+        return makeLegacyMail(template, [
+          `Estás dentro, ${shortName}.`,
+          `Después del formulario, la entrevista y la deliberación del equipo, quedó claro: te queremos en el Club Hello World, temporada ${season}.`,
+          'Lo que escribiste y lo que conversamos contigo nos convenció — ahora sí eres parte de esta generación.',
+          `El primer paso para sumarte es entrar al grupo de WhatsApp del club. Ahí coordinamos todo: reuniones, eventos, proyectos, hackatones.\n${whatsappUrl}`,
+          'Qué sigue:',
+          'En el grupo coordinaremos la primera reunión. Llegarán los detalles de cuando arrancamos y cómo nos organizamos.',
+          'Bienvenida/o oficialmente. A construir, competir y dejar huella.',
+          '“Ahora sí empieza lo bueno. Nos vemos adentro.”',
+        ]);
+      }
+
+      const template = neutralFinalAcceptedTemplate(name, season, whatsappUrl);
+      return makeLegacyMail(template, [
+        `Hola, ${shortName}.`,
+        `Nos da mucho gusto informarte que fuiste admitido(a) al Club Hello World para la temporada ${season}.`,
+        '¡Bienvenido(a) al Club Hello World!',
+        `Para recibir indicaciones y mantenerte en contacto con el equipo, únete al grupo de WhatsApp:\n${whatsappUrl}`,
+      ]);
     }
 
     case 'rectification': {
@@ -414,27 +499,32 @@ export function renderSelectionMail(
     }
 
     case 'booking': {
-      const slot = formatMexicoCityDate(requiredText(payload.slot_datetime, 'slot_datetime'));
+      const dateLong = formatLegacyDateLong(payload.slot_datetime, 'slot_datetime');
+      const time = formatLegacyTime(payload.slot_datetime, 'slot_datetime');
+      const durationMinutes = requiredDurationMinutes(payload.duration_minutes);
       const meetUrl = requiredUrl(payload.meet_url, 'meet_url');
-      const manageUrl = optionalUrl(payload.booking_url, 'booking_url');
-      const subject = `Entrevista agendada · ${season}`;
-      const textParagraphs = [
-        `Hola, ${name}.`,
-        `Tu entrevista para la temporada ${season} quedó agendada para el ${slot}.`,
-        `Enlace de la entrevista:\n${meetUrl}`,
-      ];
-      const htmlParagraphs = [
-        `Hola, ${safeName}.`,
-        `Tu entrevista para la temporada ${safeSeason} quedó agendada para el ${escapeHtml(slot)}.`,
-        `Enlace de la entrevista: ${linkHtml(meetUrl, 'Abrir enlace de entrevista')}`,
-      ];
-
-      if (manageUrl) {
-        textParagraphs.push(`Para revisar o gestionar tu reserva:\n${manageUrl}`);
-        htmlParagraphs.push(`Para revisar o gestionar tu reserva: ${linkHtml(manageUrl, 'Gestionar reserva')}`);
-      }
-
-      return makeMail(subject, textParagraphs, htmlParagraphs);
+      const manageUrl = requiredUrl(payload.booking_url, 'booking_url');
+      const template = legacyBookingTemplate({
+        nombre: name,
+        dateLong,
+        time,
+        durationMinutes,
+        meetUrl,
+        manageUrl,
+      });
+      return makeLegacyMail(
+        template,
+        [
+          `Listo, ${shortName}.`,
+          'Tu entrevista con el equipo del Club Hello World está confirmada.',
+          `Cuándo:\n${dateLong}\n${time} hrs · ${durationMinutes} minutos`,
+          `Dónde:\n${meetUrl}`,
+          'Antes de tu entrevista:',
+          '• Llega 1 minuto antes y verifica tu cámara y micrófono.\n• Si surge algo, escríbenos con al menos 12 h de anticipación.\n• Llega tú — nada que preparar.',
+          `¿Necesitas cambiar de horario? Gestiona tu entrevista aquí:\n${manageUrl}`,
+        ],
+        false,
+      );
     }
 
     case 'cancellation': {

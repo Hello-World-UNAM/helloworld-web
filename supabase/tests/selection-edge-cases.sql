@@ -5,11 +5,11 @@ update public.seleccion_config set applications_closed=false;
 insert into public.interview_days(season,date,start_time,end_time,duration_minutes,meet_url)
 values('2027-1',(now() at time zone 'America/Mexico_City')::date+15,'10:00','18:00',30,'https://meet.google.com/testing');
 do $$
-declare a uuid:=public.test_app(4); b uuid:=public.test_app(5); c uuid:=public.test_app(6); p jsonb; job jsonb; rev integer; expiry timestamptz; token text; msg uuid; first_evaluation timestamptz; second_evaluation timestamptz;
+declare a uuid:=public.test_app(4); b uuid:=public.test_app(5); c uuid:=public.test_app(6); d uuid:=public.test_app(7); e uuid:=public.test_app(8); p jsonb; job jsonb; rev integer; expiry timestamptz; token text; msg uuid; first_evaluation timestamptz; second_evaluation timestamptz;
 begin
  -- Isolate the queue from the previous scenario; these are synthetic rows only.
  update private_selection.messages set status='cancelled' where status in ('queued','sending','uncertain','failed');
- update public.solicitudes set status='accepted' where id in(a,b,c);
+ update public.solicitudes set status='accepted' where id in(a,b,c,d,e);
  insert into public.interview_booking_tokens(solicitud_id,token,invited_at,expires_at)
  values(a,'reminder-a',now()-interval '6 days',now()+interval '23 hours'),(b,'reminder-b',now(),now()+interval '20 hours');
  job:=public.selection_worker('claim');
@@ -34,6 +34,7 @@ begin
  select selection_revision into rev from public.solicitudes where id=c;
  p:=public.selection_admin('preview',jsonb_build_object('kind','final','items',jsonb_build_array(jsonb_build_object('id',c,'revision',rev))));
  perform public.selection_admin('confirm',jsonb_build_object('kind','final','items',p->'items','config_revision',p->'config_revision','request_id',gen_random_uuid()));
+ perform public.test_assert((select payload->>'interview_outcome'='none' from private_selection.messages where solicitud_id=c and kind='final'),'exception-based final mail stays interview-neutral');
  job:=public.selection_worker('claim'); msg:=(job->>'id')::uuid;
  perform public.selection_worker('prepared',jsonb_build_object('id',msg,'lease_token',job->>'lease_token','request_body','{"test":true}'::jsonb));
  perform public.selection_worker('finish',jsonb_build_object('id',msg,'lease_token',job->>'lease_token','outcome','uncertain','error','timeout'));
@@ -55,6 +56,14 @@ begin
  select expires_at into expiry from public.interview_booking_tokens where solicitud_id=a;
  perform public.selection_admin('config',jsonb_build_object('revision',rev,'default_booking_hours',48));
  perform public.test_assert((select expires_at=expiry from public.interview_booking_tokens where solicitud_id=a),'default change is not retroactive');
+ insert into public.interviews(solicitud_id,slot_datetime,duration_minutes,meet_url,status)
+ values
+   (d,now()-interval '1 day',45,'https://meet.google.com/completed-test','completed'),
+   (e,now()-interval '1 day',20,'https://meet.google.com/no-show-test','no_show');
+ perform private_selection.enqueue(d,'final',jsonb_build_object('decision','rejected'),'test-final-completed');
+ perform private_selection.enqueue(e,'final',jsonb_build_object('decision','rejected'),'test-final-no-show');
+ perform public.test_assert((select payload->>'interview_outcome'='completed' from private_selection.messages where idempotency_key='test-final-completed'),'completed interview selects historical final template');
+ perform public.test_assert((select payload->>'interview_outcome'='no_show' from private_selection.messages where idempotency_key='test-final-no-show'),'no-show interview selects dedicated final template');
  raise notice 'Reminder, exception, uncertainty and archive tests passed';
 end $$;
 

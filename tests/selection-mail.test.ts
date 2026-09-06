@@ -17,6 +17,7 @@ const BASE_PAYLOAD: SelectionMailPayload = {
   expires_at: '2026-05-21T18:00:00.000Z',
   booking_url: 'https://helloworld-unam.tech/seleccion/agendar?t=test-token',
   slot_datetime: '2026-05-21T18:00:00.000Z',
+  duration_minutes: 30,
   meet_url: 'https://meet.google.com/test-room',
   whatsapp_url: 'https://chat.whatsapp.com/test-group',
   reason: 'INTERNAL_REASON_MUST_NOT_BE_SENT',
@@ -35,9 +36,21 @@ test('escapes names and URLs in HTML output', () => {
     }),
   );
 
-  assert.match(mail.html, /&lt;Ana &amp; &quot;A&quot;&gt;/);
+  assert.match(mail.html, /&lt;Ana/);
   assert.match(mail.html, /https:\/\/example\.test\/agendar\?a=1&amp;b=2/);
   assert.doesNotMatch(mail.html, /<Ana/);
+});
+
+test('restores the historical receipt template and subject', () => {
+  const mail = renderSelectionMail('receipt', payload());
+
+  assert.equal(mail.subject, 'Tu solicitud al Club Hello World — 2027-1');
+  assert.match(mail.html, /✦ Solicitud recibida · 2027-1/);
+  assert.match(mail.html, /Hola, Ana\./);
+  assert.match(mail.html, /Cada solicitud la lee alguien del equipo — no un algoritmo/);
+  assert.match(mail.html, /No buscamos el promedio más alto/);
+  assert.match(mail.html, /instagram\.com\/helloworld_unam/);
+  assert.match(mail.text, /Está oficialmente en nuestras manos/);
 });
 
 test('formats UTC dates in America/Mexico_City', () => {
@@ -62,6 +75,32 @@ test('initial accepted sends an invitation while initial rejected does not expos
   assert.match(invitation.text, /Agenda tu entrevista/);
   assert.match(invitation.text, /helloworld-unam\.tech\/seleccion\/agendar/);
   assert.doesNotMatch(rejection.text, /agendar|helloworld-unam\.tech\/seleccion\/agendar/i);
+  assert.equal(invitation.subject, 'Avanzaste a la siguiente fase — Club Hello World');
+  assert.equal(rejection.subject, 'Sobre tu solicitud al Club Hello World');
+  assert.match(invitation.html, /Ana, queremos conocerte/);
+  assert.match(invitation.html, /Por Google Meet/);
+  assert.doesNotMatch(invitation.html, /30 minutos · por Google Meet/);
+  assert.match(rejection.html, /Tu solicitud fue revisada con detenimiento/);
+});
+
+test('restores booking confirmation with dynamic Meet details', () => {
+  const mail = renderSelectionMail('booking', payload({ duration_minutes: 45 }));
+
+  assert.equal(mail.subject, 'Confirmada: tu entrevista el jueves, 21 de mayo de 2026');
+  assert.match(mail.html, /✓ Entrevista confirmada/);
+  assert.match(mail.html, /Listo, Ana\./);
+  assert.match(mail.html, /12:00 hrs · 45 minutos/);
+  assert.match(mail.html, /https:\/\/meet\.google\.com\/test-room/);
+  assert.match(mail.html, /Gestiona tu entrevista aquí/);
+  assert.match(mail.text, /45 minutos/);
+});
+
+test('booking requires a supported dynamic duration', () => {
+  assert.throws(
+    () => renderSelectionMail('booking', payload({ duration_minutes: undefined })),
+    /invalid_duration_minutes/,
+  );
+  assert.throws(() => renderSelectionMail('booking', payload({ duration_minutes: 25 })), /invalid_duration_minutes/);
 });
 
 test('final accepted requires the WhatsApp link only for that variant', () => {
@@ -70,6 +109,39 @@ test('final accepted requires the WhatsApp link only for that variant', () => {
     /missing_whatsapp_url/,
   );
   assert.doesNotThrow(() => renderSelectionMail('final', payload({ decision: 'rejected', whatsapp_url: undefined })));
+});
+
+test('completed interviews use the historical final templates', () => {
+  const accepted = renderSelectionMail('final', payload({ decision: 'accepted', interview_outcome: 'completed' }));
+  const rejected = renderSelectionMail('final', payload({ decision: 'rejected', interview_outcome: 'completed' }));
+
+  assert.equal(accepted.subject, '¡Bienvenida/o al Club Hello World!');
+  assert.match(accepted.html, /Estás dentro, Ana/);
+  assert.match(accepted.html, /Después del formulario, la entrevista y la deliberación/);
+  assert.match(accepted.html, /Entrar al WhatsApp/);
+  assert.equal(rejected.subject, 'Sobre tu proceso de selección — Club Hello World');
+  assert.match(rejected.html, /Llegaste hasta la entrevista/);
+  assert.match(rejected.html, /Gracias, Ana/);
+});
+
+test('no-show rejection uses the dedicated truthful template', () => {
+  const mail = renderSelectionMail('final', payload({ decision: 'rejected', interview_outcome: 'no_show' }));
+
+  assert.equal(mail.subject, 'Sobre tu proceso de selección — Club Hello World');
+  assert.match(mail.html, /✦ Proceso de selección · 2027-1/);
+  assert.match(mail.html, /No registramos tu asistencia/);
+  assert.match(mail.html, /responde a este correo para que podamos revisar tu caso/);
+  assert.match(mail.text, /No registramos tu asistencia/);
+});
+
+test('final decisions without a completed interview keep neutral wording', () => {
+  const accepted = renderSelectionMail('final', payload({ decision: 'accepted', interview_outcome: 'none' }));
+  const rejected = renderSelectionMail('final', payload({ decision: 'rejected', interview_outcome: 'none' }));
+
+  assert.doesNotMatch(accepted.text.toLowerCase(), /entrevista/);
+  assert.doesNotMatch(rejected.text.toLowerCase(), /entrevista/);
+  assert.equal(accepted.subject, 'Resultado de tu proceso · 2027-1');
+  assert.equal(rejected.subject, 'Resultado de tu proceso · 2027-1');
 });
 
 test('rectification uses the stage-specific accepted template', () => {

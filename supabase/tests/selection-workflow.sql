@@ -47,6 +47,7 @@ begin
  select slot_datetime into slot_b from private_selection.slots('2027-1') order by slot_datetime desc limit 1;
  p:=public.book_interview(token_a,slot_a); booked:=(p->>'interview_id')::uuid;
  perform public.test_assert((p->>'ok')::boolean,'first booking succeeds');
+ perform public.test_assert((select payload->>'duration_minutes'='30' from private_selection.messages where kind='booking' and payload->>'interview_id'=booked::text),'booking mail captures its dynamic duration');
  perform public.test_assert((public.book_interview(token_b,slot_b)->>'ok')::boolean,'second booking succeeds');
  select reschedule_count into old_count from public.interview_booking_tokens where solicitud_id=a;
  perform public.test_assert(public.book_interview(token_a,slot_b)->>'error'='SLOT_TAKEN','occupied replacement fails');

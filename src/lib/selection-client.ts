@@ -185,7 +185,9 @@ export function renderSelectionPreviewItem(item: SelectionPreviewItem): Selectio
     stage: item.kind === 'final' ? 'final' : 'initial',
     expires_at: rawPayload.expires_at == null ? undefined : String(rawPayload.expires_at),
     booking_url: rawPayload.booking_url == null ? undefined : String(rawPayload.booking_url),
+    duration_minutes: rawPayload.duration_minutes == null ? undefined : Number(rawPayload.duration_minutes),
     whatsapp_url: rawPayload.whatsapp_url == null ? undefined : String(rawPayload.whatsapp_url),
+    interview_outcome: rawPayload.interview_outcome == null ? undefined : (String(rawPayload.interview_outcome) as SelectionMailPayload['interview_outcome']),
   };
 
   if (item.kind === 'initial' && item.decision === 'accepted' && !payload.booking_url) {
@@ -315,18 +317,47 @@ export async function previewSelectionCommunication(
 ): Promise<SelectionCommunicationDraft> {
   const items = rows.map(revisionItem);
   const requestedHours = durationHours ?? 168;
-  const preview = await selectionAdmin<SelectionPreview>('preview', {
-    kind,
-    items,
-    duration_hours: requestedHours,
-  });
+  const [preview, state] = await Promise.all([
+    selectionAdmin<SelectionPreview>('preview', {
+      kind,
+      items,
+      duration_hours: requestedHours,
+    }),
+    kind === 'final' ? getSelectionState(rows[0]?.season) : Promise.resolve(undefined),
+  ]);
+
+  const interviewOutcomeBySolicitud = new Map<string, SelectionMailPayload['interview_outcome']>();
+  if (state) {
+    for (const row of rows) {
+      const interviews = state.interviews.filter((interview) => interview.solicitud_id === row.id);
+      const outcome = interviews.some((interview) => interview.status === 'completed')
+        ? 'completed'
+        : interviews.some((interview) => interview.status === 'no_show')
+          ? 'no_show'
+          : 'none';
+      interviewOutcomeBySolicitud.set(row.id, outcome);
+    }
+  }
+
   return {
     kind,
     items,
     duration_hours: preview.duration_hours ?? requestedHours,
     preview: {
       ...preview,
-      items: preview.items.map(renderSelectionPreviewItem),
+      items: preview.items.map((item) =>
+        renderSelectionPreviewItem({
+          ...item,
+          payload: {
+            ...item.payload,
+            ...(kind === 'final'
+              ? {
+                  interview_outcome: interviewOutcomeBySolicitud.get(item.id) ?? 'none',
+                }
+              : {}),
+          },
+        }),
+      ),
     },
   };
 }

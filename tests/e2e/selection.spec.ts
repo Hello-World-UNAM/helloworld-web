@@ -130,7 +130,7 @@ test('Entrevistas sólo comunica personas seleccionadas y ya evaluadas', async (
   const confirmDialog = page.waitForEvent('dialog');
   await page.locator('#btn-bulk-final').click();
   const dialog = await confirmDialog;
-  expect(dialog.message()).toContain('Resultado');
+  expect(dialog.message()).toContain('¡Bienvenida/o al Club Hello World!');
   await dialog.accept();
 
   await expect.poll(async () => {
