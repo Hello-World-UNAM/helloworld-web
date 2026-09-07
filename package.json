@@ -47,6 +47,6 @@
     "@astrojs/check": "0.9.10",
     "@playwright/test": "1.63.0",
     "supabase": "2.116.0",
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   }
 }
