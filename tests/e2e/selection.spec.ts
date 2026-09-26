@@ -160,3 +160,77 @@ test('las rutas actuales de entrevistas y configuración renderizan su contenido
   await expect(page.locator('#config-mode-open')).toBeVisible();
   await expect(page.getByRole('heading', { name: /Temporada/ })).toBeVisible();
 });
+
+test('cronograma publicado aparece en convocatoria abierta y fase de entrevistas, con avisos de la temporada', async ({ page, request }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/seleccion');
+  await expect(page.locator('#state-open')).toBeVisible();
+  await expect(page.locator('#selection-schedule')).toBeVisible();
+  await expect(page.locator('#selection-schedule-dates')).toContainText('OCT2026');
+  await expect(page.locator('#selection-schedule-dates li').first()).toContainText('Cierre de solicitudes');
+  await expect(page.locator('.sel-schedule-wish')).toContainText('¡Mucha suerte y mucho éxito en cada etapa de este proceso!');
+  await expect(page.locator('#selection-schedule-dates')).toContainText('siete días desde que enviemos el correo');
+  await expect(page.locator('.sel-schedule-mail')).toContainText('Te escribiremos por correo con el resultado. Siempre.');
+  await expect(page.locator('.sel-schedule-mail')).toContainText('Spam o Correo no deseado');
+  await expect(page.locator('#state-open .section-card').first()).toContainText('No buscamos el promedio más alto');
+  expect(await page.locator('#state-open .section-card').first().evaluate(el => el.compareDocumentPosition(document.getElementById('selection-schedule')!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  await expect(page.locator('#selection-schedule-update-list')).not.toContainText('Aviso anterior');
+  await expect(page.locator('#selection-schedule-update-list')).not.toContainText('Borrador privado');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('#selection-schedule')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 768, height: 900 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 320, height: 700 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+  await request.post(`${fake}/__config`, { data: { applications_closed: true } });
+  await page.reload();
+  await expect(page.locator('#state-interviewing')).toBeVisible();
+  await expect(page.locator('#selection-schedule')).toBeVisible();
+  expect(await page.locator('#state-interviewing .sel-closed-quote-block').evaluate(el => el.compareDocumentPosition(document.getElementById('selection-schedule')!) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy();
+  await expect(page.locator('#selection-schedule-dates li')).toHaveCount(4);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator('#selection-schedule')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('guardar el cronograma y publicar un aviso no altera solicitudes ni envíos', async ({ page, request }) => {
+  await page.goto('/admin/seleccion-config');
+  await expect(page.locator('#schedule-form')).toBeVisible();
+  await page.locator('#schedule-final').fill('2026-10-30');
+  await expect(page.locator('#schedule-preview')).toContainText('30 oct 2026');
+  await page.locator('#schedule-form button[type="submit"]').click();
+  await expect(page.locator('#schedule-feedback')).toContainText('Cronograma guardado');
+  await page.locator('#schedule-update-body').fill('Ya enviamos los correos de la primera etapa.');
+  await page.locator('#schedule-update-published').check();
+  await page.locator('#schedule-update-form button[type="submit"]').click();
+  await expect(page.locator('#schedule-updates-admin')).toContainText('Ya enviamos los correos');
+  const calls = await (await request.get(`${fake}/__calls`)).json();
+  expect(calls.some((call: any) => call.action === 'schedule')).toBe(true);
+  expect(calls.some((call: any) => call.action === 'schedule_notice')).toBe(true);
+  expect(calls.some((call: any) => call.action === 'confirm' || call.action === 'config')).toBe(false);
+});
+
+test('el editor elimina borradores con confirmación y conserva avisos publicados', async ({ page, request }) => {
+  await page.goto('/admin/seleccion-config');
+  const draft = page.locator('.admin-schedule-update').filter({ hasText: 'Borrador privado' });
+  await expect(draft).toBeVisible();
+  page.once('dialog', dialog => dialog.dismiss());
+  await draft.getByRole('button', { name: 'Eliminar' }).click();
+  await expect(draft).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await draft.getByRole('button', { name: 'Eliminar' }).click();
+  await expect(draft).toHaveCount(0);
+  await expect(page.locator('#schedule-update-feedback')).toContainText('Borrador eliminado');
+
+  await page.locator('#schedule-update-body').fill('Aviso publicado de prueba');
+  await page.locator('#schedule-update-published').check();
+  await page.locator('#schedule-update-form button[type="submit"]').click();
+  const published = page.locator('.admin-schedule-update').filter({ hasText: 'Aviso publicado de prueba' });
+  await expect(published).toBeVisible();
+  await expect(published.getByRole('button', { name: 'Eliminar' })).toHaveCount(0);
+  const calls = await (await request.get(`${fake}/__calls`)).json();
+  expect(calls.filter((call: any) => call.action === 'schedule_notice_delete')).toHaveLength(1);
+});

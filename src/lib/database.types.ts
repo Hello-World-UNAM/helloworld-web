@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      selection_schedules: {
+        Row: { season: string; first_stage_date: string; interviews_start_date: string; interviews_end_date: string; final_results_date: string; is_published: boolean; updated_at: string }
+        Insert: { season: string; first_stage_date: string; interviews_start_date: string; interviews_end_date: string; final_results_date: string; is_published?: boolean; updated_at?: string }
+        Update: { season?: string; first_stage_date?: string; interviews_start_date?: string; interviews_end_date?: string; final_results_date?: string; is_published?: boolean; updated_at?: string }
+        Relationships: []
+      }
+      selection_schedule_updates: {
+        Row: { id: string; season: string; body: string; is_published: boolean; published_at: string | null; created_at: string }
+        Insert: { id?: string; season: string; body: string; is_published?: boolean; published_at?: string | null; created_at?: string }
+        Update: { id?: string; season?: string; body?: string; is_published?: boolean; published_at?: string | null; created_at?: string }
+        Relationships: [{ foreignKeyName: "selection_schedule_updates_season_fkey"; columns: ["season"]; isOneToOne: false; referencedRelation: "selection_schedules"; referencedColumns: ["season"] }]
+      }
       audit_logs: {
         Row: {
           action_type: string

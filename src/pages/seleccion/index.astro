@@ -265,6 +265,33 @@ const redes = [
 
       </div>
 
+      <section id="selection-schedule" class="section-card sel-schedule" style="display:none;" aria-labelledby="selection-schedule-title">
+        <div class="sel-schedule-heading">
+          <div class="sel-schedule-heading-copy">
+            <span class="sel-schedule-eyebrow"><i class="bi bi-signpost-split" aria-hidden="true"></i> RUTA DE SELECCIÓN <span id="selection-schedule-season"></span></span>
+            <h2 id="selection-schedule-title">Fechas del proceso<span aria-hidden="true">.</span></h2>
+          </div>
+          <span class="sel-schedule-count" aria-hidden="true">04 <small>FECHAS</small></span>
+        </div>
+        <p class="sel-schedule-intro">Estas fechas son los objetivos de la convocatoria. Si algo cambia, lo publicaremos en <strong class="sel-schedule-key">Actualizaciones</strong>. Mantente al tanto de esta página y de nuestras redes sociales para enterarte de las novedades.</p>
+        <ol id="selection-schedule-dates" class="sel-schedule-list"></ol>
+        <p class="sel-schedule-wish"><span aria-hidden="true">✦</span> ¡Mucha suerte y mucho éxito en cada etapa de este proceso!</p>
+        <div class="sel-schedule-mail">
+          <span class="sel-schedule-mail-icon" aria-hidden="true"><i class="bi bi-envelope-paper"></i></span>
+          <div>
+            <h3>Mantente al tanto de tu correo</h3>
+            <p>Te escribiremos por correo con el resultado. Siempre. Mientras esperas, revisa también <strong>Spam o Correo no deseado</strong>; a veces nuestros mensajes llegan ahí.</p>
+          </div>
+        </div>
+        <div class="sel-schedule-updates">
+          <div class="sel-schedule-updates-heading">
+            <span class="sel-schedule-updates-icon" aria-hidden="true"><i class="bi bi-megaphone-fill"></i></span>
+            <div><span class="sel-schedule-eyebrow">AVISOS DE LA MESA</span><h3>Actualizaciones</h3></div>
+          </div>
+          <div id="selection-schedule-update-list"></div>
+        </div>
+      </section>
+
       <!-- ═══ ESTADO ABIERTO ═══ -->
       <div id="state-open" style="display:none;">
 
@@ -366,7 +393,9 @@ const redes = [
     if (data.applications_closed) {
       // Estado intermedio: ciclo activo pero inscripciones cerradas
       stateInterviewing.style.display = '';
+      stateInterviewing.querySelector('.sel-closed-quote-block')!.insertAdjacentElement('afterend', document.getElementById('selection-schedule')!);
       document.title = `Selección ${data.active_season} | Club Hello World`;
+      await loadSchedule(data.active_season);
       return;
     }
 
@@ -374,6 +403,102 @@ const redes = [
     heroOpen.style.display = '';
     badge.textContent = `✦ ABIERTO · ${data.active_season}`;
     stateOpen.style.display = '';
+    stateOpen.querySelector('.section-card')!.insertAdjacentElement('afterend', document.getElementById('selection-schedule')!);
     document.title = `Selección ${data.active_season} | Club Hello World`;
+    await loadSchedule(data.active_season);
   });
+
+  async function loadSchedule(season: string) {
+    const { data: schedule } = await supabase.from('selection_schedules')
+      .select('season,first_stage_date,interviews_start_date,interviews_end_date,final_results_date')
+      .eq('season', season).eq('is_published', true).maybeSingle();
+    if (!schedule) return;
+    document.getElementById('selection-schedule-season')!.textContent = season;
+    const entries: Array<{ date: string; title: string; parts: Array<[string, boolean]> }> = [
+      { date: schedule.first_stage_date, title: 'Cierre de solicitudes', parts: [
+        ['Cierre previsto de solicitudes y resultados de la primera etapa, incluidas las invitaciones a entrevista. Si te invitamos, ', false],
+        ['tendrás siete días', true], [' desde que enviemos el correo ', false],
+        ['para agendar tu entrevista.', true],
+      ] },
+      { date: schedule.interviews_start_date, title: 'Inician las entrevistas', parts: [
+        ['Desde esta fecha comienzan las entrevistas.', false],
+      ] },
+      { date: schedule.interviews_end_date, title: 'Últimas entrevistas', parts: [
+        ['Fecha límite para entrevistar.', false],
+      ] },
+      { date: schedule.final_results_date, title: 'Decisión final', parts: [
+        ['Fecha límite para comunicar aceptaciones y rechazos finales.', false],
+      ] },
+    ];
+    const list = document.getElementById('selection-schedule-dates')!;
+    list.replaceChildren();
+    entries.forEach(({ date, title, parts }, index) => {
+      const item = document.createElement('li');
+      item.className = 'sel-schedule-step';
+      const marker = document.createElement('span');
+      marker.className = 'sel-schedule-step-marker';
+      marker.setAttribute('aria-hidden', 'true');
+      marker.textContent = String(index + 1).padStart(2, '0');
+      const time = document.createElement('time');
+      time.dateTime = date;
+      const spokenDate = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City' })
+        .format(new Date(`${date}T12:00:00-06:00`));
+      time.setAttribute('aria-label', index === 1 ? `Desde el ${spokenDate}` : spokenDate);
+      const [year, , day] = date.split('-');
+      const monthLabel = new Intl.DateTimeFormat('es-MX', { month: 'short', timeZone: 'America/Mexico_City' }).format(new Date(`${date}T12:00:00-06:00`)).replace('.', '').toUpperCase();
+      const dayLabel = document.createElement('strong');
+      dayLabel.textContent = String(Number(day));
+      const monthYear = document.createElement('span');
+      monthYear.textContent = monthLabel;
+      const yearLabel = document.createElement('small');
+      yearLabel.textContent = year;
+      monthYear.append(yearLabel);
+      time.append(dayLabel, monthYear);
+      const content = document.createElement('div');
+      content.className = 'sel-schedule-step-content';
+      const kicker = document.createElement('span');
+      kicker.className = 'sel-schedule-step-kicker';
+      kicker.textContent = index === 1 ? 'DESDE ESTA FECHA' : 'FECHA OBJETIVO';
+      const heading = document.createElement('h3');
+      heading.textContent = title;
+      const detail = document.createElement('p');
+      for (const [text, important] of parts) {
+        if (important) {
+          const highlight = document.createElement('strong');
+          highlight.className = 'sel-schedule-key';
+          highlight.textContent = text;
+          detail.append(highlight);
+        } else detail.append(document.createTextNode(text));
+      }
+      content.append(kicker, heading, detail);
+      item.append(marker, time, content);
+      list.append(item);
+    });
+    const { data: updates } = await supabase.from('selection_schedule_updates')
+      .select('body,published_at').eq('season', season).eq('is_published', true)
+      .order('published_at', { ascending: false });
+    const updateList = document.getElementById('selection-schedule-update-list')!;
+    updateList.replaceChildren();
+    if (updates?.length) {
+      for (const update of updates) {
+        const item = document.createElement('article');
+        item.className = 'sel-schedule-update';
+        const time = document.createElement('time');
+        time.dateTime = update.published_at ?? '';
+        time.textContent = update.published_at
+          ? new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City' }).format(new Date(update.published_at))
+          : '';
+        const body = document.createElement('p');
+        body.textContent = update.body;
+        item.append(time, body);
+        updateList.append(item);
+      }
+    } else {
+      const empty = document.createElement('p');
+      empty.className = 'sel-schedule-empty';
+      empty.textContent = 'Aún no hay avisos publicados.';
+      updateList.append(empty);
+    }
+    document.getElementById('selection-schedule')!.style.display = '';
+  }
 </script>

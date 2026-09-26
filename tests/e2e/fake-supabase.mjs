@@ -72,8 +72,12 @@ function app(id, nombre, status) {
 let state;
 let calls;
 let booking;
+let schedules;
+let scheduleUpdates;
 
 function reset() {
+  schedules = [{ season: SEASON, first_stage_date: '2026-10-01', interviews_start_date: '2026-10-08', interviews_end_date: '2026-10-22', final_results_date: '2026-10-29', is_published: true, updated_at: '2026-09-26T00:00:00Z' }];
+  scheduleUpdates = [{ id: 'old-notice', season: '2026-2', body: 'Aviso anterior', is_published: true, published_at: '2026-04-01T18:00:00Z', created_at: '2026-04-01T18:00:00Z' }, { id: 'draft-notice', season: SEASON, body: 'Borrador privado', is_published: false, published_at: '2026-09-25T18:00:00Z', created_at: '2026-09-25T18:00:00Z' }];
   state = {
     config: {
       id: true,
@@ -288,7 +292,7 @@ function writeJson(res, value, status = 200) {
 createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', 'http://127.0.0.1:4329');
   res.setHeader('Access-Control-Allow-Headers', 'authorization,apikey,content-type,x-client-info,x-supabase-api-version,prefer');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.setHeader('Content-Type', 'application/json');
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -315,6 +319,42 @@ createServer(async (req, res) => {
   if (pathname === '/rest/v1/rpc/is_email_in_directiva') return writeJson(res, true);
   if (pathname === '/rest/v1/seleccion_config') return writeJson(res, state.config);
   if (pathname === '/rest/v1/directiva') return writeJson(res, { email: user.email });
+  if (pathname === '/rest/v1/selection_schedules') {
+    if (req.method === 'POST') {
+      const existing = schedules.find(row => row.season === data.season);
+      if (existing) Object.assign(existing, data);
+      else schedules.push(data);
+      calls.push({ action: 'schedule', data: clone(data) });
+      return writeJson(res, null);
+    }
+    const rows = schedules.filter(row => (!url.searchParams.get('season') || url.searchParams.get('season') === `eq.${row.season}`) && (!url.searchParams.get('is_published') || url.searchParams.get('is_published') === `eq.${row.is_published}`));
+    return writeJson(res, req.headers.accept?.includes('vnd.pgrst.object') ? (rows[0] ?? null) : rows);
+  }
+  if (pathname === '/rest/v1/selection_schedule_updates') {
+    if (req.method === 'POST') {
+      const row = { ...data, id: `notice-${scheduleUpdates.length}`, published_at: data.is_published ? new Date().toISOString() : null, created_at: new Date().toISOString() };
+      scheduleUpdates.push(row);
+      calls.push({ action: 'schedule_notice', data: clone(data) });
+      return writeJson(res, null);
+    }
+    if (req.method === 'PATCH') {
+      const row = scheduleUpdates.find(item => url.searchParams.get('id') === `eq.${item.id}`);
+      if (row) { Object.assign(row, data); if (row.is_published && !row.published_at) row.published_at = new Date().toISOString(); }
+      return writeJson(res, null);
+    }
+    if (req.method === 'DELETE') {
+      const index = scheduleUpdates.findIndex(item =>
+        url.searchParams.get('id') === `eq.${item.id}`
+        && url.searchParams.get('season') === `eq.${item.season}`
+        && url.searchParams.get('is_published') === 'eq.false'
+        && !item.is_published);
+      const removed = index >= 0 ? scheduleUpdates.splice(index, 1) : [];
+      calls.push({ action: 'schedule_notice_delete', data: { id: url.searchParams.get('id') } });
+      return writeJson(res, removed);
+    }
+    const rows = scheduleUpdates.filter(row => (!url.searchParams.get('season') || url.searchParams.get('season') === `eq.${row.season}`) && (!url.searchParams.get('is_published') || url.searchParams.get('is_published') === `eq.${row.is_published}`));
+    return writeJson(res, rows);
+  }
 
   const rows = restRows(pathname, url);
   if (rows) {

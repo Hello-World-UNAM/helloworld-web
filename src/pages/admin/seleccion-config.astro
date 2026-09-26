@@ -195,6 +195,57 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </div>
       </div>
 
+      <div class="admin-config-card admin-schedule-card">
+        <div class="admin-schedule-header">
+          <div>
+            <span class="admin-schedule-kicker"><i class="bi bi-signpost-split" aria-hidden="true"></i> CONTENIDO PÚBLICO</span>
+            <h2>Cronograma de selección</h2>
+          </div>
+          <span class="admin-schedule-season" id="admin-schedule-season">—</span>
+        </div>
+        <p class="admin-config-sub">Define las cuatro fechas objetivo. Aparecerán en la página pública de esta temporada cuando publiques el cronograma.</p>
+        <form id="schedule-form" class="admin-config-form">
+          <div class="admin-schedule-fields">
+            <div class="admin-schedule-field">
+              <span class="admin-schedule-field-number" aria-hidden="true">01</span>
+              <div><label class="admin-field-label" for="schedule-first">Cierre de solicitudes <small>Y resultados de primera etapa</small></label><input id="schedule-first" class="admin-text-input" type="date" required></div>
+            </div>
+            <div class="admin-schedule-field">
+              <span class="admin-schedule-field-number" aria-hidden="true">02</span>
+              <div><label class="admin-field-label" for="schedule-start">Inician las entrevistas <small>Desde esta fecha</small></label><input id="schedule-start" class="admin-text-input" type="date" required></div>
+            </div>
+            <div class="admin-schedule-field">
+              <span class="admin-schedule-field-number" aria-hidden="true">03</span>
+              <div><label class="admin-field-label" for="schedule-end">Últimas entrevistas <small>Fecha límite</small></label><input id="schedule-end" class="admin-text-input" type="date" required></div>
+            </div>
+            <div class="admin-schedule-field">
+              <span class="admin-schedule-field-number" aria-hidden="true">04</span>
+              <div><label class="admin-field-label" for="schedule-final">Decisión final <small>Aceptaciones y rechazos</small></label><input id="schedule-final" class="admin-text-input" type="date" required></div>
+            </div>
+          </div>
+          <div class="admin-schedule-preview-wrap">
+            <span class="admin-schedule-kicker">VISTA PREVIA EN LA PÁGINA</span>
+            <div id="schedule-preview" class="admin-schedule-preview" aria-live="polite"></div>
+          </div>
+          <label class="admin-schedule-publish"><input id="schedule-published" type="checkbox"><span><strong>Publicar cronograma</strong><small>Visible en /seleccion mientras esta temporada esté activa.</small></span></label>
+          <button type="submit" class="hw-btn hw-btn-primary admin-save-btn">Guardar cambios →</button>
+          <p class="admin-schedule-safety">Guardar estas fechas no cierra solicitudes ni envía correos.</p>
+          <div id="schedule-feedback" class="admin-save-feedback" style="display:none;"></div>
+        </form>
+        <div class="admin-schedule-notices">
+          <span class="admin-schedule-kicker">COMUNICACIÓN DE LA MESA</span>
+          <h3>Actualizaciones</h3>
+          <p class="admin-config-sub">Publica avisos breves cuando haya novedades. Los avisos anteriores de esta temporada permanecen en el historial.</p>
+          <form id="schedule-update-form" class="admin-config-form">
+            <label class="admin-field-label" for="schedule-update-body">Nuevo aviso</label>
+            <textarea id="schedule-update-body" class="admin-text-input" maxlength="500" rows="3" placeholder="Ej. Ya enviamos las invitaciones a entrevista…" required></textarea>
+            <div class="admin-schedule-notice-actions"><label class="admin-schedule-check"><input id="schedule-update-published" type="checkbox"> Publicar ahora</label><button type="submit" class="admin-action-btn">Añadir aviso →</button></div>
+          </form>
+          <div id="schedule-update-feedback" class="admin-save-feedback" style="display:none;"></div>
+          <div id="schedule-updates-admin" class="admin-schedule-update-list"></div>
+        </div>
+      </div>
+
       <!-- ═══════════════ DIVISOR FUERTE ═══════════════ -->
       <div class="admin-section-divider">
         <span class="admin-section-divider-label">
@@ -372,11 +423,158 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     // Interviews section (solo si hay temporada activa)
     if (activeSeasonGlobal) {
+      setupSchedule();
       setupInterviewsSection();
       setupWhatsappSection();
       setupFormsToggle();
     }
   });
+
+  function scheduleField(id: string) { return document.getElementById(id) as HTMLInputElement; }
+  const scheduleDates = ['schedule-first', 'schedule-start', 'schedule-end', 'schedule-final'];
+
+  async function setupSchedule() {
+    if (!activeSeasonGlobal) return;
+    const season = activeSeasonGlobal;
+    document.getElementById('admin-schedule-season')!.textContent = season;
+    const form = document.getElementById('schedule-form') as HTMLFormElement;
+    const noticeForm = document.getElementById('schedule-update-form') as HTMLFormElement;
+    const { data, error } = await supabase.from('selection_schedules').select('*').eq('season', season).maybeSingle();
+    if (error) {
+      showFeedback(document.getElementById('schedule-feedback')!, error.message, 'error');
+      return;
+    }
+    if (data) {
+      [data.first_stage_date, data.interviews_start_date, data.interviews_end_date, data.final_results_date]
+        .forEach((value, index) => { scheduleField(scheduleDates[index]).value = value; });
+      scheduleField('schedule-published').checked = data.is_published;
+    }
+    const preview = () => {
+      const values = scheduleDates.map(id => scheduleField(id).value);
+      const target = document.getElementById('schedule-preview')!;
+      target.replaceChildren();
+      if (!values.every(Boolean)) {
+        target.textContent = 'Completa las cuatro fechas para ver cómo se leerá el cronograma.';
+        return;
+      }
+      const titles = ['Cierre de solicitudes', 'Inician las entrevistas', 'Últimas entrevistas', 'Decisión final'];
+      values.forEach((value, index) => {
+        const row = document.createElement('div');
+        row.className = 'admin-schedule-preview-row';
+        const number = document.createElement('span');
+        number.textContent = String(index + 1).padStart(2, '0');
+        const date = document.createElement('time');
+        date.dateTime = value;
+        date.textContent = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' })
+          .format(new Date(`${value}T12:00:00-06:00`));
+        const title = document.createElement('strong');
+        title.textContent = titles[index];
+        row.append(number, date, title);
+        target.append(row);
+      });
+      const note = document.createElement('p');
+      note.textContent = 'Quien reciba una invitación tendrá siete días desde el envío de su correo para agendar.';
+      target.append(note);
+    };
+    form.addEventListener('input', preview);
+    preview();
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const values = scheduleDates.map(id => scheduleField(id).value);
+      const feedback = document.getElementById('schedule-feedback')!;
+      if (!values.every(Boolean) || values.some((date, index) => index > 0 && date < values[index - 1])) {
+        showFeedback(feedback, 'Completa las fechas en orden cronológico.', 'error');
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+      button.disabled = true;
+      const { error: saveError } = await supabase.from('selection_schedules').upsert({
+        season, first_stage_date: values[0], interviews_start_date: values[1],
+        interviews_end_date: values[2], final_results_date: values[3],
+        is_published: scheduleField('schedule-published').checked, updated_at: new Date().toISOString(),
+      });
+      showFeedback(feedback, saveError?.message ?? 'Cronograma guardado.', saveError ? 'error' : 'success');
+      button.disabled = false;
+    });
+    noticeForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      const body = (document.getElementById('schedule-update-body') as HTMLTextAreaElement).value.trim();
+      const feedback = document.getElementById('schedule-update-feedback')!;
+      if (!body) return;
+      const { error: noticeError } = await supabase.from('selection_schedule_updates').insert({
+        season, body, is_published: scheduleField('schedule-update-published').checked,
+      });
+      showFeedback(feedback, noticeError?.message ?? 'Aviso guardado.', noticeError ? 'error' : 'success');
+      if (!noticeError) {
+        noticeForm.reset();
+        await refreshScheduleUpdates(season);
+      }
+    });
+    await refreshScheduleUpdates(season);
+  }
+
+  async function refreshScheduleUpdates(season: string) {
+    const list = document.getElementById('schedule-updates-admin')!;
+    const { data, error } = await supabase.from('selection_schedule_updates').select('*')
+      .eq('season', season).order('created_at', { ascending: false });
+    list.replaceChildren();
+    if (error) { list.textContent = error.message; return; }
+    if (!data?.length) { list.textContent = 'Sin avisos para esta temporada.'; return; }
+    for (const update of data) {
+      const item = document.createElement('div');
+      item.className = 'admin-schedule-update';
+      const body = document.createElement('p');
+      body.textContent = update.body;
+      const status = document.createElement('span');
+      status.className = `admin-schedule-update-status ${update.is_published ? 'is-published' : ''}`;
+      status.textContent = update.is_published ? 'PUBLICADO' : 'BORRADOR';
+      const meta = document.createElement('small');
+      meta.textContent = update.published_at
+        ? `${update.is_published ? 'Publicado' : 'Publicado anteriormente'} el ${new Intl.DateTimeFormat('es-MX', { dateStyle: 'long', timeZone: 'America/Mexico_City' }).format(new Date(update.published_at))}`
+        : 'Sin publicar';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'admin-action-btn';
+      button.textContent = update.is_published ? 'Ocultar' : 'Publicar';
+      button.addEventListener('click', async () => {
+        button.disabled = true;
+        const { error: updateError } = await supabase.from('selection_schedule_updates')
+          .update({ is_published: !update.is_published }).eq('id', update.id);
+        if (updateError) {
+          showFeedback(document.getElementById('schedule-update-feedback')!, updateError.message, 'error');
+          button.disabled = false;
+        } else await refreshScheduleUpdates(season);
+      });
+      const actions = document.createElement('div');
+      actions.className = 'admin-schedule-update-actions';
+      actions.append(button);
+      if (!update.is_published) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'admin-action-btn admin-schedule-delete';
+        remove.innerHTML = '<i class="bi bi-trash3" aria-hidden="true"></i> Eliminar';
+        remove.addEventListener('click', async () => {
+          if (!confirm('¿Eliminar este borrador? No se podrá recuperar.')) return;
+          remove.disabled = true;
+          const { data: deleted, error: deleteError } = await supabase.from('selection_schedule_updates')
+            .delete().eq('id', update.id).eq('season', season).eq('is_published', false).select('id');
+          if (deleteError || !deleted?.length) {
+            showFeedback(document.getElementById('schedule-update-feedback')!, deleteError?.message ?? 'El aviso cambió. Actualiza la página e inténtalo de nuevo.', 'error');
+            remove.disabled = false;
+          } else {
+            showFeedback(document.getElementById('schedule-update-feedback')!, 'Borrador eliminado.', 'success');
+            await refreshScheduleUpdates(season);
+          }
+        });
+        actions.append(remove);
+      }
+      const copy = document.createElement('div');
+      copy.className = 'admin-schedule-update-copy';
+      copy.append(status, meta, body);
+      item.append(copy, actions);
+      list.append(item);
+    }
+  }
 
   function renderFormsStatus(closed: boolean) {
     const pill = document.getElementById('forms-status-pill');

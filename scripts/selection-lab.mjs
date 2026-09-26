@@ -69,6 +69,8 @@ function prepare() {
     '20260905022036_selection_reminder_window.sql',
     '20260905152829_selection_save_preserves_booking.sql',
     '20260905195438_selection_evaluation_metadata.sql',
+    '20260926190150_public_selection_schedule.sql',
+    '20260926194120_delete_selection_schedule_drafts.sql',
   ]) {
     copy(join(sourceSupabase, 'migrations', migration), join(labSupabase, 'migrations', migration));
   }

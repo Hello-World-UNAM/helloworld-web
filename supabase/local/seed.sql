@@ -42,6 +42,11 @@ on conflict (email) do update
 set nombre = excluded.nombre,
     role = excluded.role;
 
+insert into public.selection_schedules
+  (season, first_stage_date, interviews_start_date, interviews_end_date, final_results_date, is_published)
+values ('2099-1', '2098-10-01', '2098-10-08', '2098-10-22', '2098-10-29', true)
+on conflict (season) do nothing;
+
 insert into public.interview_days (
   season,
   date,

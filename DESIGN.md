@@ -174,6 +174,10 @@ border-left: 5px solid #6225e6;
 padding: 10px 0 10px 18px;
 ```
 
+### Cronograma de selección
+
+El cronograma público es una `.section-card` sin radios, con encabezado editorial, cuatro fechas numeradas y una línea vertical negra. Las fechas se leen en bloques lavanda con borde negro; el primer marcador usa morado primario. La primera fecha se titula «Cierre de solicitudes». Solo «tendrás siete días» y «para agendar tu entrevista» llevan un subrayado lavanda en el texto de las fechas. Un deseo de buena suerte en Playfair cierra la secuencia; luego hay una franja lavanda para recordar el correo. Los avisos van al final sobre blanco, con acentos amarillos `#fbbf24` y un borde negro que los distingue del recordatorio. La cita de la convocatoria aparece siempre antes del cronograma. En móvil, fecha y título comparten la primera franja y la descripción ocupa todo el ancho disponible junto a la línea vertical; en pantallas muy estrechas vuelven a apilarse. Las fechas no se convierten en tarjetas independientes.
+
 ### `.objetivo-general-block p`
 Bloque de statement con fondo destacado:
 ```css
