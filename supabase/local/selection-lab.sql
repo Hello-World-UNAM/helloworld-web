@@ -7,6 +7,7 @@ alter table public.solicitudes enable row level security;
 alter table public.interview_days enable row level security;
 alter table public.interviews enable row level security;
 alter table public.interview_booking_tokens enable row level security;
+alter table public.miembros_activos enable row level security;
 
 revoke all on table public.directiva from anon, authenticated;
 revoke all on table public.seleccion_config from anon, authenticated;
@@ -14,11 +15,22 @@ revoke all on table public.solicitudes from anon, authenticated;
 revoke all on table public.interview_days from anon, authenticated;
 revoke all on table public.interviews from anon, authenticated;
 revoke all on table public.interview_booking_tokens from anon, authenticated;
+revoke all on table public.miembros_activos from anon, authenticated;
 
 grant select on table public.seleccion_config to anon, authenticated;
 grant insert on table public.solicitudes to anon;
 grant select on table public.directiva, public.solicitudes, public.interview_days,
   public.interviews, public.interview_booking_tokens to authenticated;
+grant select, update on table public.miembros_activos to authenticated;
+grant insert, delete on table public.miembros_activos to authenticated;
+
+create policy selection_lab_members_read on public.miembros_activos for select to authenticated
+using (lower(correo) = lower(auth.jwt()->>'email') or public.is_email_in_directiva(auth.jwt()->>'email'));
+create policy selection_lab_members_update on public.miembros_activos for update to authenticated
+using (lower(correo) = lower(auth.jwt()->>'email') or public.is_email_in_directiva(auth.jwt()->>'email'))
+with check (lower(correo) = lower(auth.jwt()->>'email') or public.is_email_in_directiva(auth.jwt()->>'email'));
+create policy selection_lab_members_delete on public.miembros_activos for delete to authenticated
+using (public.is_email_in_directiva(auth.jwt()->>'email'));
 
 create policy selection_lab_config_read
 on public.seleccion_config for select

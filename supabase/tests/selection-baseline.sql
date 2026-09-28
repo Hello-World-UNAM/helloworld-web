@@ -29,6 +29,17 @@ constraint directiva_email_key UNIQUE (email),
 constraint directiva_pkey PRIMARY KEY (id),
 constraint directiva_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'reviewer'::text])))
 );
+create table public.miembros_activos (
+  id uuid primary key default gen_random_uuid(),
+  nombre text not null,
+  correo text not null,
+  numero_cuenta text,
+  semestre integer,
+  telefono text,
+  rol text default 'member',
+  puntos_totales integer not null default 0,
+  created_at timestamptz default now()
+);
 create table public.interview_booking_tokens (
 id uuid not null default gen_random_uuid(),
 solicitud_id uuid not null,

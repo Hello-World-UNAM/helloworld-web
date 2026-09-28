@@ -71,6 +71,7 @@ function prepare() {
     '20260905195438_selection_evaluation_metadata.sql',
     '20260926190150_public_selection_schedule.sql',
     '20260926194120_delete_selection_schedule_drafts.sql',
+    '20260927120000_selection_member_provisioning.sql',
   ]) {
     copy(join(sourceSupabase, 'migrations', migration), join(labSupabase, 'migrations', migration));
   }

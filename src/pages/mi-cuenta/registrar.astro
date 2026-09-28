@@ -178,7 +178,7 @@ import MiCuentaLayout from '@layouts/MiCuentaLayout.astro';
     const { data: { session } } = await supabase.auth.getSession();
     if (!session || !session.user?.email) return window.location.replace('/mi-cuenta/login');
 
-    const email = session.user.email;
+    const email = session.user.email.trim().toLowerCase();
     const { data: member } = await supabase.from('miembros_activos').select('id').eq('correo', email).maybeSingle();
     if (!member) return window.location.replace('/mi-cuenta');
     memberId = member.id;

@@ -74,8 +74,10 @@ let calls;
 let booking;
 let schedules;
 let scheduleUpdates;
+let memberStatuses;
 
 function reset() {
+  memberStatuses = [];
   schedules = [{ season: SEASON, first_stage_date: '2026-10-01', interviews_start_date: '2026-10-08', interviews_end_date: '2026-10-22', final_results_date: '2026-10-29', is_published: true, updated_at: '2026-09-26T00:00:00Z' }];
   scheduleUpdates = [{ id: 'old-notice', season: '2026-2', body: 'Aviso anterior', is_published: true, published_at: '2026-04-01T18:00:00Z', created_at: '2026-04-01T18:00:00Z' }, { id: 'draft-notice', season: SEASON, body: 'Borrador privado', is_published: false, published_at: '2026-09-25T18:00:00Z', created_at: '2026-09-25T18:00:00Z' }];
   state = {
@@ -314,6 +316,14 @@ createServer(async (req, res) => {
   if (pathname === '/__booking') { Object.assign(booking, data); return writeJson(res, booking); }
   if (pathname === '/__config') { Object.assign(state.config, data); return writeJson(res, state.config); }
   if (pathname === '/__state') { Object.assign(state, data); return writeJson(res, state); }
+  if (pathname === '/__member_status') {
+    memberStatuses = data.rows ?? [];
+    for (const id of data.final_sent ?? []) {
+      const row = state.solicitudes.find((item) => item.id === id);
+      if (row) row.final_email_sent = true;
+    }
+    return writeJson(res, memberStatuses);
+  }
 
   if (pathname === '/auth/v1/user') return writeJson(res, user);
   if (pathname === '/rest/v1/rpc/is_email_in_directiva') return writeJson(res, true);
@@ -384,6 +394,7 @@ createServer(async (req, res) => {
   }
 
   if (pathname === '/rest/v1/rpc/selection_admin') return writeJson(res, handleSelectionAdmin(data));
+  if (pathname === '/rest/v1/rpc/selection_member_status') return writeJson(res, memberStatuses);
 
   return writeJson(res, { error: `Unmocked route: ${pathname}` }, 404);
 }).listen(55439, '127.0.0.1');

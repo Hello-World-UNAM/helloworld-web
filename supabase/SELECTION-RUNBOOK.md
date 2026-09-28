@@ -120,8 +120,11 @@ publicarse antes del corte, pero el envío permanece pausado hasta el canario.
   con zona horaria explícita.
 - Un correo enviado no se reescribe. Un estado incierto se investiga por id/tag
   en Resend y no se reintenta a ciegas.
-- El proceso no crea miembros automáticamente y no modifica `miembros_activos`
-  ni `puntos_registros`.
+- Confirmar un correo final de aceptación con el proveedor incorpora al
+  postulante en `miembros_activos` o registra un conflicto para revisión. Encolar
+  el correo, guardar la decisión o comunicar un rechazo no incorpora miembros.
+  Los puntos existentes no se modifican. Una rectificación final a rechazo
+  requiere revisión manual del acceso.
 
 ## Arquitectura y barreras de correo
 

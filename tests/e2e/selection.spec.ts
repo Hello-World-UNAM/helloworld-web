@@ -143,6 +143,21 @@ test('Entrevistas sólo comunica personas seleccionadas y ya evaluadas', async (
   expect(confirm.data.items).toHaveLength(1);
 });
 
+test('Entrevistas muestra el alta de un aceptado cuando ya se confirmó su correo', async ({ page, request }) => {
+  await page.goto(`/admin/solicitudes/detalle?id=${ANA_ID}`);
+  await page.locator('#eval-decision label.admin-eval-decision-accept').click();
+  await page.locator('#eval-save').click();
+  await expect(page.locator('#eval-feedback')).toContainText('resultado final guardados');
+
+  await request.post(`${fake}/__member_status`, { data: {
+    final_sent: [ANA_ID],
+    rows: [{ solicitud_id: ANA_ID, member_id: 'member-ana', status: 'created', detail: null }],
+  } });
+  await page.goto('/admin/entrevistas');
+  const row = page.locator('.admin-agenda-item').filter({ hasText: 'Ana' });
+  await expect(row).toContainText('Alta automática en Miembros completada');
+});
+
 test('una bandera ausente bloquea el panel sin activar la implementación legacy', async ({ page, request }) => {
   await request.post(`${fake}/__config`, { data: { progressive_enabled: null } });
   await page.goto('/admin/solicitudes');

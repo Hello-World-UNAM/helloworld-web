@@ -702,6 +702,15 @@ export type Database = {
         Args: { p_action: string; p_data?: Json }
         Returns: Json
       }
+      selection_member_status: {
+        Args: { p_season: string }
+        Returns: {
+          solicitud_id: string
+          member_id: string | null
+          status: string
+          detail: string | null
+        }[]
+      }
       selection_worker: {
         Args: { p_action: string; p_data?: Json }
         Returns: Json

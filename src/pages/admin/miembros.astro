@@ -270,7 +270,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     const payload = {
       nombre: inputNombre.value.trim(),
       numero_cuenta: inputCuenta.value.trim(),
-      correo: inputCorreo.value.trim(),
+      correo: inputCorreo.value.trim().toLowerCase(),
       telefono: inputTelefono.value.trim(),
       semestre: parseInt(inputSemestre.value) || 7,
       rol: inputCargo.value.trim()
