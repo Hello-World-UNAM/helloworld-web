@@ -154,8 +154,8 @@ test('rectification uses the stage-specific accepted template', () => {
     payload({ stage: 'final', decision: 'accepted', booking_url: undefined, expires_at: undefined }),
   );
 
-  assert.match(initial.text, /continuar al proceso de entrevista/);
-  assert.match(initial.text, /Agenda tu entrevista/);
+  assert.match(initial.text, /continuar a la etapa de entrevistas/);
+  assert.match(initial.text, /Agendar entrevista/);
   assert.match(final.text, /fuiste admitido\(a\)/);
   assert.match(final.text, /Bienvenido\(a\)/);
   assert.match(final.text, /WhatsApp/);
@@ -221,4 +221,34 @@ test('renders every supported kind and never leaks the internal reason', () => {
 
 test('escapeHtml handles all HTML-sensitive characters', () => {
   assert.equal(escapeHtml(`<&>"'`), '&lt;&amp;&gt;&quot;&#39;');
+});
+
+test('actionable notices require a personal link and use the responsive visual shell', () => {
+  for (const kind of ['cancellation', 'deadline', 'reminder'] as const) {
+    assert.throws(() => renderSelectionMail(kind, payload({ booking_url: undefined })), /missing_booking_url/);
+    const mail = renderSelectionMail(kind, payload());
+    assert.match(mail.html, /class="mail-card"/);
+    assert.match(mail.html, /class="mail-button"/);
+    assert.match(mail.html, /@media screen and \(max-width:360px\)/);
+    assert.match(mail.text, /test-token/);
+  }
+});
+
+test('deadline communicates an extension and cancellation does not promise a new deadline', () => {
+  const deadline = renderSelectionMail('deadline', payload());
+  assert.match(deadline.subject, /Ampliamos tu plazo/);
+  assert.match(deadline.text, /Nueva fecha límite/);
+  const cancellation = renderSelectionMail('cancellation', payload());
+  assert.match(cancellation.text, /no amplía el plazo/);
+  assert.match(cancellation.text, /si tu invitación sigue vigente/);
+});
+
+test('rejection corrections distinguish initial and final outcomes without assuming an interview', () => {
+  const initial = renderSelectionMail('rectification',payload({stage:'initial',decision:'rejected'}));
+  const final = renderSelectionMail('rectification',payload({stage:'final',decision:'rejected'}));
+  assert.match(initial.text,/no continuarás a la etapa de entrevistas/);
+  assert.match(final.text,/no fuiste admitido/);
+  assert.doesNotMatch(final.text,/después de tu entrevista/i);
+  assert.doesNotMatch(initial.html,/test-token|test-group/);
+  assert.doesNotMatch(final.html,/test-token|test-group/);
 });

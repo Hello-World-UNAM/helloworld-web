@@ -27,7 +27,8 @@ export type SelectionAction =
   | 'retry'
   | 'interview'
   | 'day'
-  | 'config';
+  | 'config'
+  | 'room';
 
 export interface SelectionConfig {
   id?: boolean;
@@ -38,8 +39,11 @@ export interface SelectionConfig {
   progressive_enabled?: boolean;
   dispatch_paused?: boolean;
   default_booking_hours?: number;
+  reminder_enabled?: boolean;
+  reminder_hours?: number[];
   selection_revision?: number;
   revision?: number;
+  interview_duration_minutes?: number;
   whatsapp_url?: string | null;
   [key: string]: unknown;
 }
@@ -76,6 +80,10 @@ export interface SelectionInvitation {
 }
 
 export interface SelectionInterview {
+  room_id?: string | null;
+  day_id?: string | null;
+  calendar_status?: string;
+  calendar_error?: string | null;
   id: string;
   solicitud_id: string;
   slot_datetime: string;
@@ -90,6 +98,8 @@ export interface SelectionInterview {
 }
 
 export interface SelectionDay {
+  room_id?: string | null;
+  interviewers?: string[];
   id: string;
   season: string;
   date: string;
@@ -123,7 +133,28 @@ export interface SelectionEvent {
   [key: string]: unknown;
 }
 
+export interface SelectionRoom {
+  id: string; season: string; date: string; name: string; position: number;
+  primary_email: string | null; backup_email: string | null;
+  published: boolean; meet_url: string | null;
+  calendar_event_id: string; calendar_status: 'queued' | 'working' | 'ready' | 'failed';
+  calendar_error: string | null;
+  google_space_name?: string | null; google_cohosts?: string[];
+}
+
+export interface SelectionCapacitySummary {
+  available_slots: number;
+  committed_applicants: number;
+  available_for_invitations: number;
+  accepted_without_booking: number;
+  missing_slots: number;
+}
+
 export interface SelectionState {
+  room_deletion_locked?: boolean;
+  room_cancellations_pending?: number;
+  capacity_summary?: SelectionCapacitySummary;
+  rooms?: SelectionRoom[];
   config: SelectionConfig;
   capacity?: number | Record<string, unknown> | null;
   solicitudes: SelectionSolicitud[];
@@ -317,6 +348,12 @@ export async function previewSelectionCommunication(
 ): Promise<SelectionCommunicationDraft> {
   const items = rows.map(revisionItem);
   const requestedHours = durationHours ?? 168;
+  const initialState = kind === 'initial' && rows.some(row => row.status === 'accepted') ? await getSelectionState(rows[0]?.season) : undefined;
+  const needed = rows.filter(row => row.status === 'accepted').length;
+  const capacity = initialState?.capacity_summary?.available_for_invitations ?? initialState?.capacity;
+  if (typeof capacity === 'number' && needed > Math.max(0, capacity)) {
+    throw new SelectionClientError(`Quieres invitar a ${needed} persona${needed === 1 ? '' : 's'}, pero quedan ${Math.max(0, capacity)} cupos publicados disponibles para nuevas invitaciones. Añade horarios o reduce la selección. Los cupos necesarios para quienes ya fueron invitados o están en cola se descuentan de este cálculo.`);
+  }
   const [preview, state] = await Promise.all([
     selectionAdmin<SelectionPreview>('preview', {
       kind,
@@ -424,11 +461,21 @@ export function errorMessage(error: unknown): string {
 }
 
 const SELECTION_ERROR_LABELS: Record<string, string> = {
+  BLOCK_HAS_RESERVATIONS: 'El bloque tiene reservas: conserva sala, horario, duración y enlace. Puedes cambiar entrevistadores.',
+  OVERLAPPING_BLOCKS: 'Los bloques de esta sala se superponen.',
+  INTERVIEWER_CONFLICT: 'Una persona está asignada a otra sala durante ese horario.',
+  HOSTS_REQUIRED: 'Asigna un titular y un respaldo distintos antes de preparar Calendar.',
+  LEGACY_AGENDA_RETIRED: 'La agenda se administra desde las salas de entrevista.',
+  INITIAL_MAIL_LOCKS_AGENDA: 'Ya se inició o completó un envío de correo inicial en esta temporada. Sus salas y horarios ya no se pueden eliminar.',
+  ROOM_NOT_READY: 'Guarda los responsables, añade horarios y conecta la sala con Google antes de publicar.',
+  CALENDAR_IN_PROGRESS: 'Calendar está procesando esta sala. Espera a que termine.',
+  INVALID_BLOCK: 'El bloque debe permitir al menos una entrevista completa.',
   ALREADY_NOTIFIED: 'Esta decisión ya fue comunicada.',
   COMMUNICATION_EXISTS_USE_RETRY_OR_RECTIFY: 'Ya existe una comunicación para esta decisión. Usa reintento o rectificación.',
   DISPATCH_PAUSED: 'El despacho de correos está pausado en configuración.',
+  '23514': 'Revisa los horarios de los recordatorios: el primer aviso debe ser anterior al último.',
   HISTORICAL_READ_ONLY: 'La temporada histórica es de sólo lectura.',
-  INSUFFICIENT_CAPACITY: 'No hay suficientes horarios libres para estas invitaciones.',
+  INSUFFICIENT_CAPACITY: 'No hay suficientes cupos publicados para estas invitaciones. Añade horarios o reduce los aceptados seleccionados; también cuentan quienes ya fueron invitados y aún no reservan.',
   INTERVIEW_IN_FUTURE: 'La entrevista aún no ha ocurrido: está programada para una fecha y hora futuras. En producción debes esperar a realizarla.',
   INTERVIEW_OR_EXCEPTION_REQUIRED: 'Para aceptar se requiere una entrevista completada o un motivo de excepción.',
   INVALID_DAY_OR_MEET: 'La fecha debe ser futura y la URL debe ser de Google Meet.',

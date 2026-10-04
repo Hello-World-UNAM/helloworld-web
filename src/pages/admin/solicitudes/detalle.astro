@@ -95,7 +95,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
             </div>
             <div id="eval-banner-noiview" class="admin-historical-banner admin-eval-banner-warn" style="display:none;">
               <i class="bi bi-exclamation-triangle-fill"></i>
-              Este candidato no agendó entrevista. Necesita decisión manual antes del cierre.
+              <span id="eval-booking-notice-text"></span>
             </div>
             <div id="eval-banner-locked" class="admin-historical-banner admin-eval-banner-locked" style="display:none;">
               <i class="bi bi-lock-fill"></i>
@@ -282,6 +282,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     selectionLabSaveEvaluation,
     selectionRevision,
     stageCommsOccupancy,
+    type SelectionState,
     type SelectionMessage,
     type SelectionSolicitud,
   } from '@lib/selection-client';
@@ -347,6 +348,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   let isHistorical = false;
   let progressiveEnabled = false;
   let solicitudMessages: SelectionMessage[] = [];
+  let selectionState: SelectionState | null = null;
   let evaluationInterviewStatus: 'none' | 'confirmed' | 'completed' | 'no_show' | 'cancelled' = 'none';
   let evaluationInterviewSlot: string | null = null;
 
@@ -400,6 +402,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       showError('No se pudo verificar el backend de selecciones. Recarga antes de hacer cambios.');
       return;
     }
+    selectionState = feature.state ?? null;
     progressiveEnabled = feature.mode === 'progressive';
     const progressiveRow = feature.state?.solicitudes.find((row) => row.id === id);
     if (progressiveRow) solicitud = progressiveRow as unknown as Solicitud;
@@ -647,6 +650,30 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     blandas: null, motivacion: null, proyectos: null, aporte: null, tecnica: null,
   };
 
+  function pendingBookingNotice(lookupFailed: boolean): { text: string; warning: boolean } {
+    if (lookupFailed) return { text: 'No se pudo comprobar si tiene entrevista. Recarga para verificar su situación.', warning: true };
+    const invitation = selectionState?.invitations.find(row => row.solicitud_id === solicitud!.id);
+    if (invitation?.revoked_at) return { text: 'La invitación para agendar fue revocada. Revisa el caso antes de continuar.', warning: true };
+    const occupancy = stageCommsOccupancy(solicitudMessages, solicitud!.id, 'initial', solicitud!.email_notification_sent);
+    if (occupancy === 'failed') return { text: 'El correo de invitación tuvo un problema de envío o entrega. Revisa el envío antes de dar por notificado al aspirante.', warning: true };
+    if (occupancy === 'uncertain') return { text: 'No se pudo confirmar el envío de la invitación. Revisa su estado antes de reenviarla.', warning: true };
+    const awaitingSend = solicitudMessages.some(message => message.kind === 'initial' &&
+      (message.status === 'queued' || message.status === 'sending'));
+    if (!solicitud!.email_notification_sent && (!invitation?.invited_at || awaitingSend)) {
+      return { text: occupancy === 'queued'
+        ? 'El correo de invitación está en cola o en proceso de envío. El aspirante todavía no ha sido notificado para agendar.'
+        : 'Aún no se le envía el correo de invitación. Comunica la aceptación desde Solicitudes para que pueda agendar su entrevista.', warning: false };
+    }
+    if (invitation?.expires_at) {
+      const deadline = formatInterviewDate(invitation.expires_at);
+      if (new Date(invitation.expires_at).getTime() <= Date.now()) {
+        return { text: `El plazo para agendar venció el ${deadline} y no registró entrevista. Revisa el caso: puedes ampliar el plazo o guardar una decisión manual antes del cierre.`, warning: true };
+      }
+      return { text: `En espera de que agende su entrevista. Tiene hasta el ${deadline}.`, warning: false };
+    }
+    return { text: 'La invitación ya fue enviada. En espera de que agende su entrevista; no hay una fecha límite registrada.', warning: false };
+  }
+
   async function setupEvaluation() {
     if (!solicitud) return;
     // Solo si pasó forms (accepted)
@@ -668,14 +695,20 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       decisionHelp.textContent = 'En el flujo histórico la decisión es obligatoria para guardar la evaluación.';
     }
 
-    // Detectar contexto: ¿tiene entrevista? ¿qué estado?
-    const { data: iv } = await supabase
-      .from('interviews')
-      .select('id, status, slot_datetime')
-      .eq('solicitud_id', solicitud.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // El flujo actual ya trae reservas e invitaciones en la misma lectura.
+    // Una reserva activa tiene prioridad sobre cancelaciones anteriores.
+    let iv: { id: string; status: string; slot_datetime: string } | null = null;
+    let interviewLookupFailed = false;
+    if (progressiveEnabled && selectionState) {
+      const interviews = selectionState.interviews.filter(row => row.solicitud_id === solicitud!.id);
+      iv = interviews.find(row => row.status === 'confirmed') ??
+        interviews.sort((a, b) => (b.created_at ?? b.slot_datetime).localeCompare(a.created_at ?? a.slot_datetime))[0] ?? null;
+    } else {
+      const result = await supabase.from('interviews').select('id, status, slot_datetime')
+        .eq('solicitud_id', solicitud.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+      iv = result.data;
+      interviewLookupFailed = !!result.error;
+    }
 
     evaluationInterviewStatus = (iv?.status as typeof evaluationInterviewStatus) ?? 'none';
     evaluationInterviewSlot = iv?.slot_datetime ?? null;
@@ -707,10 +740,22 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       interviewContext.textContent = 'No hay una entrevista confirmada. Si eliges Aceptar, el motivo de excepción es obligatorio.';
     }
 
-    if (!iv) {
-      document.getElementById('eval-banner-noiview')!.style.display = '';
-    } else if (iv.status === 'cancelled' || iv.status === 'no_show') {
-      document.getElementById('eval-banner-noshow')!.style.display = '';
+    const noInterviewBanner = document.getElementById('eval-banner-noiview')!;
+    const noShowBanner = document.getElementById('eval-banner-noshow')!;
+    noInterviewBanner.style.display = 'none';
+    noShowBanner.style.display = 'none';
+    if (!solicitud.final_email_sent) {
+      if (!iv) {
+        const notice = pendingBookingNotice(interviewLookupFailed);
+        noInterviewBanner.className = `admin-historical-banner ${notice.warning ? 'admin-eval-banner-warn' : 'admin-eval-banner-info'}`;
+        noInterviewBanner.querySelector('i')!.className = notice.warning ? 'bi bi-exclamation-triangle-fill' : 'bi bi-info-circle-fill';
+        document.getElementById('eval-booking-notice-text')!.textContent = notice.text;
+        noInterviewBanner.style.display = '';
+        interviewContext.textContent = 'Puedes guardar notas mientras avanza el proceso. Para aceptar sin entrevista completada, el motivo de excepción es obligatorio.';
+      } else if (iv.status === 'cancelled' || iv.status === 'no_show') {
+        noShowBanner.style.display = '';
+        noShowBanner.innerHTML = `<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><span>${iv.status === 'no_show' ? 'El aspirante no asistió a su entrevista.' : 'La entrevista fue cancelada.'} Revisa el caso y guarda una decisión final manual antes del cierre.</span>`;
+      }
     }
     // Lock si ya se envió el correo final
     const locked = !!solicitud.final_email_sent;
@@ -978,3 +1023,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     el.textContent = msg;
   }
 </script>
+
+<style is:global>
+  .admin-eval-banner-info { background: #f5f0ff; border-color: #6225e6; color: #47209a; }
+</style>

@@ -1,5 +1,30 @@
 const SITE_URL = 'https://helloworld-unam.tech';
 
+// Fluid tables and inline wrapping remain usable when a mail client strips media queries.
+// Queries only tighten spacing and stack the social links on narrow screens.
+export const SELECTION_MAIL_RESPONSIVE_STYLES = `
+  body { -webkit-text-size-adjust:100%; }
+  .mail-card, .mail-footer { width:100%; max-width:580px; table-layout:fixed; }
+  .mail-content { overflow-wrap:break-word; word-wrap:break-word; }
+  .mail-badge, .mail-button { box-sizing:border-box; max-width:100%; overflow-wrap:break-word; }
+  @media screen and (max-width:600px) {
+    .mail-body { padding:20px 12px !important; }
+    .mail-content { padding:26px 20px !important; }
+    .mail-content h1 { font-size:26px !important; letter-spacing:1px !important; line-height:1.2 !important; }
+    .mail-badge { padding:6px 10px !important; font-size:11px !important; letter-spacing:1px !important; margin-bottom:22px !important; }
+    .mail-panel { padding:20px 16px !important; }
+    .mail-button { display:block !important; padding:14px 12px !important; font-size:14px !important; letter-spacing:1px !important; }
+    .mail-social { display:block !important; width:100% !important; box-sizing:border-box !important; padding:4px 0 !important; }
+    .mail-simple { padding:26px 20px !important; }
+  }
+  @media screen and (max-width:360px) {
+    .mail-body { padding:16px 8px !important; }
+    .mail-content { padding:24px 16px !important; }
+    .mail-content h1 { font-size:24px !important; }
+    .mail-panel { padding:18px 12px !important; }
+  }
+`;
+
 export interface SelectionHtmlTemplate {
   subject: string;
   html: string;
@@ -13,7 +38,7 @@ function firstName(fullName: string): string {
   return escapeHtml(fullName.split(' ')[0] || fullName);
 }
 
-function emailShell(options: { eyebrow: string; eyebrowBg: string; inner: string; title?: string }): string {
+export function emailShell(options: { eyebrow: string; eyebrowBg: string; inner: string; title?: string }): string {
   const titleTag = options.title ? `<title>${escapeHtml(options.title)}</title>` : '';
   return `<!DOCTYPE html>
 <html lang="es">
@@ -24,11 +49,12 @@ function emailShell(options: { eyebrow: string; eyebrowBg: string; inner: string
   <meta name="supported-color-schemes" content="light only">
   ${titleTag}
   <style>
+    ${SELECTION_MAIL_RESPONSIVE_STYLES}
     :root { color-scheme: light only; supported-color-schemes: light only; }
     [data-ogsc] body, [data-ogsb] body { background:#faf8ff !important; }
   </style>
 </head>
-<body style="margin:0;padding:24px 16px;background:#faf8ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#222;">
+<body class="mail-body" style="margin:0;padding:24px 16px;background:#faf8ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#222;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr><td align="center">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;">
@@ -38,15 +64,15 @@ function emailShell(options: { eyebrow: string; eyebrowBg: string; inner: string
           </a>
         </td></tr>
       </table>
-      <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%;background:#ffffff;border:4px solid #000000;">
-        <tr><td style="padding:36px 32px;">
-          <div style="display:inline-block;background:${options.eyebrowBg};border:3px solid #000000;padding:6px 14px;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:1.2px;color:#000000;margin-bottom:28px;">
+      <table role="presentation" class="mail-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;max-width:580px;background:#ffffff;border:4px solid #000000;">
+        <tr><td class="mail-content" style="overflow-wrap:break-word;word-wrap:break-word;padding:36px 32px;">
+          <div class="mail-badge" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;background:${options.eyebrowBg};border:3px solid #000000;padding:6px 14px;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:1.2px;color:#000000;margin-bottom:28px;">
             ${options.eyebrow}
           </div>
           ${options.inner}
         </td></tr>
       </table>
-      <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%;margin-top:28px;">
+      <table role="presentation" class="mail-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;max-width:580px;margin-top:28px;">
         <tr><td align="center" style="padding:0 16px;">
           <p style="font-size:12px;color:#777777;margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Club Hello World · FES Aragón, UNAM</p>
           <p style="font-size:12px;color:#999999;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Si tienes dudas, responde a este correo.</p>
@@ -79,8 +105,8 @@ function socialBlock(): string {
   const cells = networks
     .map(
       (network) => `
-    <td valign="top" width="33.33%" style="padding:4px;">
-      <a href="${network.href}" style="display:block;background:#ffffff;border:3px solid #000000;padding:14px 10px;text-decoration:none;color:#000000;text-align:center;">
+    <td class="mail-social" valign="top" width="33.33%" style="padding:4px;">
+      <a href="${network.href}" style="display:block;background:#ffffff;border:3px solid #000000;padding:14px 10px;overflow-wrap:break-word;word-wrap:break-word;text-decoration:none;color:#000000;text-align:center;">
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#6225e6;margin-bottom:4px;">${network.label}</div>
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;font-weight:600;color:#222222;">${network.handle}</div>
       </a>
@@ -89,7 +115,7 @@ function socialBlock(): string {
     .join('');
   return `
     <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;font-weight:700;color:#6225e6;text-transform:uppercase;letter-spacing:1.2px;margin:32px 0 12px 0;">Mantente cerca</p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;"><tr>${cells}</tr></table>`;
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed;margin-bottom:8px;"><tr>${cells}</tr></table>`;
 }
 
 export function legacyReceiptTemplate(nombre: string, seasonValue: string): SelectionHtmlTemplate {
@@ -103,13 +129,14 @@ export function legacyReceiptTemplate(nombre: string, seasonValue: string): Sele
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Solicitud recibida</title>
+  <style>${SELECTION_MAIL_RESPONSIVE_STYLES}</style>
 </head>
-<body style="margin:0;padding:24px 16px;background:#f9f3ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#222;">
+<body class="mail-body" style="margin:0;padding:24px 16px;background:#f9f3ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#222;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr><td align="center">
-      <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;background:#ffffff;border:4px solid #000000;">
-        <tr><td style="padding:40px 36px 36px 36px;">
-          <div style="display:inline-block;background:#c4b5fd;border:3px solid #000;padding:6px 14px;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:1px;color:#000;margin-bottom:28px;">
+      <table role="presentation" class="mail-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;max-width:580px;background:#ffffff;border:4px solid #000000;">
+        <tr><td class="mail-content" style="overflow-wrap:break-word;word-wrap:break-word;padding:40px 36px 36px 36px;">
+          <div class="mail-badge" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;background:#c4b5fd;border:3px solid #000;padding:6px 14px;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:1px;color:#000;margin-bottom:28px;">
             ✦ Solicitud recibida · ${season}
           </div>
           <h1 style="font-size:30px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 18px 0;color:#000;line-height:1.1;">
@@ -125,7 +152,7 @@ export function legacyReceiptTemplate(nombre: string, seasonValue: string): Sele
             Te escribiremos a este correo cuando tengamos una decisión, sin importar cuál sea.
           </p>
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:3px solid #000;margin:0 0 32px 0;">
-            <tr><td style="padding:22px 24px;">
+            <tr><td class="mail-panel" style="padding:22px 24px;">
               <p style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;color:#2d002e;margin:0;line-height:1.55;">
                 “No buscamos el promedio más alto. Buscamos a quien quiera competir, construir cosas reales y dejar huella desde la UNAM.”
               </p>
@@ -171,7 +198,7 @@ export function legacyInitialAcceptedTemplate(nombre: string, deadlineSpanish: s
         El siguiente paso es una entrevista corta con un par de personas del equipo. Queremos entender quién hay detrás de la solicitud y resolverte dudas que tengas sobre el club.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:4px solid #000000;margin:0 0 28px 0;">
-        <tr><td style="padding:28px 24px;text-align:center;">
+        <tr><td class="mail-panel" style="padding:28px 24px;text-align:center;">
           <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;font-weight:800;color:#6225e6;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px 0;">
             ★ Agenda tu entrevista
           </p>
@@ -181,7 +208,7 @@ export function legacyInitialAcceptedTemplate(nombre: string, deadlineSpanish: s
           </p>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 18px;">
             <tr><td bgcolor="#6225e6" style="background:#6225e6;border:3px solid #000000;">
-              <a href="${bookingUrl}" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#ffffff;text-decoration:none;">
+              <a href="${bookingUrl}" class="mail-button" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#ffffff;text-decoration:none;">
                 Reservar horario →
               </a>
             </td></tr>
@@ -201,7 +228,7 @@ export function legacyInitialAcceptedTemplate(nombre: string, deadlineSpanish: s
         No hay nada que preparar — lo que ya hiciste hasta hoy es suficiente.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:3px solid #000000;margin:0 0 8px 0;">
-        <tr><td style="padding:22px 24px;">
+        <tr><td class="mail-panel" style="padding:22px 24px;">
           <p style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;color:#2d002e;margin:0;line-height:1.55;">
             “El formulario nos dijo lo que has hecho. La entrevista nos dirá quién eres.”
           </p>
@@ -236,7 +263,7 @@ export function legacyInitialRejectedTemplate(nombre: string, seasonValue: strin
         Te invitamos a postularte nuevamente en la próxima convocatoria. Mientras tanto, te animamos a seguir construyendo y aprendiendo — el crecimiento técnico es un camino que recorres con nosotros o sin nosotros.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:3px solid #000000;margin:0 0 8px 0;">
-        <tr><td style="padding:22px 24px;">
+        <tr><td class="mail-panel" style="padding:22px 24px;">
           <p style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;color:#2d002e;margin:0;line-height:1.55;">
             “El club no es la única forma de desarrollarse y seguir creciendo. Es solo una de miles.”
           </p>
@@ -263,13 +290,13 @@ export function legacyBookingTemplate(options: {
   const manageUrl = escapeHtml(options.manageUrl);
   return {
     subject: `Confirmada: tu entrevista el ${options.dateLong}`,
-    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><title>Confirmada: tu entrevista</title><style>:root{color-scheme:light only;supported-color-schemes:light only;}[data-ogsc] body,[data-ogsb] body{background:#faf8ff !important;}</style></head><body style="margin:0;padding:24px 16px;background:#faf8ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#222;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center">
+    html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><title>Confirmada: tu entrevista</title><style>${SELECTION_MAIL_RESPONSIVE_STYLES}:root{color-scheme:light only;supported-color-schemes:light only;}[data-ogsc] body,[data-ogsb] body{background:#faf8ff !important;}</style></head><body class="mail-body" style="margin:0;padding:24px 16px;background:#faf8ff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#222;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center">
 
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 24px;"><tr><td style="background:#fff;border:4px solid #000;padding:12px;line-height:0;"><a href="${SITE_URL}" style="text-decoration:none;display:block;line-height:0;"><img src="${SITE_URL}/img/logo.png" alt="Club Hello World" width="52" height="52" style="display:block;width:52px;height:52px;"></a></td></tr></table>
 
-  <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%;background:#fff;border:4px solid #000;"><tr><td style="padding:36px 32px;">
+  <table role="presentation" class="mail-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;max-width:580px;background:#fff;border:4px solid #000;"><tr><td class="mail-content" style="overflow-wrap:break-word;word-wrap:break-word;padding:36px 32px;">
 
-    <div style="display:inline-block;background:#d1fae5;border:3px solid #000;padding:6px 14px;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:1.2px;color:#000;margin-bottom:28px;">✓ Entrevista confirmada</div>
+    <div class="mail-badge" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;background:#d1fae5;border:3px solid #000;padding:6px 14px;font-weight:800;text-transform:uppercase;font-size:13px;letter-spacing:1.2px;color:#000;margin-bottom:28px;">✓ Entrevista confirmada</div>
 
     <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:30px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 22px 0;color:#000;line-height:1.1;">Listo, ${name}.</h1>
 
@@ -281,11 +308,12 @@ export function legacyBookingTemplate(options: {
       <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:16px;color:#333;margin:0 0 18px 0;">${time} hrs · ${options.durationMinutes} minutos</p>
 
       <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:12px;font-weight:800;color:#6225e6;text-transform:uppercase;letter-spacing:2px;margin:18px 0 8px 0;">Dónde</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#6225e6" style="background:#6225e6;border:3px solid #000;"><a href="${meetUrl}" style="display:inline-block;padding:12px 22px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#fff;text-decoration:none;"><span style="display:inline-block;vertical-align:middle;margin-right:4px;">📹</span> Abrir Google Meet</a></td></tr></table>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td bgcolor="#6225e6" style="background:#6225e6;border:3px solid #000;"><a href="${meetUrl}" class="mail-button" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;padding:12px 22px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#fff;text-decoration:none;"><span style="display:inline-block;vertical-align:middle;margin-right:4px;">📹</span> Abrir Google Meet</a></td></tr></table>
       <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:11px;color:#777;margin:10px 0 0;word-break:break-all;">${meetUrl}</p>
     </td></tr></table>
 
     <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;font-weight:800;color:#6225e6;text-transform:uppercase;letter-spacing:1.2px;margin:0 0 10px 0;">Antes de tu entrevista</p>
+    <p style="font-size:15px;line-height:1.7;color:#444;margin:0 0 16px 0;">Solicita entrar a tu hora; el equipo te admitirá cuando termine la entrevista anterior.</p>
     <p style="font-size:15px;line-height:1.7;color:#444;margin:0 0 8px 0;">• Llega 1 minuto antes y verifica tu cámara y micrófono.</p>
     <p style="font-size:15px;line-height:1.7;color:#444;margin:0 0 8px 0;">• Si surge algo, escríbenos con al menos <strong>12 h</strong> de anticipación.</p>
     <p style="font-size:15px;line-height:1.7;color:#444;margin:0 0 24px 0;">• Llega tú — nada que preparar.</p>
@@ -294,7 +322,7 @@ export function legacyBookingTemplate(options: {
 
   </td></tr></table>
 
-  <table role="presentation" width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%;margin-top:28px;"><tr><td align="center" style="padding:0 16px;"><p style="font-size:12px;color:#777;margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Club Hello World · FES Aragón, UNAM</p><p style="font-size:12px;color:#999;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Si tienes dudas, responde a este correo.</p></td></tr></table>
+  <table role="presentation" class="mail-card" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;table-layout:fixed;max-width:580px;margin-top:28px;"><tr><td align="center" style="padding:0 16px;"><p style="font-size:12px;color:#777;margin:0 0 4px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Club Hello World · FES Aragón, UNAM</p><p style="font-size:12px;color:#999;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">Si tienes dudas, responde a este correo.</p></td></tr></table>
 
 </td></tr></table></body></html>`,
   };
@@ -324,7 +352,7 @@ export function legacyFinalAcceptedTemplate(nombre: string, seasonValue: string,
         El primer paso para sumarte es entrar al grupo de WhatsApp del club. Ahí coordinamos todo: reuniones, eventos, proyectos, hackatones.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#d1fae5;border:4px solid #000000;margin:0 0 28px 0;">
-        <tr><td style="padding:28px 24px;text-align:center;">
+        <tr><td class="mail-panel" style="padding:28px 24px;text-align:center;">
           <p style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:13px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px 0;">
             ★ Únete al grupo
           </p>
@@ -333,7 +361,7 @@ export function legacyFinalAcceptedTemplate(nombre: string, seasonValue: string,
           </p>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
             <tr><td bgcolor="#25D366" style="background:#25D366;border:3px solid #000000;">
-              <a href="${whatsappUrl}" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#ffffff;text-decoration:none;">
+              <a href="${whatsappUrl}" class="mail-button" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#ffffff;text-decoration:none;">
                 Entrar al WhatsApp →
               </a>
             </td></tr>
@@ -350,7 +378,7 @@ export function legacyFinalAcceptedTemplate(nombre: string, seasonValue: string,
         Bienvenida/o oficialmente. A construir, competir y dejar huella.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:3px solid #000000;margin:0 0 8px 0;">
-        <tr><td style="padding:22px 24px;">
+        <tr><td class="mail-panel" style="padding:22px 24px;">
           <p style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;color:#2d002e;margin:0;line-height:1.55;">
             “Ahora sí empieza lo bueno. Nos vemos adentro.”
           </p>
@@ -385,7 +413,7 @@ export function legacyFinalRejectedTemplate(nombre: string, seasonValue: string)
         Te invitamos a postularte nuevamente en la próxima convocatoria. Mientras tanto, te animamos a seguir construyendo y aprendiendo — el crecimiento técnico es un camino que recorres con nosotros o sin nosotros.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:3px solid #000000;margin:0 0 8px 0;">
-        <tr><td style="padding:22px 24px;">
+        <tr><td class="mail-panel" style="padding:22px 24px;">
           <p style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;color:#2d002e;margin:0;line-height:1.55;">
             “El club no es la única forma de desarrollarse y seguir creciendo. Es solo una de miles.”
           </p>
@@ -420,7 +448,7 @@ export function noShowFinalRejectedTemplate(nombre: string, seasonValue: string)
         Si ocurrió un problema o crees que recibiste este mensaje por error, responde a este correo para que podamos revisar tu caso.
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f0e6ff;border:3px solid #000000;margin:0 0 8px 0;">
-        <tr><td style="padding:22px 24px;">
+        <tr><td class="mail-panel" style="padding:22px 24px;">
           <p style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;color:#2d002e;margin:0;line-height:1.55;">
             “El club no es la única forma de desarrollarse y seguir creciendo. Es solo una de miles.”
           </p>
@@ -447,9 +475,9 @@ export function neutralFinalAcceptedTemplate(nombre: string, seasonValue: string
       <h1 style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:30px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 22px 0;color:#000000;line-height:1.1;">Hola, ${name}.</h1>
       <p style="font-size:16px;line-height:1.75;color:#333333;margin:0 0 18px 0;">Nos da mucho gusto informarte que fuiste admitido(a) al Club Hello World para la temporada ${season}.</p>
       <p style="font-size:16px;line-height:1.75;color:#333333;margin:0 0 24px 0;">¡Bienvenido(a) al Club Hello World!</p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#d1fae5;border:4px solid #000000;margin:0 0 8px 0;"><tr><td style="padding:28px 24px;text-align:center;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#d1fae5;border:4px solid #000000;margin:0 0 8px 0;"><tr><td class="mail-panel" style="padding:28px 24px;text-align:center;">
         <p style="font-size:15px;color:#065f46;margin:0 0 22px 0;line-height:1.5;">Para recibir indicaciones y mantenerte en contacto con el equipo, únete al grupo de WhatsApp.</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td bgcolor="#25D366" style="background:#25D366;border:3px solid #000000;"><a href="${whatsappUrl}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#ffffff;text-decoration:none;">Entrar al WhatsApp →</a></td></tr></table>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td bgcolor="#25D366" style="background:#25D366;border:3px solid #000000;"><a href="${whatsappUrl}" class="mail-button" style="max-width:100%;box-sizing:border-box;overflow-wrap:break-word;display:inline-block;padding:14px 28px;font-size:15px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#ffffff;text-decoration:none;">Entrar al WhatsApp →</a></td></tr></table>
       </td></tr></table>
       ${socialBlock()}
     `,

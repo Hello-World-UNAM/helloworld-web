@@ -1,5 +1,7 @@
 // Deno tests: no network permission. All HTTP requests are intercepted below.
 import { assertEquals } from 'jsr:@std/assert@1.0.19';
+import { mailScenarios } from './fixtures/selection-mail-scenarios.ts';
+import { renderSelectionMail, type SelectionMailKind, type SelectionMailPayload } from '../supabase/functions/_shared/selection-mail.ts';
 
 const realServe = Deno.serve;
 Object.defineProperty(Deno, 'serve', { value: () => undefined, configurable: true });
@@ -11,6 +13,30 @@ const id = '00000000-0000-0000-0000-000000000099';
 const env = { SELECTION_WORKER_SECRET: 'synthetic-worker-secret', RESEND_API_KEY: 'synthetic-resend-api-key', SUPABASE_URL: 'http://127.0.0.1:59999', SELECTION_DB_SECRET_KEY: 'synthetic-service', RESEND_WEBHOOK_SECRET: 'c3ludGhldGljLXNlY3JldA==' };
 function setup() { for (const [key,value] of Object.entries(env)) Deno.env.set(key,value); }
 const request = () => new Request('http://localhost/worker', { method: 'POST', headers: { 'X-Selection-Worker-Secret': env.SELECTION_WORKER_SECRET } });
+
+Deno.test('a reminder skipped during preparation never reaches the provider', async () => {
+  setup();
+  const original = globalThis.fetch;
+  let claimed = false;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (!url.startsWith(env.SUPABASE_URL + '/rest/v1/rpc/selection_worker')) throw new Error('Skipped reminder reached an external provider');
+    const body = JSON.parse(String(init?.body));
+    if (body.p_action === 'claim') {
+      if (claimed) return Response.json(null);
+      claimed = true;
+      const scenario = mailScenarios().find(s => s.id==='reminder')!;
+      return Response.json({id,lease_token:id,kind:'reminder',recipient:'synthetic@example.org',payload:scenario.payload,idempotency_key:'synthetic-key',first_attempt_at:new Date().toISOString(),attempts:1});
+    }
+    if (body.p_action === 'prepared') return Response.json({skipped:true});
+    throw new Error('Skipped job must not be finished as sent');
+  }) as typeof fetch;
+  try {
+    const result = await handleSelectionDispatch(request());
+    assertEquals(result.status,200);
+    assertEquals((await result.json()).accepted,0);
+  } finally { globalThis.fetch = original; }
+});
 
 Deno.test('dispatch and webhook reject unauthenticated calls before HTTP', async () => {
   setup();
@@ -75,3 +101,38 @@ Deno.test('webhook verifies exact signed bytes and rejects changed payload', asy
     assertEquals(persisted,1);
   } finally { globalThis.fetch=original; }
 });
+
+for (const scenario of mailScenarios()) {
+  Deno.test(`worker prepares and delivers the exact redesigned HTML: ${scenario.id}`, async () => {
+    setup();
+    const original = globalThis.fetch;
+    let claimed = false;
+    let prepared: Record<string, unknown> | undefined;
+    let delivered: Record<string, unknown> | undefined;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url === 'https://api.resend.com/emails') {
+        delivered = JSON.parse(String(init?.body));
+        return Response.json({ id: `synthetic-${scenario.id}` });
+      }
+      if (!url.startsWith(env.SUPABASE_URL + '/rest/v1/rpc/selection_worker')) throw new Error('Unexpected HTTP target');
+      const body = JSON.parse(String(init?.body));
+      if (body.p_action === 'claim') {
+        if (claimed) return Response.json(null);
+        claimed = true;
+        return Response.json({id,lease_token:id,kind:scenario.kind,recipient:'synthetic@example.org',payload:scenario.payload,idempotency_key:`synthetic-${scenario.id}`,first_attempt_at:new Date().toISOString(),attempts:1});
+      }
+      if (body.p_action === 'prepared') { prepared = body.p_data.request_body; return Response.json({request_body:prepared}); }
+      if (body.p_action === 'finish') { assertEquals(body.p_data.outcome,'accepted'); return Response.json({ok:true}); }
+      throw new Error('Unexpected RPC');
+    }) as typeof fetch;
+    try {
+      assertEquals((await handleSelectionDispatch(request())).status,200);
+      const expected = renderSelectionMail(scenario.kind as SelectionMailKind,scenario.payload as unknown as SelectionMailPayload);
+      assertEquals(prepared?.html,expected.html);
+      assertEquals(prepared?.text,expected.text);
+      assertEquals(prepared?.subject,expected.subject);
+      assertEquals(delivered,prepared);
+    } finally { globalThis.fetch = original; }
+  });
+}

@@ -15,7 +15,7 @@
     "check": "astro check",
     "check:selection": "astro check --tsconfig tsconfig.selection.json",
     "test": "node --experimental-strip-types --test tests/selection-mail.test.ts",
-    "test:edge": "deno test --node-modules-dir=none --allow-env tests/selection-edge.test.ts",
+    "test:edge": "deno test --node-modules-dir=none --allow-env tests/selection-edge.test.ts tests/selection-calendar-edge.test.ts",
     "test:db": "node scripts/test-selection-db.mjs",
     "test:e2e": "playwright test",
     "selection:lab:prepare": "node scripts/selection-lab.mjs prepare",
@@ -29,7 +29,8 @@
     "selection:lab:verify": "node scripts/selection-lab.mjs verify",
     "selection:lab:smoke": "node scripts/smoke-selection-lab.mjs",
     "selection:lab:e2e": "node scripts/e2e-selection-lab.mjs",
-    "selection:backup:cvs": "node scripts/backup-selection-cvs.mjs"
+    "selection:backup:cvs": "node scripts/backup-selection-cvs.mjs",
+    "test:calendar": "node --experimental-strip-types --test tests/selection-calendar.test.ts tests/selection-meet-hosts.test.ts"
   },
   "dependencies": {
     "@astrojs/vercel": "^8.2.11",

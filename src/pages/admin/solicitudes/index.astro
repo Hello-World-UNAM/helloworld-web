@@ -48,15 +48,16 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </div>
       </div>
 
+      <div class="selection-filter-bar">
       <!-- Status counters -->
-      <div class="admin-stats" id="admin-stats">
+      <div class="admin-stats admin-stats-extended selection-summary-stats" id="admin-stats">
         <button data-status="all" class="admin-stat admin-stat-active">
           <span class="admin-stat-num" id="count-all">0</span>
           <span class="admin-stat-label">Total</span>
         </button>
         <button data-status="pending" class="admin-stat">
           <span class="admin-stat-num" id="count-pending">0</span>
-          <span class="admin-stat-label">Pendientes</span>
+          <span class="admin-stat-label">Por revisar</span>
         </button>
         <button data-status="reviewing" class="admin-stat">
           <span class="admin-stat-num" id="count-reviewing">0</span>
@@ -64,12 +65,25 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </button>
         <button data-status="accepted" class="admin-stat">
           <span class="admin-stat-num" id="count-accepted">0</span>
-          <span class="admin-stat-label">Aceptados</span>
+          <span class="admin-stat-label">Pasaron forms</span>
         </button>
         <button data-status="rejected" class="admin-stat">
           <span class="admin-stat-num" id="count-rejected">0</span>
           <span class="admin-stat-label">Rechazados</span>
         </button>
+      </div>
+
+      <section id="initial-comms-summary" class="selection-comms-summary" style="display:none;" aria-label="Estado del correo de decisión inicial">
+        <label for="initial-comms-filter">Correo inicial:</label>
+        <select id="initial-comms-filter" class="admin-select">
+          <option id="comms-count-all" value="all">Todos</option>
+          <option id="comms-count-free" value="free">Sin enviar</option>
+          <option id="comms-count-queued" value="queued">En cola / en proceso</option>
+          <option id="comms-count-sent" value="sent">Enviados</option>
+          <option id="comms-count-problem" value="problem">Revisar envío</option>
+        </select>
+        <p id="initial-comms-hint" class="selection-comms-hint" aria-live="polite" hidden></p>
+      </section>
       </div>
 
       <!-- Search -->
@@ -149,6 +163,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   let allRows: Row[] = [];
   let activeFilter: Status | 'all' = 'all';
+  let communicationFilter: 'all' | 'free' | 'queued' | 'sent' | 'problem' = 'all';
   let searchQuery = '';
   let activeSeason: string | null = null;
   let viewingActiveSeason = false;
@@ -278,6 +293,11 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       });
     });
 
+    document.getElementById('initial-comms-filter')!.addEventListener('change', event => {
+      communicationFilter = (event.target as HTMLSelectElement).value as typeof communicationFilter;
+      renderTable();
+    });
+
     // ── Search ──────────────────────────────────────────────────────────
     const search = document.getElementById('admin-search') as HTMLInputElement;
     search.addEventListener('input', () => {
@@ -305,6 +325,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     histBadge.style.display = viewingActiveSeason ? 'none' : 'inline-flex';
 
     selectedRows.clear();
+    communicationFilter = 'all';
+    (document.getElementById('initial-comms-filter') as HTMLSelectElement).value = 'all';
     let data: unknown[] | null = null;
     let error: { message: string } | null = null;
     stateMessages = [];
@@ -333,6 +355,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
     allRows = (data || []) as Row[];
     updateCounts();
+    updateCommunicationSummary();
     renderTable();
     updateBulkButton();
   }
@@ -344,6 +367,34 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       const el = document.getElementById(`count-${k}`);
       if (el) el.textContent = String(counts[k]);
     });
+  }
+
+  function communicationBucket(row: Row): typeof communicationFilter {
+    const occupancy = initialOccupancy(row);
+    return occupancy === 'failed' || occupancy === 'uncertain' ? 'problem' : occupancy;
+  }
+
+  function updateCommunicationSummary() {
+    const enabled = progressiveEnabled && viewingActiveSeason;
+    document.getElementById('initial-comms-summary')!.style.display = enabled ? '' : 'none';
+    const hint = document.getElementById('initial-comms-hint')!;
+    hint.hidden = !enabled;
+    if (!enabled) return;
+    const decisions = allRows.filter(row => row.status === 'accepted' || row.status === 'rejected');
+    const counts = { all: allRows.length, free: 0, queued: 0, sent: 0, problem: 0 };
+    decisions.forEach(row => counts[communicationBucket(row)]++);
+    const labels = { all: 'Todos', free: 'Sin enviar', queued: 'En cola / en proceso', sent: 'Enviados', problem: 'Revisar envío' };
+    for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+      document.getElementById(`comms-count-${key}`)!.textContent = `${labels[key]} (${counts[key]})`;
+    }
+    const parts: string[] = [];
+    if (counts.free) parts.push(`${counts.free} sin enviar`);
+    if (counts.queued) parts.push(`${counts.queued} en cola o pendientes de entrega`);
+    if (counts.problem) parts.push(`${counts.problem} con problemas de envío`);
+    hint.textContent = parts.join(' · ');
+    hint.hidden = parts.length === 0;
+    hint.classList.toggle('selection-comms-hint-warning', counts.problem > 0);
+
   }
 
   function updateBulkButton() {
@@ -420,6 +471,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (activeFilter !== 'all') {
       filtered = filtered.filter(r => r.status === activeFilter);
     }
+    if (progressiveEnabled && viewingActiveSeason && communicationFilter !== 'all') {
+      filtered = filtered.filter(row => (row.status === 'accepted' || row.status === 'rejected') && communicationBucket(row) === communicationFilter);
+    }
     if (searchQuery) {
       filtered = filtered.filter(r =>
         r.nombre.toLowerCase().includes(searchQuery) ||
@@ -478,7 +532,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   function commsBadge(row: Row): string {
     if (!progressiveEnabled || !viewingActiveSeason) return '';
     const occupancy = initialOccupancy(row);
-    if (occupancy === 'free') return '';
+    if (occupancy === 'free') return (row.status === 'accepted' || row.status === 'rejected')
+      ? '<span class="admin-comms-badge admin-comms-badge-free" title="Decisión guardada; falta comunicarla al aspirante"><i class="bi bi-envelope" aria-hidden="true"></i>Sin enviar</span>' : '';
     const text = occupancy === 'failed' ? 'Falló envío'
       : occupancy === 'uncertain' ? 'Envío incierto'
       : occupancy === 'sent' ? 'Enviado'
@@ -552,11 +607,14 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         rows as unknown as SelectionSolicitud[],
         defaultBookingHours,
       );
+      const acceptedCount = draft.preview.items.filter(item => item.decision === 'accepted').length;
+      const capacityText = typeof draft.preview.capacity === 'number' && acceptedCount > 0
+        ? `Capacidad: ${acceptedCount} nuevas invitaciones para ${Math.max(0, draft.preview.capacity)} cupos disponibles.\n\n` : '';
       const summary = draft.preview.items
         .map((item) => `• ${item.nombre} <${item.correo}>\n  ${item.subject}`)
         .join('\n\n');
       if (!confirm(
-        `PREVISUALIZACIÓN DEL LOTE (${draft.preview.items.length})\n\n${summary}\n\n` +
+        `PREVISUALIZACIÓN DEL LOTE (${draft.preview.items.length})\n\n${capacityText}${summary}\n\n` +
         'Confirmar sólo encola estos mensajes. No cierra inscripciones y no afecta a otras solicitudes.'
       )) return;
 

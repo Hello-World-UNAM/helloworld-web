@@ -1,4 +1,5 @@
 ---
+import SelectionRooms from '@components/admin/SelectionRooms.astro';
 import AdminLayout from '@layouts/AdminLayout.astro';
 ---
 
@@ -88,6 +89,19 @@ import AdminLayout from '@layouts/AdminLayout.astro';
               <span><strong>Pausar correos</strong><small>Los lotes quedan en cola hasta reanudar el despacho.</small></span>
             </label>
           </div>
+          <fieldset class="admin-reminder-settings">
+            <legend>Recordatorios para agendar</legend>
+            <label><input id="progressive-reminder-enabled" type="checkbox" checked /> Activar recordatorios automáticos</label>
+            <div class="admin-progressive-settings">
+              <label class="admin-field-label" for="progressive-reminder-first">Primer aviso (horas antes del vencimiento)
+                <input id="progressive-reminder-first" class="admin-text-input" type="number" min="1" max="8760" value="72" />
+              </label>
+              <label class="admin-field-label" for="progressive-reminder-last">Último aviso (horas antes del vencimiento)
+                <input id="progressive-reminder-last" class="admin-text-input" type="number" min="1" max="8760" value="24" />
+              </label>
+            </div>
+            <p class="admin-deadline-hint">Se aplica a las invitaciones que se envíen a partir de ahora. Máximo dos avisos, sólo si la persona no ha agendado y hay horarios. Si el plazo es corto, se omite el aviso que quedaría antes de la invitación. Las invitaciones anteriores conservan su configuración.</p>
+          </fieldset>
           <button type="button" id="progressive-config-save" class="hw-btn hw-btn-primary admin-deadline-save">
             Guardar configuración
           </button>
@@ -253,89 +267,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </span>
       </div>
 
-      <!-- ═══ Card: configuración de días de entrevista ═══ -->
-      <div class="admin-config-card">
-        <h2 class="admin-interviews-title">Días disponibles para entrevistas</h2>
-        <p class="admin-config-sub">
-          Define los días en los que el equipo podrá entrevistar. Los slots se generan
-          automáticamente desde el rango horario y la duración elegida. Cada día tiene una
-          sala de Google Meet única que todos los entrevistados ese día usarán.
-        </p>
-
-        <!-- Stats de capacidad -->
-        <div class="admin-stats-row" id="interview-stats">
-          <div class="admin-stat-pill">
-            <span class="admin-stat-pill-num" id="stat-slots">0</span>
-            <span class="admin-stat-pill-label">Slots</span>
-          </div>
-          <div class="admin-stat-pill">
-            <span class="admin-stat-pill-num" id="stat-accepted">0</span>
-            <span class="admin-stat-pill-label">Aceptados</span>
-          </div>
-          <div class="admin-stat-pill" id="stat-warning-pill" style="display:none;">
-            <span class="admin-stat-pill-num" id="stat-missing">0</span>
-            <span class="admin-stat-pill-label">Faltan</span>
-          </div>
-        </div>
-
-        <!-- Lista de días configurados -->
-        <div id="interview-days-list" class="admin-days-list">
-          <div class="admin-empty admin-days-empty">Sin días configurados todavía.</div>
-        </div>
-
-        <!-- Form: añadir día -->
-        <details class="admin-add-day-details">
-          <summary class="admin-add-day-summary">
-            <i class="bi bi-plus-circle"></i> Agregar día de entrevista
-          </summary>
-          <form id="day-form" class="admin-day-form" novalidate>
-            <div id="day-deadline-hint" class="admin-warn-hint" style="display:none;">
-              <i class="bi bi-exclamation-triangle-fill"></i>
-              Primero guarda la <strong>Fecha límite para agendar entrevista</strong> (sección de arriba).
-              Los días de entrevista deben ser <em>posteriores</em> a esa fecha.
-            </div>
-            <div class="admin-day-form-row">
-              <div class="admin-day-form-field">
-                <label class="admin-field-label" for="day-date">Fecha</label>
-                <input type="date" id="day-date" class="admin-text-input" required>
-              </div>
-              <div class="admin-day-form-field">
-                <label class="admin-field-label" for="day-start">Hora inicio</label>
-                <input type="time" id="day-start" class="admin-text-input" required>
-              </div>
-              <div class="admin-day-form-field">
-                <label class="admin-field-label" for="day-end">Hora fin</label>
-                <input type="time" id="day-end" class="admin-text-input" required>
-              </div>
-            </div>
-            <div class="admin-day-form-row admin-day-form-row-meet">
-              <div class="admin-day-form-field">
-                <label class="admin-field-label" for="day-duration">Duración</label>
-                <select id="day-duration" class="admin-select admin-select-block">
-                  <option value="15">15 min</option>
-                  <option value="20">20 min</option>
-                  <option value="30" selected>30 min</option>
-                  <option value="45">45 min</option>
-                  <option value="60">60 min</option>
-                </select>
-              </div>
-              <div class="admin-day-form-field">
-                <label class="admin-field-label" for="day-meet">URL de Google Meet</label>
-                <input type="url" id="day-meet" class="admin-text-input" required
-                  placeholder="https://meet.google.com/abc-defg-hij">
-              </div>
-            </div>
-            <div id="day-slots-preview" class="admin-slots-preview" style="display:none;">
-              <span class="admin-slots-preview-label">Slots que se generarán:</span>
-              <span id="day-slots-list"></span>
-            </div>
-            <button type="submit" id="day-add-btn" class="hw-btn hw-btn-primary admin-deadline-save">
-              Agregar día
-            </button>
-            <div id="day-feedback" class="admin-save-feedback" style="display:none;"></div>
-          </form>
-        </details>
-      </div>
+      <SelectionRooms />
 
       <!-- ═══════════════ DIVISOR FUERTE ═══════════════ -->
       <div class="admin-section-divider">
@@ -369,9 +301,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 </AdminLayout>
 
 <script>
+  import { initSelectionRooms } from '@lib/selection-rooms-ui';
   import { supabase } from '@lib/supabase';
   import { nextSemesters, formatSemesterDisplay } from '@lib/season';
-  import { generateSlots, formatSlotTime, formatDayShort, type InterviewDay } from '@lib/interview-slots';
   import {
     getSelectionFeatureMode,
     getSelectionState,
@@ -381,7 +313,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   let userEmail = '';
   let activeSeasonGlobal: string | null = null;
-  let interviewDeadlineGlobal: Date | null = null;
   let progressiveEnabled = false;
   let selectionConfigRevision = 0;
 
@@ -607,6 +538,10 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       String(Math.max(1, Math.round(configuredHours / 24)));
     (document.getElementById('progressive-dispatch-paused') as HTMLInputElement).checked =
       config?.dispatch_paused === true;
+    const reminderHours = Array.isArray(config?.reminder_hours) ? config.reminder_hours : [72, 24];
+    (document.getElementById('progressive-reminder-enabled') as HTMLInputElement).checked = config?.reminder_enabled !== false;
+    (document.getElementById('progressive-reminder-first') as HTMLInputElement).value = String(reminderHours[0]);
+    (document.getElementById('progressive-reminder-last') as HTMLInputElement).value = String(reminderHours[1]);
     document.getElementById('progressive-config-save')!.addEventListener('click', async () => {
       const days = Number((document.getElementById('progressive-default-days') as HTMLInputElement).value);
       const paused = (document.getElementById('progressive-dispatch-paused') as HTMLInputElement).checked;
@@ -617,12 +552,20 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         return;
       }
       const hours = days * 24;
+      const reminderEnabled = (document.getElementById('progressive-reminder-enabled') as HTMLInputElement).checked;
+      const reminderHours = ['first', 'last'].map(name => Number((document.getElementById(`progressive-reminder-${name}`) as HTMLInputElement).value));
+      if (reminderHours.some(value => !Number.isInteger(value) || value < 1 || value > 8760) || reminderHours[0] <= reminderHours[1]) {
+        showFeedback(feedback, 'Los avisos deben ser horas enteras entre 1 y 8760. El primer aviso debe ocurrir antes que el último.', 'error');
+        return;
+      }
       button.disabled = true;
       try {
         await selectionAdmin('config', {
           revision: selectionConfigRevision,
           default_booking_hours: hours,
           dispatch_paused: paused,
+          reminder_enabled: reminderEnabled,
+          reminder_hours: reminderHours,
         });
         await refreshProgressiveRevision();
         showFeedback(feedback, `✓ Configuración guardada: ${days} día${days === 1 ? '' : 's'} para agendar.`, 'success');
@@ -823,8 +766,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     if (error) {
       showFeedback(fb, `Error: ${error.message}`, 'error');
     } else {
-      interviewDeadlineGlobal = d;
-      updateDayFormDeadlineState();
       showFeedback(fb, '✓ Fecha guardada. Ya puedes agregar días de entrevista.', 'success');
     }
     saveBtn.disabled = false;
@@ -862,7 +803,6 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       document.getElementById('opened-by-display')!.textContent = data.opened_by || '—';
 
       // Pre-llenar deadline input con valor actual
-      interviewDeadlineGlobal = data.interview_deadline_at ? new Date(data.interview_deadline_at) : null;
       const deadlineInput = document.getElementById('deadline-input') as HTMLInputElement | null;
       if (deadlineInput && data.interview_deadline_at) {
         deadlineInput.value = toLocalInputValue(new Date(data.interview_deadline_at));
@@ -998,294 +938,18 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     el.textContent = msg;
   }
 
-  function updateDayFormDeadlineState() {
-    const btn  = document.getElementById('day-add-btn') as HTMLButtonElement | null;
-    const hint = document.getElementById('day-deadline-hint') as HTMLElement | null;
-    if (!btn || !hint) return;
-    const valid = progressiveEnabled || (!!interviewDeadlineGlobal && interviewDeadlineGlobal.getTime() > Date.now());
-    hint.style.display = valid ? 'none' : '';
-    btn.disabled = !valid;
-    if (!valid) btn.title = 'Primero guarda la fecha límite para agendar entrevista';
-    else btn.title = '';
-  }
-
-  // ══════════════════════════════════════════════════════════════════════
-  // Sección: días de entrevista
-  // ══════════════════════════════════════════════════════════════════════
-
   function setupInterviewsSection() {
-    updateDayFormDeadlineState();
-    refreshInterviewDays();
-
-    const dayForm = document.getElementById('day-form') as HTMLFormElement;
-    const dateInput     = document.getElementById('day-date')     as HTMLInputElement;
-    const startInput    = document.getElementById('day-start')    as HTMLInputElement;
-    const endInput      = document.getElementById('day-end')      as HTMLInputElement;
-    const durationInput = document.getElementById('day-duration') as HTMLSelectElement;
-
-    // Live preview de los slots que se van a generar
-    function updateSlotsPreview() {
-      const previewWrap = document.getElementById('day-slots-preview') as HTMLElement;
-      const previewList = document.getElementById('day-slots-list')    as HTMLElement;
-      if (!dateInput.value || !startInput.value || !endInput.value) {
-        previewWrap.style.display = 'none';
-        return;
-      }
-      try {
-        const slots = generateSlots({
-          id: '', date: dateInput.value,
-          start_time: startInput.value + ':00',
-          end_time:   endInput.value + ':00',
-          duration_minutes: parseInt(durationInput.value, 10),
-        });
-        if (slots.length === 0) {
-          previewWrap.style.display = 'block';
-          previewList.textContent = '(rango inválido — ningún slot cabe)';
-          return;
-        }
-        previewWrap.style.display = 'block';
-        previewList.textContent = `${slots.length} slots: ${slots.map(formatSlotTime).join(', ')}`;
-      } catch {
-        previewWrap.style.display = 'none';
-      }
-    }
-
-    [dateInput, startInput, endInput, durationInput].forEach(el => {
-      el.addEventListener('input', updateSlotsPreview);
-      el.addEventListener('change', updateSlotsPreview);
-    });
-
-    dayForm.addEventListener('submit', addDay);
-
-    // Al abrir el details: default date = deadline+1 (si hay deadline) o hoy
-    const detailsEl = document.querySelector<HTMLDetailsElement>('.admin-add-day-details');
-    if (detailsEl) {
-      detailsEl.addEventListener('toggle', () => {
-        if (!detailsEl.open || dateInput.value) return;
-        let defaultDateStr: string;
-        if (!progressiveEnabled && interviewDeadlineGlobal) {
-          const deadlineLocal = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadlineGlobal);
-          const [y, m, d] = deadlineLocal.split('-').map(Number);
-          const next = new Date(y, m - 1, d + 1);
-          defaultDateStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
-        } else {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          defaultDateStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
-        }
-        dateInput.value = defaultDateStr;
-        updateSlotsPreview();
-      });
-    }
+    if (!progressiveEnabled) return;
+    document.addEventListener('selection-rooms-state', event => { selectionConfigRevision = (event as CustomEvent<number>).detail; });
+    initSelectionRooms(() => activeSeasonGlobal ?? undefined);
   }
 
-  async function refreshInterviewDays() {
-    const list = document.getElementById('interview-days-list')!;
-    if (!activeSeasonGlobal) return;
-
-    const { data: days, error } = await supabase
-      .from('interview_days')
-      .select('*')
-      .eq('season', activeSeasonGlobal)
-      .order('date', { ascending: true });
-
-    if (error) {
-      list.innerHTML = `<div class="admin-empty admin-empty-error">Error: ${escapeHtml(error.message)}</div>`;
-      return;
-    }
-
-    if (!days || days.length === 0) {
-      list.innerHTML = '<div class="admin-empty admin-days-empty">Sin días configurados todavía.</div>';
-    } else {
-      list.innerHTML = days.map(d => {
-        const slots = generateSlots(d as InterviewDay);
-        const missingMeet = !d.meet_url || d.meet_url.trim() === '';
-        return `
-          <article class="admin-day-card ${missingMeet ? 'admin-day-card-warning' : ''}">
-            <div class="admin-day-card-main">
-              <div class="admin-day-card-date">${escapeHtml(formatDayShort(d.date))}</div>
-              <div class="admin-day-card-meta">
-                ${escapeHtml(d.start_time.slice(0,5))} – ${escapeHtml(d.end_time.slice(0,5))}
-                · ${d.duration_minutes} min · <strong>${slots.length} slots</strong>
-              </div>
-              <div class="admin-day-card-meet">
-                ${missingMeet
-                  ? `<span class="admin-day-meet-missing"><i class="bi bi-exclamation-triangle"></i> Falta URL de Meet</span>`
-                  : `<a href="${escapeAttr(d.meet_url!)}" target="_blank" rel="noopener noreferrer" class="admin-day-meet-link"><i class="bi bi-camera-video"></i> ${escapeHtml(d.meet_url!)}</a>`
-                }
-              </div>
-            </div>
-            <button type="button" class="admin-day-delete-btn" data-day-id="${d.id}" aria-label="Borrar día">
-              <i class="bi bi-trash"></i>
-            </button>
-          </article>
-        `;
-      }).join('');
-
-      list.querySelectorAll<HTMLButtonElement>('.admin-day-delete-btn').forEach(btn => {
-        btn.addEventListener('click', () => deleteDay(btn.dataset.dayId!));
-      });
-    }
-
-    await refreshInterviewStats(days || []);
-  }
-
-  async function refreshInterviewStats(days: { duration_minutes: number; start_time: string; end_time: string; date: string; id: string; }[]) {
-    let totalSlots = 0;
-    for (const d of days) {
-      totalSlots += generateSlots(d as InterviewDay).length;
-    }
-
-    // Aceptados de la season activa
-    let accepted = 0;
-    if (activeSeasonGlobal) {
-      const { count } = await supabase
-        .from('solicitudes')
-        .select('*', { count: 'exact', head: true })
-        .eq('season', activeSeasonGlobal)
-        .eq('status', 'accepted');
-      accepted = count || 0;
-    }
-
-    document.getElementById('stat-slots')!.textContent = String(totalSlots);
-    document.getElementById('stat-accepted')!.textContent = String(accepted);
-
-    const warningPill = document.getElementById('stat-warning-pill')!;
-    const missingEl = document.getElementById('stat-missing')!;
-    const missing = accepted - totalSlots;
-    if (missing > 0) {
-      warningPill.style.display = 'inline-flex';
-      missingEl.textContent = String(missing);
-    } else {
-      warningPill.style.display = 'none';
-    }
-  }
-
-  async function addDay(e: Event) {
-    e.preventDefault();
-    const dateInput     = document.getElementById('day-date')     as HTMLInputElement;
-    const startInput    = document.getElementById('day-start')    as HTMLInputElement;
-    const endInput      = document.getElementById('day-end')      as HTMLInputElement;
-    const durationInput = document.getElementById('day-duration') as HTMLSelectElement;
-    const meetInput     = document.getElementById('day-meet')     as HTMLInputElement;
-    const btn           = document.getElementById('day-add-btn')  as HTMLButtonElement;
-    const fb            = document.getElementById('day-feedback') as HTMLElement;
-
-    const date     = dateInput.value;
-    const start    = startInput.value;
-    const end      = endInput.value;
-    const duration = parseInt(durationInput.value, 10);
-    const meet     = meetInput.value.trim();
-
-    if (!progressiveEnabled && (!interviewDeadlineGlobal || interviewDeadlineGlobal.getTime() <= Date.now())) {
-      showFeedback(fb, 'Configura primero la fecha límite para agendar entrevista.', 'error');
-      return;
-    }
-    const interviewDeadline = interviewDeadlineGlobal;
-    const deadlineDateStr = interviewDeadline
-      ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Mexico_City' }).format(interviewDeadline)
-      : '';
-    if (!progressiveEnabled && interviewDeadline && date <= deadlineDateStr) {
-      const deadlineFormatted = interviewDeadline.toLocaleDateString('es-MX', {
-        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City',
-      });
-      showFeedback(fb, `La fecha de entrevista debe ser posterior a la fecha límite de agendado (${deadlineFormatted}).`, 'error');
-      return;
-    }
-
-    if (!date || !start || !end || !meet) {
-      showFeedback(fb, 'Llena todos los campos.', 'error');
-      return;
-    }
-    if (start >= end) {
-      showFeedback(fb, 'La hora de fin debe ser después de la hora de inicio.', 'error');
-      return;
-    }
-    if (!/^https:\/\/(meet\.google\.com|.*zoom\.us|.*teams\.microsoft\.com)\//i.test(meet)) {
-      const ok = confirm('La URL no parece de Meet/Zoom/Teams. ¿Continuar de todos modos?');
-      if (!ok) return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Agregando…';
-
-    let error: { message: string; code?: string } | null = null;
-    if (progressiveEnabled) {
-      try {
-        await selectionAdmin('day', {
-          date,
-          start_time: start + ':00',
-          end_time: end + ':00',
-          duration_minutes: duration,
-          meet_url: meet,
-          notes: null,
-        });
-        await refreshProgressiveRevision();
-      } catch (cause) {
-        error = { message: selectionErrorMessage(cause) };
-      }
-    } else {
-      error = (await supabase
-        .from('interview_days')
-        .insert({
-          season: activeSeasonGlobal!,
-          date,
-          start_time: start + ':00',
-          end_time: end + ':00',
-          duration_minutes: duration,
-          meet_url: meet,
-          created_by: userEmail,
-        })).error;
-    }
-
-    if (error) {
-      if (error.code === '23505') {
-        showFeedback(fb, 'Ya tienes un día configurado para esa fecha.', 'error');
-      } else {
-        showFeedback(fb, `Error: ${error.message}`, 'error');
-      }
-    } else {
-      showFeedback(fb, '✓ Día agregado.', 'success');
-      (document.getElementById('day-form') as HTMLFormElement).reset();
-      document.getElementById('day-slots-preview')!.style.display = 'none';
-      await refreshInterviewDays();
-      // Cerrar el details
-      const details = document.querySelector<HTMLDetailsElement>('.admin-add-day-details');
-      if (details) details.open = false;
-    }
-    btn.disabled = false;
-    btn.textContent = 'Agregar día';
-  }
-
-  async function deleteDay(id: string) {
-    const ok = confirm('¿Borrar este día de entrevista?\n\nSi ya hay entrevistas agendadas para este día, no se podrán cancelar desde aquí — esto solo borra el día del listado.');
-    if (!ok) return;
-
-    let error: { message: string } | null = null;
-    if (progressiveEnabled) {
-      try {
-        await selectionAdmin('day', { id, delete: true });
-        await refreshProgressiveRevision();
-      } catch (cause) {
-        error = { message: selectionErrorMessage(cause) };
-      }
-    } else {
-      error = (await supabase
-        .from('interview_days')
-        .delete()
-        .eq('id', id)).error;
-    }
-
-    if (error) {
-      alert(`Error: ${error.message}`);
-      return;
-    }
-    await refreshInterviewDays();
-  }
-
-  function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-  function escapeAttr(s: string): string { return escapeHtml(s); }
 </script>
+
+<style>
+  #whatsapp-preview > span { min-width:0; overflow-wrap:anywhere; }
+  .admin-reminder-settings { margin: 1.5rem 0; padding: 1.25rem; border: 2px solid #000; background: #f9f3ff; }
+  .admin-reminder-settings legend { font-weight: 900; padding: 0 .5rem; }
+  .admin-reminder-settings > label { display: flex; align-items: center; gap: .5rem; font-weight: 700; margin-bottom: 1rem; }
+  .admin-reminder-settings .admin-progressive-settings { flex-wrap: wrap; }
+</style>

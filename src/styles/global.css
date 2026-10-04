@@ -9018,3 +9018,20 @@ a.admin-dash-stat:hover {
   .sel-schedule-step:hover .sel-schedule-step-marker { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 #c4b5fd; }
   .sel-schedule-step:hover time { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #c4b5fd; }
 }
+
+/* Resumen y filtro de comunicación compartidos por Solicitudes y Entrevistas. */
+.selection-filter-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 8px; }
+  .selection-filter-bar .selection-summary-stats { flex: 1 1 620px; min-width: 0; margin: 0; }
+  .selection-comms-summary { display: grid; flex: 0 0 auto; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 6px 8px; margin-left: auto; }
+  .selection-comms-summary label { font-size: .72rem; font-weight: 700; white-space: nowrap; color: #555; }
+  .selection-comms-summary .admin-select { min-height: 40px; max-width: 235px; font-size: .78rem; }
+  .selection-comms-hint { display: inline-block; max-width: 100%; grid-column: 1 / -1; justify-self: end; margin: 0; padding: 7px 12px; border-left: 3px solid #6225e6; background: #f0e7ff; font-size: .82rem; font-weight: 700; color: #47209a; line-height: 1.5; }
+  .selection-comms-hint[hidden] { display: none; }
+  .selection-comms-hint-warning { color: #92400e; border-color: #92400e; background: #fef3c7; }
+  .admin-comms-badge-free { background: #fff; color: #555; border: 1px solid #888; }
+  @media(max-width: 540px) {
+    .selection-filter-bar { gap: 8px; }
+    .selection-filter-bar .selection-summary-stats { flex-basis: 100%; min-width: 0; }
+    .selection-comms-summary { width: 100%; grid-template-columns: auto minmax(0, 1fr); }
+    .selection-comms-summary .admin-select { min-width: 0; width: 100%; max-width: 235px; justify-self: end; }
+  }

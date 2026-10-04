@@ -1,0 +1,139 @@
+---
+const isLab = import.meta.env.PUBLIC_SELECTION_LAB === 'true';
+---
+<section id="selection-rooms" class="admin-config-card" hidden aria-labelledby="rooms-title">
+  <div class="rooms-heading"><div><span class="rooms-eyebrow">Agenda de entrevistas</span><h2 id="rooms-title">Jornadas por salas</h2><p>Organiza horarios y responsables. Cada sala usa un mismo Meet durante el día.</p></div><button type="button" id="room-refresh" class="rooms-button rooms-button-quiet" aria-label="Actualizar agenda"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Actualizar</button></div>
+  <p id="room-feedback" role="status" aria-live="polite" hidden></p>
+  <ol class="rooms-guide" aria-label="Cómo preparar la agenda"><li><span>1</span><div><strong>Crea una jornada</strong><small>Fecha, horario y número de salas.</small></div></li><li><span>2</span><div><strong>Asigna responsables</strong><small>Un titular y un respaldo por sala.</small></div></li><li><span>3</span><div><strong>Conecta y publica</strong><small>Google prepara el Meet y los coanfitriones.</small></div></li></ol>
+  {isLab && <p class="rooms-lab-note"><i class="bi bi-info-circle" aria-hidden="true"></i> Laboratorio con Calendar real: conectar una sala envía invitaciones a sus responsables.</p>}
+  <div class="rooms-setup">
+    <details id="room-create-details" class="rooms-create"><summary class="rooms-button rooms-button-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Crear jornada</summary>
+      <form id="room-create-form" class="rooms-form">
+        <h3 class="rooms-create-title">Nueva jornada</h3>
+        <p>Define la fecha y el horario de las salas. Después podrás añadir descansos y asignar responsables.</p>
+        <div class="rooms-fields rooms-fields-create">
+          <label for="room-date" class="rooms-create-date">Fecha de la jornada<input id="room-date" name="date" type="date" required /></label>
+          <label for="room-start">Inicio<input id="room-start" name="start_time" type="time" value="10:00" required /></label>
+          <label for="room-end">Fin<input id="room-end" name="end_time" type="time" value="13:00" required /></label>
+          <label for="room-count" class="rooms-create-count">Número de salas<input id="room-count" name="room_count" type="number" min="1" step="1" value="1" required /></label>
+        </div><p id="room-capacity-preview" class="rooms-help" aria-live="polite"></p>
+        <p id="room-demand-preview" class="rooms-help rooms-demand" aria-live="polite" hidden></p>
+        <button class="rooms-button rooms-button-primary" type="submit">Crear salas en borrador</button>
+      </form>
+    </details>
+    <p id="room-create-feedback" class="room-form-feedback room-full-field" role="status" aria-live="polite" hidden></p>
+    <details class="rooms-duration"><summary>Duración de entrevistas <strong id="room-duration-label">15 min</strong><i class="bi bi-chevron-down" aria-hidden="true"></i></summary>
+      <form id="room-duration-form" class="rooms-form"><div class="rooms-duration-row"><label for="room-duration">Cada entrevista dura<select id="room-duration" name="duration"><option value="15">15 minutos</option><option value="20">20 minutos</option><option value="30">30 minutos</option><option value="45">45 minutos</option><option value="60">60 minutos</option></select></label><button class="rooms-button" type="submit">Guardar duración</button></div><p id="room-duration-feedback" class="room-form-feedback" role="status" aria-live="polite" hidden></p><p class="rooms-help">Se aplica a horarios futuros sin reservas. Las citas ya agendadas conservan su duración.</p></form>
+    </details>
+  </div>
+  <div id="room-list" class="rooms-list"></div>
+  <details class="rooms-queue"><summary>Invitaciones pendientes</summary><p class="rooms-help">Revisa los envíos de Calendar de las citas. Los estados aparecen dentro de cada sala.</p><button id="room-process-calendar" type="button" class="rooms-button">Sincronizar invitaciones pendientes</button><p id="room-cancellation-status" class="rooms-help" role="status" hidden></p><p id="room-queue-feedback" class="room-form-feedback" role="status" aria-live="polite" hidden></p></details>
+</section>
+<style is:global>
+  #selection-rooms { --rooms-purple:#6225e6; padding:clamp(20px,4vw,40px); }
+  #selection-rooms[hidden],#selection-rooms [hidden] { display:none; }
+  #selection-rooms *,#selection-rooms *::before,#selection-rooms *::after { box-sizing:border-box; }
+  #selection-rooms h2 { margin:6px 0 12px; font-size:clamp(24px,3vw,32px); font-weight:900; letter-spacing:-.02em; }
+  #selection-rooms p { margin:0 0 16px; line-height:1.6; color:#555; font-size:14px; }
+  .rooms-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+  .rooms-eyebrow { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.12em; color:var(--rooms-purple); }
+  .rooms-guide { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); list-style:none; padding:20px 0; margin:8px 0 20px; border-block:2px solid #111; gap:16px; }
+  .rooms-guide li { display:flex; gap:10px; align-items:flex-start; }
+  .rooms-guide li>span { display:grid; place-items:center; flex:0 0 26px; height:26px; color:#fff; background:#111; font-size:13px; font-weight:800; }
+  .rooms-guide strong { font-size:13px; display:block; line-height:1.4; }
+  .rooms-guide small { font-size:12px; line-height:1.5; display:block; margin-top:4px; color:#666; }
+  #selection-rooms .rooms-lab-note { background:#fff8df; border-left:3px solid #ad7a00; padding:10px 12px; font-size:12px; }
+  .rooms-setup { display:flex; flex-wrap:wrap; align-items:flex-start; gap:16px; margin-bottom:24px; }
+  #selection-rooms details>summary { cursor:pointer; list-style:none; }
+  #selection-rooms details>summary::-webkit-details-marker { display:none; }
+  .rooms-create { flex:1 1 240px; min-width:0; }
+  .rooms-create[open] { flex-basis:100%; }
+  .rooms-duration { flex:1 1 260px; min-width:0; border:1px solid #ccc; }
+  .rooms-duration>summary { display:flex; align-items:center; gap:12px; padding:12px; font-size:13px; }
+  .rooms-duration>summary strong { margin-left:auto; white-space:nowrap; }
+  .rooms-form { padding:18px 0 0; }
+  .rooms-duration .rooms-form { padding:0 12px 12px; }
+  .rooms-duration-row { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; }
+  #selection-rooms .rooms-button { display:inline-flex; justify-content:center; align-items:center; gap:8px; min-height:44px; padding:10px 14px; border:2px solid #111; background:#fff; color:#111; font:700 13px 'DM Sans',sans-serif; line-height:1.3; text-transform:none; cursor:pointer; box-shadow:none; text-decoration:none; }
+  #selection-rooms .rooms-button-primary { color:#fff; background:var(--rooms-purple); }
+  #selection-rooms .rooms-button-quiet { border-color:#ddd; background:transparent; }
+  #selection-rooms .rooms-button:disabled { cursor:not-allowed; opacity:.45; }
+  #selection-rooms .rooms-button:hover:not(:disabled) { box-shadow:3px 3px 0 #111; transform:translate(-1px,-1px); }
+  #selection-rooms :is(button,input,select,summary,a):focus-visible { outline:3px solid var(--rooms-purple); outline-offset:3px; }
+  .rooms-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:16px; }
+  .rooms-fields-create { grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+  .rooms-create { container-type:inline-size; }
+  #room-create-form { margin-top:14px; padding:22px; border:2px solid var(--rooms-purple); background:#faf7ff; }
+  #selection-rooms .rooms-demand { padding:10px 12px; border-left:3px solid #287447; background:#edf8f0; color:#234b32; }
+  #selection-rooms .rooms-demand[data-warning=true] { border-color:#bd8400; background:#fff8df; color:#715000; }
+  .rooms-create-title { margin:0 0 8px; font-size:20px; font-weight:800; color:#111; }
+  .rooms-create[open]>summary i { transform:rotate(45deg); }
+  .rooms-create-date,.rooms-create-count { grid-column:1/-1; }
+  #room-create-form input { width:100%; min-width:0; min-height:46px; font-size:16px; background:#fff; }
+  #room-create-form #room-count { max-width:160px; }
+  @container(max-width:380px) {
+    #room-create-form { padding:16px; }
+    .rooms-fields-create { grid-template-columns:minmax(0,1fr); gap:14px; }
+    #room-create-form button[type=submit] { width:100%; }
+  }
+  #selection-rooms label { display:grid; gap:7px; min-width:0; font-size:12px; font-weight:700; color:#333; text-transform:none; letter-spacing:0; }
+  #selection-rooms :is(input,select) { min-width:0; width:100%; min-height:44px; padding:9px 10px; border:2px solid #111; border-radius:0; background:#fff; color:#111; font:500 14px 'DM Sans',sans-serif; }
+  #selection-rooms input[readonly] { background:#eee; }
+  #selection-rooms .rooms-help { margin:12px 0; font-size:12px; }
+  #selection-rooms .rooms-help:last-child { margin-bottom:0; }
+  #room-feedback { border-left:3px solid var(--rooms-purple); background:#f4efff; padding:10px 12px; overflow-wrap:anywhere; }
+  #room-feedback[data-error=true] { border-color:#a11; background:#fff1f1; }
+  .rooms-day { margin-top:28px; }
+  .rooms-day-heading { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:14px; }
+  .rooms-day-heading h3 { font-size:18px; margin:0; font-weight:900; text-transform:capitalize; }
+  .rooms-day-heading span { color:#666; font-size:12px; }
+  .room-card { border:2px solid #111; margin-bottom:16px; background:#fff; }
+  .room-card-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:18px 20px; border-bottom:1px solid #ddd; background:#faf8ff; }
+  .room-card-header h4 { margin:0; font-size:18px; font-weight:900; }
+  .room-state { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; background:#eee; font-size:11px; font-weight:800; }
+  .room-state[data-tone=ready] { color:#14633b; background:#e6f5ec; }
+  .room-state[data-tone=error] { color:#9c2424; background:#ffeaea; }
+  .room-card-body { padding:18px 20px; }
+  .room-overview { display:flex; flex-wrap:wrap; gap:10px 22px; margin-bottom:16px; font-size:13px; }
+  .room-overview span { display:flex; align-items:center; gap:7px; }
+  .room-responsibles { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding:12px; border:1px solid #ddd; margin-bottom:12px; }
+  .room-responsibles dt { font-size:11px; color:#666; margin-bottom:4px; }
+  .room-responsibles dd { margin:0; font-size:12px; font-weight:700; overflow-wrap:anywhere; }
+  .room-panel { border-top:1px solid #ddd; }
+  .room-panel>summary { display:flex; gap:10px; justify-content:space-between; align-items:center; padding:14px 0; font-size:13px; font-weight:700; }
+  .room-panel>summary::after { content:'+'; font-size:18px; line-height:1; }
+  .room-panel[open]>summary::after { content:'−'; }
+  #selection-rooms .room-form-feedback { margin:12px 0 0; padding:10px 12px; background:#edf8f0; border-left:3px solid #287447; color:#234b32; font-size:13px; overflow-wrap:anywhere; }
+  #selection-rooms .room-form-feedback[data-error=true] { background:#fff1f1; border-color:#a11; color:#862323; }
+  #selection-rooms .room-action-feedback { flex:1 1 100%; margin:0; }
+  #selection-rooms .room-form-feedback[data-phase=working], #room-feedback[data-phase=working] { background:#f4efff; border-color:var(--rooms-purple); color:#47209a; }
+  #selection-rooms button[aria-busy=true] { opacity:.8; cursor:wait; }
+  .room-google-saved { display:grid; gap:8px; margin:12px 0 0; padding-top:12px; border-top:1px solid #b9dac5; }
+  .room-google-saved>div { display:grid; grid-template-columns:140px minmax(0,1fr); gap:8px; }
+  .room-google-saved dt { font-weight:700; }
+  .room-google-saved dd { margin:0; overflow-wrap:anywhere; }
+  .room-google-saved a { color:inherit; text-decoration:underline; }
+  @media(max-width:540px) { .room-google-saved>div { grid-template-columns:minmax(0,1fr); gap:2px; } }
+  #room-create-feedback { flex:1 1 100%; }
+  .room-full-field { grid-column:1/-1; }
+  .room-block { border-top:1px dashed #ccc; padding:16px 0; }
+  .room-block:first-of-type { border-top:0; }
+  .room-inline-actions { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+  .room-footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding-top:18px; margin-top:6px; border-top:2px solid #111; }
+  #selection-rooms .room-next { flex:1 1 220px; margin:0; font-size:12px; }
+  .room-footer-buttons { display:flex; flex-wrap:wrap; gap:10px; }
+  .room-meet { display:flex; align-items:center; gap:8px; color:var(--rooms-purple); font-weight:700; font-size:13px; text-decoration:none; padding:10px 0; }
+  #selection-rooms .room-error { color:#9c2424; background:#fff1f1; padding:12px; font-size:13px; }
+  .room-error details { margin-top:8px; font-size:11px; overflow-wrap:anywhere; }
+  .room-booking { border-top:1px solid #ddd; padding:12px 0; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+  .rooms-queue { border-top:1px solid #ddd; margin-top:24px; padding-top:16px; }
+  .rooms-queue>summary { font-size:12px; font-weight:700; color:#666; }
+  .rooms-empty { text-align:center; border:2px dashed #ccc; padding:28px 20px; }
+  .rooms-empty strong { display:block; margin:12px 0 6px; }
+  .rooms-empty>i { font-size:26px; color:var(--rooms-purple); }
+  @media(max-width:720px) { .rooms-guide { grid-template-columns:1fr; gap:14px; } .rooms-heading { flex-wrap:wrap; } .room-responsibles,.rooms-fields:not(.rooms-fields-create) { grid-template-columns:1fr; } .room-card-header,.room-card-body { padding:16px; } .room-footer-buttons { width:100%; } .room-footer-buttons .rooms-button-primary { flex:1; } }
+  @media(prefers-reduced-motion:reduce) { #selection-rooms .rooms-button { transform:none !important; } }
+  .room-publish-notice { flex: 1 1 100%; padding: 12px 14px; margin: 0; border-left: 3px solid #6826ff; background: #f5f0ff; font-size: 12px; line-height: 1.6; }
+  .room-deletion-note { flex: 1 1 100%; margin: 0; color: #666; font-size: 12px; line-height: 1.6; }
+  [data-operation="delete"] { color: #a52b24; }
+</style>

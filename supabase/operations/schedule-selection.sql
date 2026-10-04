@@ -38,10 +38,21 @@ end $$;
        body:='{}'::jsonb,timeout_milliseconds:=50000
      ) where exists(select 1 from public.seleccion_config where id and progressive_enabled and not dispatch_paused);
    $job$);
+   if exists(select 1 from cron.job where jobname='selection-calendar-minute') then
+     perform cron.unschedule('selection-calendar-minute');
+   end if;
+   perform cron.schedule('selection-calendar-minute','* * * * *',$job$
+     select net.http_post(
+       url:=(select decrypted_secret from vault.decrypted_secrets where name='selection_project_url')||'/functions/v1/selection-calendar',
+       headers:=jsonb_build_object('Content-Type','application/json','X-Selection-Worker-Secret',
+         (select decrypted_secret from vault.decrypted_secrets where name='selection_worker_secret')),
+       body:='{}'::jsonb,timeout_milliseconds:=110000
+     ) where exists(select 1 from public.seleccion_config where id and progressive_enabled and not dispatch_paused);
+   $job$);
  end $$;
 commit;
 
 -- Metadata only. Never print Vault values.
 select jobid,jobname,schedule,active
 from cron.job
-where jobname='selection-dispatch-minute';
+where jobname in ('selection-dispatch-minute','selection-calendar-minute');
