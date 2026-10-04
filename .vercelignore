@@ -1,0 +1,18 @@
+# Only the website is deployed to Vercel. Edge functions are deployed separately.
+supabase/**
+tests/**
+scripts/**
+.agent*/**
+presentation-library/**
+.selection-lab/**
+.env.selection-lab
+src/pages/admin/selection-lab.astro
+src/pages/api/selection-lab/**
+.env*
+.git/**
+.astro/**
+dist/**
+node_modules/**
+.vercel/**
+test-results/**
+playwright-report/**

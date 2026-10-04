@@ -367,6 +367,10 @@ export async function handleSelectionDispatch(request: Request): Promise<Respons
         lease_token: job.lease_token,
         request_body: requestBody,
       });
+      if (isRecord(prepared) && prepared.skipped === true) {
+        processed += 1;
+        continue;
+      }
       if (!isRecord(prepared) || !isSelectionMailRequestBody(prepared.request_body, job.id)) {
         throw new WorkerDatabaseError();
       }

@@ -138,6 +138,8 @@ export type Database = {
       }
       interview_days: {
         Row: {
+          room_id: string | null
+          interviewers: string[]
           created_at: string
           created_by: string | null
           date: string
@@ -150,6 +152,8 @@ export type Database = {
           start_time: string
         }
         Insert: {
+          room_id?: string | null
+          interviewers?: string[]
           created_at?: string
           created_by?: string | null
           date: string
@@ -162,6 +166,8 @@ export type Database = {
           start_time: string
         }
         Update: {
+          room_id?: string | null
+          interviewers?: string[]
           created_at?: string
           created_by?: string | null
           date?: string
@@ -177,6 +183,13 @@ export type Database = {
       }
       interviews: {
         Row: {
+          room_id: string | null
+          day_id: string | null
+          calendar_event_id: string | null
+          calendar_status: string
+          calendar_error: string | null
+          calendar_lease: string | null
+          calendar_lease_until: string | null
           cancelled_at: string | null
           created_at: string
           duration_minutes: number
@@ -190,6 +203,13 @@ export type Database = {
           status: string
         }
         Insert: {
+          room_id?: string | null
+          day_id?: string | null
+          calendar_event_id?: string | null
+          calendar_status?: string
+          calendar_error?: string | null
+          calendar_lease?: string | null
+          calendar_lease_until?: string | null
           cancelled_at?: string | null
           created_at?: string
           duration_minutes?: number
@@ -203,6 +223,13 @@ export type Database = {
           status?: string
         }
         Update: {
+          room_id?: string | null
+          day_id?: string | null
+          calendar_event_id?: string | null
+          calendar_status?: string
+          calendar_error?: string | null
+          calendar_lease?: string | null
+          calendar_lease_until?: string | null
           cancelled_at?: string | null
           created_at?: string
           duration_minutes?: number
@@ -422,6 +449,7 @@ export type Database = {
       }
       seleccion_config: {
         Row: {
+          interview_duration_minutes: number
           active_season: string | null
           applications_closed: boolean
           closed_at: string | null
@@ -441,6 +469,7 @@ export type Database = {
           whatsapp_url: string
         }
         Insert: {
+          interview_duration_minutes?: number
           active_season?: string | null
           applications_closed?: boolean
           closed_at?: string | null
@@ -460,6 +489,7 @@ export type Database = {
           whatsapp_url?: string
         }
         Update: {
+          interview_duration_minutes?: number
           active_season?: string | null
           applications_closed?: boolean
           closed_at?: string | null
@@ -646,7 +676,7 @@ export type Database = {
         Returns: undefined
       }
       book_interview: {
-        Args: { p_slot: string; p_token: string }
+        Args: { p_duration_minutes?: number; p_slot: string; p_token: string }
         Returns: Json
       }
       cancel_interview: { Args: { p_token: string }; Returns: Json }

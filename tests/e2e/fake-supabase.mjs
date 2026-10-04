@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 
 const ADMIN_ID = '00000000-0000-0000-0000-000000000001';
@@ -224,19 +225,62 @@ function previewItems(items, kind) {
   });
 }
 
+function capacitySummary() {
+  if (state.capacity_summary) return clone(state.capacity_summary);
+  const waiting = state.solicitudes.filter(row => row.status === 'accepted' && !row.final_decision &&
+    !state.interviews.some(interview => interview.solicitud_id === row.id && ['confirmed','completed','no_show'].includes(interview.status)));
+  const commitments = waiting.filter(row => state.invitations.some(invitation => invitation.solicitud_id === row.id && !invitation.revoked_at && invitation.invited_at && Date.parse(invitation.expires_at) > Date.now()) ||
+    state.messages.some(message => message.solicitud_id === row.id && message.kind === 'initial' && ['queued','sending','accepted','failed','uncertain'].includes(message.status))).length;
+  return { available_slots: state.capacity, committed_applicants: commitments, available_for_invitations: state.capacity - commitments,
+    accepted_without_booking: waiting.length, missing_slots: Math.max(0, waiting.length - state.capacity) };
+}
+
 function handleSelectionAdmin(data) {
   const action = data.p_action;
   const payload = data.p_data || {};
-  if (action === 'state') return clone(state);
+  if (action === 'state') return { ...clone(state), capacity_summary: capacitySummary() };
 
   calls.push({ action, data: clone(payload) });
+
+  if (action === 'config') {
+    if (payload.interview_duration_minutes) state.config.interview_duration_minutes = payload.interview_duration_minutes;
+    state.config.selection_revision++;
+    return { ok: true };
+  }
+  if (action === 'room') {
+    state.rooms ??= [];
+    if (payload.operation === 'create') {
+      for (let n = 1; n <= payload.room_count; n++) {
+        const id = randomUUID();
+        state.rooms.push({ id, season: state.config.active_season, date: payload.date, name: `Sala ${n}`, position: n, primary_email: null, backup_email: null, calendar_status: 'queued', calendar_error: null, meet_url: null, published: false, host_verified_at: null });
+        state.days.push({ id: randomUUID(), room_id: id, date: payload.date, season: state.config.active_season, start_time: `${payload.start_time}:00`, end_time: `${payload.end_time}:00`, duration_minutes: state.config.interview_duration_minutes ?? 15, interviewers: [] });
+      }
+    } else {
+      const room = state.rooms.find(r => r.id === payload.id);
+      if (payload.operation === 'edit' && room) Object.assign(room, { name: payload.name, primary_email: payload.primary_email, backup_email: payload.backup_email });
+      if (payload.operation === 'prepare' && room) room.calendar_status = 'queued';
+      if (payload.operation === 'publish' && room) room.published = true;
+      if (payload.operation === 'delete' && room) { state.rooms = state.rooms.filter(r => r.id !== room.id); state.days = state.days.filter(d => d.room_id !== room.id); }
+      if (payload.operation === 'block' && payload.block_id) {
+        const block = state.days.find(d => d.id === payload.block_id);
+        if (block) block.interviewers = payload.interviewers;
+      }
+    }
+    state.config.selection_revision++;
+    return { ok: true };
+  }
+
+  if (['preview','confirm'].includes(action) && payload.kind === 'initial') {
+    const needed = (payload.items ?? []).filter(item => state.solicitudes.find(row => row.id === item.id)?.status === 'accepted').length;
+    if (needed > 0 && needed > capacitySummary().available_for_invitations) return { error: { message: 'INSUFFICIENT_CAPACITY' } };
+  }
 
   if (action === 'preview') {
     return {
       items: previewItems(payload.items || [], payload.kind),
       duration_hours: payload.duration_hours ?? 168,
       config_revision: state.config.selection_revision,
-      capacity: state.capacity,
+      capacity: capacitySummary().available_for_invitations,
       errors: [],
     };
   }
@@ -311,6 +355,12 @@ createServer(async (req, res) => {
   const { pathname } = url;
 
   if (pathname === '/__health') return writeJson(res, { ok: true });
+  if (pathname === '/functions/v1/selection-calendar') {
+    calls.push({ action: 'calendar', data: clone(data) });
+    const room = state.rooms?.find(r => r.id === data.room_id);
+    if (room) Object.assign(room, { calendar_status: 'ready', meet_url: 'https://meet.google.com/aaa-bbbb-ccc', google_space_name: 'spaces/testroom', google_cohosts: [room.primary_email,room.backup_email] });
+    return writeJson(res,{ok:true,processed:room ? 1 : 0,failed:0});
+  }
   if (pathname === '/__reset') { reset(); return writeJson(res, { ok: true }); }
   if (pathname === '/__calls') return writeJson(res, calls);
   if (pathname === '/__booking') { Object.assign(booking, data); return writeJson(res, booking); }

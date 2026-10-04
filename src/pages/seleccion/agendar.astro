@@ -59,6 +59,7 @@ import Layout from '@layouts/Layout.astro';
           Si necesitas cambiar de horario, puedes hacerlo abajo.
         </p>
 
+        <p>Solicita entrar a tu hora; el equipo te admitirá cuando termine la entrevista anterior.</p>
         <div class="agendar-booked-actions">
           <button type="button" id="btn-reschedule" class="hw-btn hw-btn-secondary">
             Reagendar →
@@ -207,7 +208,7 @@ import Layout from '@layouts/Layout.astro';
           <h2>Te esperamos.</h2>
           <p class="agendar-success-when" id="success-when">—</p>
           <p class="agendar-success-msg">
-            Te enviamos un correo con tu enlace de Google Meet y los detalles. Si surge algo, escríbenos con al menos 12 h de anticipación.
+            Tu reserva está confirmada. Recibirás un correo con tu enlace de Google Meet y los detalles. Solicita entrar a tu hora; el equipo te admitirá cuando termine la entrevista anterior. Si surge algo, escríbenos con al menos 12 h de anticipación.
           </p>
         </div>
       </div>
@@ -231,8 +232,9 @@ import Layout from '@layouts/Layout.astro';
     current_interview: { id: string; slot_datetime: string; duration_minutes: number; meet_url: string | null } | null;
     days: InterviewDay[];
     taken_slots: string[];
-    slots?: Array<{ slot_datetime: string; duration_minutes: number; meet_url: string | null }>;
+    slots?: Array<{ slot_datetime: string; duration_minutes: number; meet_url?: string | null }>;
     progressive?: boolean;
+    booking_blocked_reason?: string | null;
     reschedule_count: number;
     max_reschedules: number;
     can_reschedule: boolean;
@@ -243,6 +245,7 @@ import Layout from '@layouts/Layout.astro';
   let token = '';
   let state: State | null = null;
   let chosenSlot: Date | null = null;
+  let chosenDuration = 15;
   let chosenDay: InterviewDay | null = null;
   let rescheduling = false;
 
@@ -274,6 +277,16 @@ import Layout from '@layouts/Layout.astro';
     }
 
     state = normalizeBookingState(data as State);
+    if (!state.current_interview && state.booking_blocked_reason) {
+      const reasons: Record<string, string> = {
+        NOT_INVITED: 'Tu invitación todavía no está disponible. Revisa tu correo o contacta al equipo.',
+        INVITATION_EXPIRED: 'El plazo de tu invitación para agendar ya venció. Contacta al equipo para revisar tu caso.',
+        MAX_RESCHEDULES: 'Ya usaste los cambios de horario disponibles. Contacta al equipo si necesitas ayuda.',
+        TEAM_REVIEW_REQUIRED: 'El equipo necesita revisar tu proceso antes de que puedas elegir otra cita.',
+      };
+      showInvalid(reasons[state.booking_blocked_reason] || 'Tu invitación no permite agendar en este momento. Contacta al equipo.');
+      return;
+    }
     document.getElementById('welcome-name')!.textContent = `Hola, ${state.solicitud.nombre.split(' ')[0]}.`;
 
     if (state.current_interview && !rescheduling) {
@@ -309,7 +322,7 @@ import Layout from '@layouts/Layout.astro';
   function normalizeBookingState(raw: State): State {
     if (!raw.progressive) return raw;
 
-    const slots = Array.isArray(raw.slots) ? raw.slots : [];
+    const slots = Array.isArray(raw.slots) ? [...new Map(raw.slots.map(slot => [`${slot.slot_datetime}/${slot.duration_minutes}`, slot])).values()] : [];
     const grouped = new Map<string, typeof slots>();
     for (const slot of slots) {
       const date = mexicoDateKey(slot.slot_datetime);
@@ -477,19 +490,19 @@ import Layout from '@layouts/Layout.astro';
     const slots = state.progressive
       ? (state.slots || [])
           .filter(slot => mexicoDateKey(slot.slot_datetime) === chosenDay!.date)
-          .map(slot => new Date(slot.slot_datetime))
-      : generateSlots(chosenDay);
+          .map(slot => ({ date: new Date(slot.slot_datetime), duration: slot.duration_minutes }))
+      : generateSlots(chosenDay).map(date => ({ date, duration: chosenDay!.duration_minutes }));
 
-    grid.innerHTML = slots.map(s => {
+    grid.innerHTML = slots.map(({ date: s, duration }) => {
       const taken = takenSet.has(s.toISOString());
       const inPast = s.getTime() < Date.now();
       const disabled = taken || inPast;
       return `
         <button type="button"
           class="agendar-hour-btn ${disabled ? 'agendar-hour-btn-disabled' : ''}"
-          data-slot="${s.toISOString()}"
+          data-slot="${s.toISOString()}" data-duration="${duration}"
           ${disabled ? 'disabled' : ''}>
-          ${formatSlotTime(s)}
+          ${formatSlotTime(s)}${state!.progressive ? `<small style="display:block;font-size:11px;">${duration} min</small>` : ''}
         </button>
       `;
     }).join('');
@@ -500,6 +513,7 @@ import Layout from '@layouts/Layout.astro';
         grid.querySelectorAll('.agendar-hour-btn').forEach(b => b.classList.remove('agendar-hour-btn-active'));
         btn.classList.add('agendar-hour-btn-active');
         chosenSlot = new Date(btn.dataset.slot!);
+        chosenDuration = Number(btn.dataset.duration);
         renderConfirm();
       });
     });
@@ -513,7 +527,7 @@ import Layout from '@layouts/Layout.astro';
     document.getElementById('confirm-section')!.style.display = 'block';
     document.getElementById('confirm-when')!.textContent =
       `${formatDayLong(chosenSlot)} a las ${formatSlotTime(chosenSlot)} hrs`;
-    document.getElementById('confirm-duration')!.textContent = `${chosenDay.duration_minutes} minutos`;
+    document.getElementById('confirm-duration')!.textContent = `${chosenDuration} minutos`;
 
     (document.getElementById('btn-confirm-cancel') as HTMLButtonElement).onclick = () => {
       document.getElementById('confirm-section')!.style.display = 'none';
@@ -535,6 +549,7 @@ import Layout from '@layouts/Layout.astro';
     const { data, error } = await supabase.rpc('book_interview', {
       p_token: token,
       p_slot:  chosenSlot.toISOString(),
+      ...(state?.progressive ? { p_duration_minutes: chosenDuration } : {}),
     });
 
     const result = data as BookingMutationResult | null;

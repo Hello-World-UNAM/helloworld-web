@@ -1,3 +1,4 @@
+import { renderSelectionNotice } from './selection-notification-templates.ts';
 import {
   legacyBookingTemplate,
   legacyFinalAcceptedTemplate,
@@ -269,35 +270,6 @@ function interviewOutcome(value: unknown): SelectionInterviewOutcome {
   throw new SelectionMailTemplateError('invalid_interview_outcome');
 }
 
-function linkHtml(url: string, label: string): string {
-  return `<a href="${escapeHtml(url)}">${escapeHtml(label)}</a>`;
-}
-
-function htmlShell(heading: string, paragraphs: string[]): string {
-  const body = paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('');
-
-  return [
-    '<!doctype html>',
-    '<html lang="es">',
-    '<body style="margin:0;background:#f7f5ff;color:#111;font-family:Arial,sans-serif;line-height:1.55;">',
-    '<main style="max-width:640px;margin:0 auto;padding:32px 24px;background:#fff;">',
-    `<h1 style="font-size:24px;line-height:1.2;margin:0 0 24px;">${escapeHtml(heading)}</h1>`,
-    body,
-    '<p style="margin-top:32px;color:#666;font-size:13px;">Club Hello World · FES Aragón UNAM</p>',
-    '</main>',
-    '</body>',
-    '</html>',
-  ].join('');
-}
-
-function makeMail(subject: string, textParagraphs: string[], htmlParagraphs: string[]): SelectionMail {
-  return {
-    subject,
-    text: [...textParagraphs, 'Club Hello World · FES Aragón UNAM'].join('\n\n'),
-    html: htmlShell(subject, htmlParagraphs),
-  };
-}
-
 const SOCIAL_TEXT = [
   'Mantente cerca:',
   'Instagram: https://www.instagram.com/helloworld_unam/',
@@ -435,67 +407,23 @@ export function renderSelectionMail(
     case 'rectification': {
       const decision = requiredDecision(payload.decision);
       const stage = requiredStage(payload.stage);
-      const subject = `Actualización corregida de tu proceso · ${season}`;
-      if (decision === 'rejected') {
-        return makeMail(
-          subject,
-          [
-            `Hola, ${name}.`,
-            `Actualizamos la decisión vigente sobre tu proceso de selección para la temporada ${season}: por esta ocasión no continuarás en el proceso.`,
-            'Este mensaje sustituye la comunicación anterior.',
-          ],
-          [
-            `Hola, ${safeName}.`,
-            `Actualizamos la decisión vigente sobre tu proceso de selección para la temporada ${safeSeason}: por esta ocasión no continuarás en el proceso.`,
-            'Este mensaje sustituye la comunicación anterior.',
-          ],
-        );
-      }
-
-      if (stage === 'initial') {
-        const bookingUrl = requiredUrl(payload.booking_url, 'booking_url');
-        const expiresAt = optionalDate(payload.expires_at, 'expires_at');
-        if (!expiresAt) {
-          throw new SelectionMailTemplateError('missing_expires_at');
-        }
-
-        return makeMail(
-          subject,
-          [
-            `Hola, ${name}.`,
-            `Corregimos la comunicación anterior: tu solicitud para la temporada ${season} fue aceptada para continuar al proceso de entrevista.`,
-            `Agenda tu entrevista aquí:\n${bookingUrl}`,
-            `El enlace estará disponible hasta ${expiresAt}.`,
-            'Este mensaje sustituye la comunicación anterior.',
-          ],
-          [
-            `Hola, ${safeName}.`,
-            `Corregimos la comunicación anterior: tu solicitud para la temporada ${safeSeason} fue aceptada para continuar al proceso de entrevista.`,
-            `Agenda tu entrevista aquí: ${linkHtml(bookingUrl, 'Agendar entrevista')}`,
-            `El enlace estará disponible hasta ${escapeHtml(expiresAt)}.`,
-            'Este mensaje sustituye la comunicación anterior.',
-          ],
-        );
-      }
-
-      const whatsappUrl = requiredUrl(payload.whatsapp_url, 'whatsapp_url');
-      return makeMail(
-        subject,
-        [
-          `Hola, ${name}.`,
-          `Corregimos la comunicación anterior: nos da mucho gusto informarte que fuiste admitido(a) al Club Hello World para la temporada ${season}.`,
-          '¡Bienvenido(a) al Club Hello World!',
-          `Para recibir indicaciones y mantenerte en contacto con el equipo, únete al grupo de WhatsApp:\n${whatsappUrl}`,
-          'Este mensaje sustituye la comunicación anterior.',
-        ],
-        [
-          `Hola, ${safeName}.`,
-          `Corregimos la comunicación anterior: nos da mucho gusto informarte que fuiste admitido(a) al Club Hello World para la temporada ${safeSeason}.`,
-          '¡Bienvenido(a) al Club Hello World!',
-          `Para recibir indicaciones y mantenerte en contacto con el equipo, únete al grupo de WhatsApp: ${linkHtml(whatsappUrl, 'Unirme al grupo de WhatsApp')}`,
-          'Este mensaje sustituye la comunicación anterior.',
-        ],
-      );
+      const accepted = decision === 'accepted';
+      const initial = stage === 'initial';
+      const subject = `Corrección de ${initial ? 'tu solicitud' : 'tu resultado final'} · ${season}`;
+      const paragraphs = ['Queremos corregir la comunicación que recibiste anteriormente. Disculpa la confusión.'];
+      paragraphs.push(initial
+        ? (accepted ? `Tu solicitud para la temporada ${season} fue aceptada para continuar a la etapa de entrevistas.` : `Después de actualizar la revisión de tu solicitud para la temporada ${season}, por esta ocasión no continuarás a la etapa de entrevistas. Gracias por el interés y el tiempo que dedicaste a postularte.`)
+        : (accepted ? `Nos da mucho gusto confirmarte que fuiste admitido(a) al Club Hello World para la temporada ${season}. ¡Bienvenido(a)!` : `El resultado final de tu proceso para la temporada ${season} es que, por esta ocasión, no fuiste admitido(a) al Club Hello World. Agradecemos sinceramente tu participación.`));
+      const expiresAt = accepted && initial ? optionalDate(payload.expires_at, 'expires_at') : null;
+      if (accepted && initial && !expiresAt) throw new SelectionMailTemplateError('missing_expires_at');
+      return renderSelectionNotice({ subject, heading: accepted ? (initial ? `${shortName}, queremos conocerte.` : `Bienvenido(a), ${shortName}.`) : `Una actualización para ti, ${shortName}.`,
+        eyebrow: `✦ Corrección ${initial ? 'de solicitud' : 'final'} · ${season}`, tone: accepted ? 'success' : 'notice', paragraphs,
+        detail: expiresAt ? { label: 'Puedes agendar hasta', text: expiresAt } : undefined,
+        action: accepted ? (initial
+          ? { label: 'Agendar entrevista →', url: requiredUrl(payload.booking_url, 'booking_url'), description: 'Elige el horario que mejor te quede entre las opciones disponibles.' }
+          : { label: 'Entrar al WhatsApp →', url: requiredUrl(payload.whatsapp_url, 'whatsapp_url'), description: 'Únete al grupo del club para recibir indicaciones y conocer los siguientes pasos.' }) : undefined,
+        closing: 'Este mensaje sustituye la comunicación anterior. Si algo no queda claro, responde a este correo: estamos para ayudarte.',
+      });
     }
 
     case 'booking': {
@@ -519,6 +447,7 @@ export function renderSelectionMail(
           'Tu entrevista con el equipo del Club Hello World está confirmada.',
           `Cuándo:\n${dateLong}\n${time} hrs · ${durationMinutes} minutos`,
           `Dónde:\n${meetUrl}`,
+          'Solicita entrar a tu hora; el equipo te admitirá cuando termine la entrevista anterior.',
           'Antes de tu entrevista:',
           '• Llega 1 minuto antes y verifica tu cámara y micrófono.\n• Si surge algo, escríbenos con al menos 12 h de anticipación.\n• Llega tú — nada que preparar.',
           `¿Necesitas cambiar de horario? Gestiona tu entrevista aquí:\n${manageUrl}`,
@@ -529,71 +458,35 @@ export function renderSelectionMail(
 
     case 'cancellation': {
       const slot = optionalDate(payload.slot_datetime, 'slot_datetime');
-      const bookingUrl = optionalUrl(payload.booking_url, 'booking_url');
-      const subject = `Entrevista cancelada · ${season}`;
-      const textParagraphs = [
-        `Hola, ${name}.`,
-        slot
-          ? `La entrevista que estaba agendada para el ${slot} fue cancelada y el horario quedó liberado.`
-          : `Tu entrevista para la temporada ${season} fue cancelada y el horario quedó liberado.`,
-        'Si el proceso sigue vigente, el equipo te indicará los siguientes pasos.',
-      ];
-      const htmlParagraphs = [
-        `Hola, ${safeName}.`,
-        slot
-          ? `La entrevista que estaba agendada para el ${escapeHtml(slot)} fue cancelada y el horario quedó liberado.`
-          : `Tu entrevista para la temporada ${safeSeason} fue cancelada y el horario quedó liberado.`,
-        'Si el proceso sigue vigente, el equipo te indicará los siguientes pasos.',
-      ];
-
-      if (bookingUrl) {
-        textParagraphs.push(`Puedes revisar las opciones disponibles aquí:\n${bookingUrl}`);
-        htmlParagraphs.push(`Puedes revisar las opciones disponibles aquí: ${linkHtml(bookingUrl, 'Revisar opciones')}`);
-      }
-
-      return makeMail(subject, textParagraphs, htmlParagraphs);
+      return renderSelectionNotice({ subject: `Entrevista cancelada · ${season}`, heading: `Tu cita fue cancelada, ${shortName}.`,
+        eyebrow: `✦ Entrevista cancelada · ${season}`, tone: 'notice',
+        paragraphs: [`Tu entrevista para la temporada ${season} fue cancelada y el horario quedó liberado.`, 'Si deseas elegir otra cita, revisa las opciones de tu invitación.'],
+        detail: slot ? { label: 'Cita cancelada', text: slot } : undefined,
+        action: { label: 'Revisar opciones para reagendar →', url: requiredUrl(payload.booking_url, 'booking_url'), description: 'Podrás agendar otra entrevista si tu invitación sigue vigente y hay horarios disponibles.' },
+        closing: 'Cancelar una cita no amplía el plazo para agendar. Si el plazo venció o necesitas ayuda, responde a este correo para que el equipo revise tu caso.',
+      });
     }
 
     case 'deadline': {
       const expiresAt = formatMexicoCityDate(requiredText(payload.expires_at, 'expires_at'));
-      const bookingUrl = optionalUrl(payload.booking_url, 'booking_url');
-      const subject = `Tu plazo para agendar termina pronto · ${season}`;
-      const textParagraphs = [
-        `Hola, ${name}.`,
-        `Tu invitación para agendar entrevista de la temporada ${season} vence el ${expiresAt}.`,
-      ];
-      const htmlParagraphs = [
-        `Hola, ${safeName}.`,
-        `Tu invitación para agendar entrevista de la temporada ${safeSeason} vence el ${escapeHtml(expiresAt)}.`,
-      ];
-
-      if (bookingUrl) {
-        textParagraphs.push(`Si aún no tienes una cita, agenda aquí:\n${bookingUrl}`);
-        htmlParagraphs.push(`Si aún no tienes una cita, agenda aquí: ${linkHtml(bookingUrl, 'Agendar entrevista')}`);
-      }
-
-      return makeMail(subject, textParagraphs, htmlParagraphs);
+      return renderSelectionNotice({ subject: `Ampliamos tu plazo para agendar · ${season}`, heading: `Tienes más tiempo, ${shortName}.`,
+        eyebrow: `✦ Ampliación del plazo · ${season}`, tone: 'success',
+        paragraphs: [`Ampliamos el plazo de tu invitación a entrevista para la temporada ${season}. Si aún no has elegido horario, puedes hacerlo desde tu enlace personal.`],
+        detail: { label: 'Nueva fecha límite para agendar', text: expiresAt },
+        action: { label: 'Agendar entrevista →', url: requiredUrl(payload.booking_url, 'booking_url'), description: 'Revisa los horarios disponibles y elige el que mejor te quede.' },
+        closing: 'Si ya tienes una cita confirmada, consérvala: no necesitas volver a agendar. Si necesitas ayuda, responde a este correo.',
+      });
     }
 
     case 'reminder': {
       const expiresAt = formatMexicoCityDate(requiredText(payload.expires_at, 'expires_at'));
-      const bookingUrl = optionalUrl(payload.booking_url, 'booking_url');
-      const subject = `Recordatorio: agenda tu entrevista · ${season}`;
-      const textParagraphs = [
-        `Hola, ${name}.`,
-        `Este es un recordatorio de que tu invitación para agendar entrevista sigue pendiente y vence el ${expiresAt}.`,
-      ];
-      const htmlParagraphs = [
-        `Hola, ${safeName}.`,
-        `Este es un recordatorio de que tu invitación para agendar entrevista sigue pendiente y vence el ${escapeHtml(expiresAt)}.`,
-      ];
-
-      if (bookingUrl) {
-        textParagraphs.push(`Agenda aquí:\n${bookingUrl}`);
-        htmlParagraphs.push(`Agenda aquí: ${linkHtml(bookingUrl, 'Agendar entrevista')}`);
-      }
-
-      return makeMail(subject, textParagraphs, htmlParagraphs);
+      return renderSelectionNotice({ subject: `Recordatorio: agenda tu entrevista · ${season}`, heading: `Nos falta tu horario, ${shortName}.`,
+        eyebrow: `✦ Recordatorio de agenda · ${season}`, tone: 'notice',
+        paragraphs: [`Tu invitación a entrevista para la temporada ${season} sigue pendiente de agendar. Aún puedes elegir un horario entre las opciones disponibles.`],
+        detail: { label: 'Tu plazo para agendar termina', text: expiresAt },
+        action: { label: 'Agendar entrevista →', url: requiredUrl(payload.booking_url, 'booking_url'), description: 'Elige el horario que mejor te quede antes de que venza tu invitación.' },
+        closing: '¿Tienes alguna duda o dificultad para agendar? Responde a este correo y te ayudamos.',
+      });
     }
 
     default: {

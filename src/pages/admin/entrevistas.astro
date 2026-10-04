@@ -33,29 +33,57 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         </div>
       </div>
 
+      <div class="selection-filter-bar">
       <!-- Stats: estado entrevistas + decisión final -->
-      <div id="entrevistas-stats" class="admin-stats admin-stats-extended">
-        <div class="admin-stat">
+      <div id="entrevistas-stats" class="admin-stats admin-stats-extended selection-summary-stats">
+        <button type="button" class="admin-stat admin-stat-active" data-evaluation="all" aria-pressed="true">
           <span class="admin-stat-num" id="stat-total">0</span>
-          <span class="admin-stat-label">Pasaron forms</span>
-        </div>
-        <div class="admin-stat">
+          <span class="admin-stat-label">Total</span>
+        </button>
+        <button type="button" class="admin-stat" data-evaluation="evaluated" aria-pressed="false">
           <span class="admin-stat-num" id="stat-evaluated">0</span>
           <span class="admin-stat-label">Evaluados</span>
-        </div>
-        <div class="admin-stat">
+        </button>
+        <button type="button" class="admin-stat" data-evaluation="accepted" aria-pressed="false">
           <span class="admin-stat-num" id="stat-accepted-final">0</span>
           <span class="admin-stat-label">Aceptados</span>
-        </div>
-        <div class="admin-stat">
+        </button>
+        <button type="button" class="admin-stat" data-evaluation="rejected" aria-pressed="false">
           <span class="admin-stat-num" id="stat-rejected-final">0</span>
           <span class="admin-stat-label">Rechazados</span>
-        </div>
-        <div class="admin-stat">
+        </button>
+        <button type="button" class="admin-stat" data-evaluation="pending" aria-pressed="false">
           <span class="admin-stat-num" id="stat-pending">0</span>
-          <span class="admin-stat-label">Pendientes</span>
-        </div>
+          <span class="admin-stat-label">Sin evaluar</span>
+        </button>
       </div>
+
+      <section id="final-comms-summary" class="selection-comms-summary" style="display:none;" aria-label="Estado del correo de resultado final">
+        <label for="final-comms-filter">Correo final:</label>
+        <select id="final-comms-filter" class="admin-select">
+          <option id="final-comms-count-all" value="all">Todos</option>
+          <option id="final-comms-count-free" value="free">Sin enviar</option>
+          <option id="final-comms-count-queued" value="queued">En cola / en proceso</option>
+          <option id="final-comms-count-sent" value="sent">Enviados</option>
+          <option id="final-comms-count-problem" value="problem">Revisar envío</option>
+        </select>
+        <p id="final-comms-hint" class="selection-comms-hint" aria-live="polite" hidden></p>
+      </section>
+      </div>
+
+      <div class="admin-search-wrap">
+        <i class="bi bi-search admin-search-icon" aria-hidden="true"></i>
+        <input
+          type="search"
+          id="admin-search"
+          class="admin-search"
+          placeholder="Buscar por nombre, correo o carrera…"
+          aria-label="Buscar por nombre, correo o carrera"
+          aria-describedby="interview-search-summary"
+          autocomplete="off"
+        >
+      </div>
+      <p id="interview-search-summary" class="admin-table-foot" role="status" hidden></p>
 
       <div id="final-selection-guide" class="admin-final-selection-guide" style="display:none;" aria-live="polite">
         <i class="bi bi-check2-square"></i>
@@ -63,6 +91,9 @@ import AdminLayout from '@layouts/AdminLayout.astro';
         <strong id="final-selection-count">0 seleccionados</strong>
       </div>
       <div id="member-provisioning-alert" class="admin-final-selection-guide" style="display:none;" role="status"></div>
+      <div id="interview-search-empty" class="admin-empty" hidden>
+        No hay coincidencias. Prueba con otro nombre, correo o carrera.
+      </div>
 
       <!-- Periodo de agendado (antes del deadline) -->
       <div id="booking-phase-section" style="display:none;">
@@ -91,6 +122,12 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   </section>
 </AdminLayout>
 
+<style>
+  .admin-interviews :global([hidden]) {
+    display: none !important;
+  }
+</style>
+
 <script>
   import { supabase } from '@lib/supabase';
   import { formatDayLong } from '@lib/interview-slots';
@@ -105,6 +142,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     selectionErrorMessage,
     selectionLabCompleteInterview,
     stageCommsOccupancy,
+    type SelectionRoom,
     type SelectionMessage,
     type SelectionSolicitud,
   } from '@lib/selection-client';
@@ -126,6 +164,8 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   type InterviewRow = {
     id: string;
     solicitud_id: string;
+    room_id?: string | null;
+    calendar_status?: string;
     slot_datetime: string;
     duration_minutes: number;
     meet_url: string | null;
@@ -144,14 +184,82 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   let activeSeason = '';
   let progressiveEnabled = false;
   let stateMessages: SelectionMessage[] = [];
+  let interviewRooms = new Map<string, SelectionRoom>();
   type MemberProvisioning = { status: string; detail: string | null; member_id: string | null };
   let memberProvisioning = new Map<string, MemberProvisioning>();
   let memberProvisioningUnavailable = false;
   let visibleSolicitudes: SolicitudWithEval[] = [];
   let finalInterviewStatuses = new Map<string, InterviewRow['status']>();
   const selectedFinalIds = new Set<string>();
+  let searchTerms: string[] = [];
+  let evaluationFilter: 'all' | 'evaluated' | 'accepted' | 'rejected' | 'pending' = 'all';
+  let finalMailFilter: 'all' | 'free' | 'queued' | 'sent' | 'problem' = 'all';
+
+  function normalizeSearch(value: string): string {
+    return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
+  }
+
+  function matchesSearch(row: SolicitudWithEval): boolean {
+    const text = normalizeSearch(`${row.nombre} ${row.correo} ${row.carrera}`);
+    return searchTerms.every((term) => text.includes(term)) &&
+      matchesEvaluation(row) &&
+      (finalMailFilter === 'all' || (!!row.final_decision && finalMailBucket(row) === finalMailFilter));
+  }
+
+  function matchesEvaluation(row: SolicitudWithEval): boolean {
+    if (evaluationFilter === 'all') return true;
+    if (evaluationFilter === 'evaluated') return !!row.final_decision;
+    if (evaluationFilter === 'pending') return !row.final_decision;
+    return row.final_decision === evaluationFilter;
+  }
+
+  function applyInterviewSearch() {
+    const filtering = searchTerms.length > 0 || finalMailFilter !== 'all' || evaluationFilter !== 'all';
+    const matchingIds = new Set(visibleSolicitudes.filter(matchesSearch).map((row) => row.id));
+    const shownIds = new Set<string>();
+    document.querySelectorAll<HTMLElement>('.admin-interviews .admin-agenda-item').forEach((item) => {
+      const id = item.dataset.solicitudId ?? '';
+      item.hidden = !matchingIds.has(id);
+      if (!item.hidden) shownIds.add(id);
+    });
+    document.querySelectorAll<HTMLElement>('.admin-interviews .admin-agenda-day').forEach((section) => {
+      const count = section.querySelectorAll('.admin-agenda-item:not([hidden])').length;
+      section.hidden = filtering && count === 0;
+      const badge = section.querySelector('.admin-agenda-day-count');
+      if (badge) badge.textContent = String(count);
+    });
+    const agenda = document.getElementById('agenda-by-day')!;
+    agenda.hidden = filtering && !agenda.querySelector('.admin-agenda-item:not([hidden])');
+    const summary = document.getElementById('interview-search-summary')!;
+    summary.hidden = !filtering;
+    summary.textContent = `${shownIds.size} persona${shownIds.size === 1 ? '' : 's'} encontrada${shownIds.size === 1 ? '' : 's'}.`;
+    document.getElementById('interview-search-empty')!.hidden = !filtering || shownIds.size > 0;
+    if (progressiveEnabled) {
+      refreshFinalSelection(visibleSolicitudes, visibleSolicitudes.filter((row) => !row.final_decision).length);
+    }
+  }
 
   document.addEventListener('DOMContentLoaded', async () => {
+    const search = document.getElementById('admin-search') as HTMLInputElement;
+    search.addEventListener('input', () => {
+      searchTerms = normalizeSearch(search.value).split(/\s+/).filter(Boolean);
+      applyInterviewSearch();
+    });
+    document.querySelectorAll<HTMLButtonElement>('[data-evaluation]').forEach(button => {
+      button.addEventListener('click', () => {
+        evaluationFilter = button.dataset.evaluation as typeof evaluationFilter;
+        document.querySelectorAll<HTMLButtonElement>('[data-evaluation]').forEach(item => {
+          const active = item === button;
+          item.classList.toggle('admin-stat-active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+        applyInterviewSearch();
+      });
+    });
+    document.getElementById('final-comms-filter')!.addEventListener('change', event => {
+      finalMailFilter = (event.target as HTMLSelectElement).value as typeof finalMailFilter;
+      applyInterviewSearch();
+    });
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.email) { window.location.replace('/admin/login'); return; }
     const { data: directiva } = await supabase
@@ -192,6 +300,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       const sols = accepted.filter((row) => visibleIds.has(row.id));
       visibleSolicitudes = sols;
       const byId = new Map(sols.map((row) => [row.id, row]));
+      interviewRooms = new Map((feature.state.rooms ?? []).map(room => [room.id, room]));
       const ivs = feature.state.interviews.map((interview) => ({
         ...interview,
         solicitudes: byId.get(interview.solicitud_id) ?? null,
@@ -200,6 +309,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       renderAgenda(ivs);
       renderNoInterview(sols, ivs, invitedIds);
       setupBulkBtn(sols);
+      applyInterviewSearch();
       return;
     }
 
@@ -256,6 +366,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     } else {
       renderBookingPhase(sols, ivs, interviewDeadline!);
     }
+    applyInterviewSearch();
   });
 
   async function loadMemberProvisioning(season: string) {
@@ -324,7 +435,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
                 const meet = iv?.meet_url
                   ? `<a href="${escapeAttr(iv.meet_url)}" target="_blank" rel="noopener noreferrer" class="admin-agenda-meet" title="Abrir Meet"><i class="bi bi-camera-video-fill"></i></a>`
                   : '';
-                return `<article class="admin-agenda-item">
+                return `<article class="admin-agenda-item" data-solicitud-id="${escapeAttr(s.id)}">
                   <div class="admin-agenda-time">${time}</div>
                   <div class="admin-agenda-info">
                     <div class="admin-agenda-name">${escapeHtml(s.nombre)}</div>
@@ -346,7 +457,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           ? '<p class="admin-no-interview-hint">Todos han agendado su entrevista.</p>'
           : `<p class="admin-no-interview-hint">Aún no han elegido horario. Tienen hasta el deadline para hacerlo.</p>
              <div class="admin-agenda-list">
-               ${noList.map(s => `<article class="admin-agenda-item admin-agenda-no-interview">
+               ${noList.map(s => `<article class="admin-agenda-item admin-agenda-no-interview" data-solicitud-id="${escapeAttr(s.id)}">
                  <div class="admin-agenda-time">—</div>
                  <div class="admin-agenda-info">
                    <div class="admin-agenda-name">${escapeHtml(s.nombre)}</div>
@@ -359,7 +470,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   function renderStats(sols: SolicitudWithEval[]) {
     const total = sols.length;
-    const evaluated = sols.filter(s => s.evaluated_at).length;
+    const evaluated = sols.filter(s => s.final_decision).length;
     const acceptedFinal = sols.filter(s => s.final_decision === 'accepted').length;
     const rejectedFinal = sols.filter(s => s.final_decision === 'rejected').length;
     const pending = sols.filter(s => !s.final_decision).length;
@@ -369,6 +480,31 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     document.getElementById('stat-accepted-final')!.textContent = String(acceptedFinal);
     document.getElementById('stat-rejected-final')!.textContent = String(rejectedFinal);
     document.getElementById('stat-pending')!.textContent = String(pending);
+    renderFinalMailSummary(sols);
+  }
+
+  function finalMailBucket(row: SolicitudWithEval): typeof finalMailFilter {
+    const occupancy = finalCommunicationOccupancy(row);
+    return occupancy === 'failed' || occupancy === 'uncertain' ? 'problem' : occupancy;
+  }
+
+  function renderFinalMailSummary(sols: SolicitudWithEval[]) {
+    document.getElementById('final-comms-summary')!.style.display = progressiveEnabled ? '' : 'none';
+    if (!progressiveEnabled) return;
+    const counts = { all: sols.length, free: 0, queued: 0, sent: 0, problem: 0 };
+    sols.filter(row => row.final_decision).forEach(row => counts[finalMailBucket(row)]++);
+    const labels = { all: 'Todos', free: 'Sin enviar', queued: 'En cola / en proceso', sent: 'Enviados', problem: 'Revisar envío' };
+    for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+      document.getElementById(`final-comms-count-${key}`)!.textContent = `${labels[key]} (${counts[key]})`;
+    }
+    const parts: string[] = [];
+    if (counts.free) parts.push(`${counts.free} sin enviar`);
+    if (counts.queued) parts.push(`${counts.queued} en cola o pendientes de entrega`);
+    if (counts.problem) parts.push(`${counts.problem} con problemas de envío`);
+    const hint = document.getElementById('final-comms-hint')!;
+    hint.textContent = parts.join(' · ');
+    hint.hidden = parts.length === 0;
+    hint.classList.toggle('selection-comms-hint-warning', counts.problem > 0);
   }
 
   function renderAgenda(rows: InterviewRow[]) {
@@ -410,12 +546,14 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   function renderInterviewItem(r: InterviewRow): string {
     const time = formatTime(r.slot_datetime);
+    const endTime = formatTime(new Date(new Date(r.slot_datetime).getTime() + r.duration_minutes * 60_000).toISOString());
+    const room = r.room_id ? interviewRooms.get(r.room_id) : undefined;
     const sol = r.solicitudes;
     const evalBadge = renderEvalBadge(sol);
     return `
-      <article class="admin-agenda-item ${progressiveEnabled ? 'admin-agenda-item-progressive' : ''} admin-agenda-status-${r.status} ${progressiveEnabled && sol?.final_decision ? `admin-agenda-decision-${sol.final_decision}` : ''}">
+      <article data-solicitud-id="${escapeAttr(r.solicitud_id)}" class="admin-agenda-item admin-interview-room-card ${progressiveEnabled ? 'admin-agenda-item-progressive' : ''} admin-agenda-status-${r.status} ${progressiveEnabled && sol?.final_decision ? `admin-agenda-decision-${sol.final_decision}` : ''}">
         ${progressiveEnabled ? renderFinalSelectionControl(sol, r.status) : ''}
-        <div class="admin-agenda-time">${time}</div>
+        <div class="admin-agenda-time"><span>${time}</span><span class="interview-end-time">a ${endTime}</span><span class="interview-duration">${r.duration_minutes} min</span></div>
         <div class="admin-agenda-info">
           <div class="admin-agenda-name">${escapeHtml(sol?.nombre || 'Sin nombre')}</div>
           <div class="admin-agenda-sub">${escapeHtml(sol?.carrera || '—')} · ${sol?.semestre || '?'}° sem</div>
@@ -427,10 +565,15 @@ import AdminLayout from '@layouts/AdminLayout.astro';
           ${evalBadge}
         </div>
         <div class="admin-agenda-actions">
-          ${r.meet_url ? `<a href="${escapeAttr(r.meet_url)}" target="_blank" rel="noopener noreferrer" class="admin-agenda-meet" title="Abrir Meet"><i class="bi bi-camera-video-fill"></i></a>` : ''}
+          ${r.meet_url ? `<a href="${escapeAttr(r.meet_url)}" target="_blank" rel="noopener noreferrer" class="admin-agenda-meet" title="Abrir Meet" aria-label="Abrir Meet de ${escapeAttr(room?.name ?? 'esta entrevista')} (nueva pestaña)"><i class="bi bi-camera-video-fill" aria-hidden="true"></i> Abrir Meet</a>` : '<span class="interview-meet-pending">Meet pendiente</span>'}
           <a href="/admin/solicitudes/detalle?id=${r.solicitud_id}#evaluacion" class="admin-agenda-detail admin-agenda-evaluate" title="Evaluar / Ver solicitud">
-            <i class="bi bi-clipboard-data"></i>
+            <i class="bi bi-clipboard-data" aria-hidden="true"></i> Evaluar
           </a>
+        </div>
+        <div class="interview-room-summary" aria-label="Sala y responsables de esta entrevista">
+          <div class="interview-room-identity"><span class="interview-meta-label"><i class="bi bi-door-open" aria-hidden="true"></i> Sala asignada</span><strong>${escapeHtml(room?.name ?? (r.room_id ? 'Sala sin información' : 'Sin sala registrada'))}</strong></div>
+          <div><span class="interview-meta-label">Anfitrión · titular</span><span class="interview-responsible">${escapeHtml(room?.primary_email ?? 'Sin asignar')}</span></div>
+          <div><span class="interview-meta-label">Coanfitrión · respaldo</span><span class="interview-responsible">${escapeHtml(room?.backup_email ?? 'Sin asignar')}</span></div>
         </div>
         ${progressiveEnabled && sol ? renderFinalDecisionSummary(sol, r.status) : ''}
         ${r.status === 'confirmed' ? `
@@ -439,7 +582,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
               <i class="bi bi-check2"></i> Marcar completada
             </button>
             <button type="button" class="admin-mini-btn admin-mini-btn-warn" data-id="${r.id}" data-action="no_show">
-              <i class="bi bi-person-x"></i> No show
+              <i class="bi bi-person-x"></i> No asistió
             </button>
           </div>
         ` : ''}
@@ -469,7 +612,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
     document.getElementById('no-interview-count')!.textContent = String(without.length);
     const list = document.getElementById('no-interview-list')!;
     list.innerHTML = without.map(s => `
-      <article class="admin-agenda-item ${progressiveEnabled ? 'admin-agenda-item-progressive' : ''} admin-agenda-no-interview ${progressiveEnabled && s.final_decision ? `admin-agenda-decision-${s.final_decision}` : ''}">
+      <article data-solicitud-id="${escapeAttr(s.id)}" class="admin-agenda-item ${progressiveEnabled ? 'admin-agenda-item-progressive' : ''} admin-agenda-no-interview ${progressiveEnabled && s.final_decision ? `admin-agenda-decision-${s.final_decision}` : ''}">
         ${progressiveEnabled ? renderFinalSelectionControl(s, null) : ''}
         <div class="admin-agenda-time">—</div>
         <div class="admin-agenda-info">
@@ -575,20 +718,23 @@ import AdminLayout from '@layouts/AdminLayout.astro';
       if (!ready.some((row) => row.id === id)) selectedFinalIds.delete(id);
     }
     const selected = ready.filter((row) => selectedFinalIds.has(row.id));
-    const allSelected = ready.length > 0 && ready.every((row) => selectedFinalIds.has(row.id));
+    const matchingReady = ready.filter(matchesSearch);
+    const allSelected = matchingReady.length > 0 && matchingReady.every((row) => selectedFinalIds.has(row.id));
     const selectAll = document.getElementById('final-select-all') as HTMLButtonElement;
 
-    selectAll.disabled = ready.length === 0;
+    selectAll.disabled = matchingReady.length === 0;
     selectAll.setAttribute('aria-pressed', String(allSelected));
     selectAll.innerHTML = allSelected
       ? '<i class="bi bi-square"></i> Deseleccionar todos'
       : '<i class="bi bi-check2-square"></i> Seleccionar todos';
-    selectAll.title = ready.length === 0
-      ? 'No hay resultados finales pendientes de comunicar.'
-      : `${allSelected ? 'Quitar' : 'Marcar'} los ${ready.length} resultados listos para comunicar.`;
+    selectAll.title = matchingReady.length === 0
+      ? 'No hay resultados finales pendientes de comunicar en esta búsqueda.'
+      : `${allSelected ? 'Quitar' : 'Marcar'} los ${matchingReady.length} resultados listos para comunicar${searchTerms.length ? ' en esta búsqueda' : ''}.`;
 
     guide.style.display = 'flex';
     count.textContent = `${selected.length} seleccionado${selected.length === 1 ? '' : 's'}`;
+    const outsideSearch = selected.filter((row) => !matchesSearch(row)).length;
+    if (outsideSearch) count.textContent += ` (${outsideSearch} fuera de la búsqueda)`;
     if (ready.length === 0) {
       guideText.textContent = pendingDecision > 0
         ? `Faltan ${pendingDecision} resultado${pendingDecision === 1 ? '' : 's'} finales. Cuando estén guardados aparecerán aquí para comunicar.`
@@ -620,7 +766,7 @@ import AdminLayout from '@layouts/AdminLayout.astro';
 
   function toggleFinalSelectAll() {
     if (!progressiveEnabled) return;
-    const ready = visibleSolicitudes.filter((row) => isFinalSelectable(row));
+    const ready = visibleSolicitudes.filter((row) => isFinalSelectable(row) && matchesSearch(row));
     const allSelected = ready.length > 0 && ready.every((row) => selectedFinalIds.has(row.id));
     for (const row of ready) {
       if (allSelected) selectedFinalIds.delete(row.id);
@@ -792,3 +938,39 @@ import AdminLayout from '@layouts/AdminLayout.astro';
   }
   function escapeAttr(s: string): string { return escapeHtml(s); }
 </script>
+
+
+<style is:global>
+  .admin-interview-room-card .admin-agenda-time { display: grid; gap: 3px; }
+  .admin-interview-room-card .interview-end-time { font-size: .78rem; font-weight: 600; letter-spacing: 0; }
+  .admin-interview-room-card .interview-duration { font-size: .7rem; font-weight: 600; color: #555; letter-spacing: 0; }
+  .admin-interview-room-card .admin-agenda-name { white-space: normal; overflow-wrap: anywhere; }
+  .admin-interview-room-card .admin-agenda-actions { flex-wrap: wrap; }
+  .admin-interview-room-card .admin-agenda-meet,
+  .admin-interview-room-card .admin-agenda-detail { width: auto; min-height: 40px; height: auto; gap: 7px; padding: 8px 12px; font-size: .8rem; font-weight: 700; }
+  .admin-interview-room-card .admin-agenda-detail { background: white; color: #000; }
+  .admin-interview-room-card .admin-agenda-actions a:focus-visible { outline: 3px solid #6225e6; outline-offset: 3px; }
+  .interview-room-summary { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(120px, .6fr) minmax(0, 1fr) minmax(0, 1fr); border: 1px solid #d9d0ea; background: #faf7ff; }
+  .interview-room-summary > div { min-width: 0; padding: 12px 14px; }
+  .interview-room-summary > div + div { border-left: 1px solid #d9d0ea; }
+  .interview-meta-label { display: block; margin-bottom: 5px; font-size: .68rem; font-weight: 800; color: #655a77; text-transform: uppercase; letter-spacing: .05em; }
+  .interview-room-identity strong { color: #6225e6; font-size: .95rem; overflow-wrap: anywhere; }
+  .interview-responsible { display: block; font-size: .82rem; font-weight: 600; overflow-wrap: anywhere; }
+  .interview-meet-pending { align-self: center; font-size: .8rem; color: #666; }
+  .admin-interview-room-card .admin-agenda-row-actions { flex-wrap: wrap; }
+  @media (max-width: 1050px) {
+    .admin-interview-room-card { grid-template-columns: 80px minmax(0, 1fr) auto; }
+    .admin-interview-room-card.admin-agenda-item-progressive { grid-template-columns: 32px 80px minmax(0, 1fr) auto; }
+    .admin-interview-room-card .admin-agenda-actions { grid-column: 1 / -1; }
+    .admin-interview-room-card.admin-agenda-item-progressive .admin-agenda-actions { grid-column: 2 / -1; }
+  }
+  @media (max-width: 600px) {
+    .admin-interview-room-card { grid-template-columns: 65px minmax(0, 1fr); gap: 10px; padding: 12px; }
+    .admin-interview-room-card.admin-agenda-item-progressive { grid-template-columns: 24px 65px minmax(0, 1fr); }
+    .admin-interview-room-card .admin-agenda-status-cell { grid-column: 1 / -1; }
+    .admin-interview-room-card.admin-agenda-item-progressive .admin-agenda-status-cell { grid-column: 2 / -1; }
+    .interview-room-summary { grid-template-columns: minmax(0, 1fr); }
+    .interview-room-summary > div + div { border-left: 0; border-top: 1px solid #d9d0ea; }
+    .interview-room-summary > div { padding: 10px 12px; }
+  }
+</style>
