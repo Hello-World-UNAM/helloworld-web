@@ -71,3 +71,7 @@ El dispatcher remoto v10 difiere únicamente en dos textos de admisión a Meet (
 El primer build remoto falló por excluir el renderer compartido de correo que utiliza la previsualización del panel. Se corrigió la lista de archivos y se recompiló antes de promover el deployment; el sitio anterior permaneció publicado durante esa corrección.
 
 Los respaldos están fuera de Git en `/home/sebs/.config/helloworld-selection/production-release-20261003`; el archivo `database-and-cvs.tar.gz.aesgcm` se comprobó descifrando y comparando SHA-256, con llave separada en `backup-keys`. No hay secretos ni datos personales en este documento.
+
+## Pendiente de GitHub
+
+El release está publicado y la rama remota contiene todo el código y la evidencia. `main` conserva su versión anterior: el ruleset de GitHub exige `required_approving_review_count=1` para fusionar el PR #20. Los checks de Vercel pasan y el PR es mergeable; falta la revisión humana. No se eludió esta protección. El despliegue manual probado utiliza el código del PR, por lo que esta revisión pendiente no bloquea la versión ya publicada.
