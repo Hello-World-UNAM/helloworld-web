@@ -1,5 +1,10 @@
 # Only the website is deployed to Vercel. Edge functions are deployed separately.
-supabase/**
+supabase/local/**
+supabase/tests/**
+supabase/migrations/**
+supabase/operations/**
+supabase/*.md
+supabase/config.toml
 tests/**
 scripts/**
 .agent*/**
